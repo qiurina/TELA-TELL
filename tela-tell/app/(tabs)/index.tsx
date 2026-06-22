@@ -41,7 +41,10 @@ export default function HomeScreen() {
                   <Text style={styles.heroTitle}>Know what you are buying</Text>
                   <Text style={styles.heroTagline}>Scan it. Know it. Buy Right.</Text>
                   <Pressable
-                    style={({ pressed }) => [pressed && styles.scanButtonPressed]}
+                    style={({ pressed }) => [
+                      styles.scanButtonWrap,
+                      pressed && styles.scanButtonPressed,
+                    ]}
                     onPress={() => router.push('/scan')}>
                     <LinearGradient
                       colors={[BrandColors.primaryLight, BrandColors.primary, BrandColors.primaryDark]}
@@ -49,7 +52,9 @@ export default function HomeScreen() {
                       end={{ x: 1, y: 0.5 }}
                       style={[styles.scanButton, primaryButtonShadow()]}>
                       <ScanLine size={18} color={BrandColors.white} strokeWidth={2.5} />
-                      <Text style={styles.scanButtonText}>Start Fabric Scan</Text>
+                      <Text style={styles.scanButtonText} numberOfLines={1}>
+                        Scan Now
+                      </Text>
                     </LinearGradient>
                   </Pressable>
                 </View>
@@ -101,14 +106,14 @@ const styles = StyleSheet.create({
   },
   topRow: {
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   headerText: {
     gap: 2,
   },
   brand: {
     fontFamily: Fonts.bold,
-    fontSize: 26,
+    fontSize: 20,
     color: BrandColors.white,
     letterSpacing: -0.3,
   },
@@ -138,14 +143,15 @@ const styles = StyleSheet.create({
   },
   heroLeft: {
     flex: 1,
+    minWidth: 0,
     gap: 10,
     paddingRight: 4,
   },
   heroTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 22,
+    fontSize: 20,
     color: BrandColors.primaryDark,
-    lineHeight: 28,
+    lineHeight: 26,
     letterSpacing: -0.3,
   },
   heroTagline: {
@@ -155,28 +161,36 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
   },
   heroImage: {
-    width: 130,
-    height: 150,
+    width: '36%',
+    maxWidth: 130,
+    minWidth: 88,
+    aspectRatio: 130 / 150,
+    flexShrink: 0,
+  },
+  scanButtonWrap: {
+    width: '100%',
+    marginTop: 4,
   },
   scanButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
     gap: 8,
+    width: '100%',
     paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     borderRadius: 999,
-    marginTop: 4,
   },
   scanButtonPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
   },
   scanButtonText: {
+    flexShrink: 1,
     fontFamily: Fonts.semiBold,
     color: BrandColors.white,
-    fontSize: 15,
+    fontSize: 14,
+    textAlign: 'center',
   },
   recentHeader: {
     flexDirection: 'row',

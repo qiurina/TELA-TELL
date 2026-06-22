@@ -94,14 +94,14 @@ const styles = StyleSheet.create({
   },
   topRow: {
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   headerText: {
     gap: 2,
   },
   title: {
     fontFamily: Fonts.bold,
-    fontSize: 26,
+    fontSize: 20,
     color: BrandColors.white,
     letterSpacing: -0.3,
   },

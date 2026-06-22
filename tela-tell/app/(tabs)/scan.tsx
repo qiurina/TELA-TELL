@@ -7,11 +7,42 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraGuide } from '@/components/scan/camera-guide';
 import { DeviceStatusCard } from '@/components/scan/device-status-card';
 import { ScanActions } from '@/components/scan/scan-actions';
+import { ScanConfirmSheet } from '@/components/scan/scan-confirm-sheet';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/hooks/use-fabric-capture';
 import { clearLastCaptureUri, setLastCaptureUri } from '@/lib/last-capture';
 import { clearLastSellerLabel, getLastSellerLabel } from '@/lib/last-seller-label';
+
+type ScanConfirmKind = 'device' | 'upload' | 'phone';
+
+type ScanConfirmState = {
+  kind: ScanConfirmKind;
+  title: string;
+  message: string;
+  confirmLabel: string;
+};
+
+const SCAN_CONFIRM_COPY: Record<ScanConfirmKind, Omit<ScanConfirmState, 'kind'>> = {
+  device: {
+    title: 'IoT Scanner',
+    message:
+      'Place the scanner over the fabric. This prototype uses sample analysis results for the demo.',
+    confirmLabel: 'Start Scan',
+  },
+  upload: {
+    title: 'Upload from Gallery',
+    message:
+      'Fabric results from gallery photos may be less accurate. For the best results, please use the IoT scanner device.',
+    confirmLabel: 'Upload Photo',
+  },
+  phone: {
+    title: 'Scan with Your Phone',
+    message:
+      'Fabric results from phone photos may be less accurate. For the best results, please use the IoT scanner device.',
+    confirmLabel: 'Continue',
+  },
+};
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -20,6 +51,7 @@ export default function ScanScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
   const [savedSellerLabel, setSavedSellerLabel] = useState<string | null>(null);
+  const [confirmSheet, setConfirmSheet] = useState<ScanConfirmState | null>(null);
   const { captureFromCamera, captureFromGallery } = useFabricCapture();
 
   useFocusEffect(
@@ -43,28 +75,20 @@ export default function ScanScreen() {
     }, 1500);
   };
 
-  const handlePhoneScan = async () => {
+  const handlePhoneScan = () => {
     if (isAnalyzing) {
       return;
     }
 
-    const photoUri = await captureFromCamera();
-
-    if (photoUri) {
-      setPreviewUri(photoUri);
-    }
+    setConfirmSheet({ kind: 'phone', ...SCAN_CONFIRM_COPY.phone });
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (isAnalyzing) {
       return;
     }
 
-    const photoUri = await captureFromGallery();
-
-    if (photoUri) {
-      setPreviewUri(photoUri);
-    }
+    setConfirmSheet({ kind: 'upload', ...SCAN_CONFIRM_COPY.upload });
   };
 
   const handleAnalyze = () => {
@@ -88,14 +112,28 @@ export default function ScanScreen() {
       return;
     }
 
-    Alert.alert(
-      'IoT Scanner',
-      'Place the scanner over the fabric. Using sample analysis results for this prototype.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Start scan', onPress: () => runAnalysis() },
-      ],
-    );
+    setConfirmSheet({ kind: 'device', ...SCAN_CONFIRM_COPY.device });
+  };
+
+  const handleConfirmSheet = async () => {
+    if (!confirmSheet) {
+      return;
+    }
+
+    const { kind } = confirmSheet;
+    setConfirmSheet(null);
+
+    if (kind === 'device') {
+      runAnalysis();
+      return;
+    }
+
+    const photoUri =
+      kind === 'phone' ? await captureFromCamera() : await captureFromGallery();
+
+    if (photoUri) {
+      setPreviewUri(photoUri);
+    }
   };
 
   const handleTryAnother = () => {
@@ -161,6 +199,15 @@ export default function ScanScreen() {
           </ScrollView>
         </View>
       </View>
+
+      <ScanConfirmSheet
+        visible={confirmSheet !== null}
+        title={confirmSheet?.title ?? ''}
+        message={confirmSheet?.message ?? ''}
+        confirmLabel={confirmSheet?.confirmLabel ?? 'Continue'}
+        onConfirm={handleConfirmSheet}
+        onCancel={() => setConfirmSheet(null)}
+      />
     </View>
   );
 }
@@ -182,14 +229,14 @@ const styles = StyleSheet.create({
   },
   topRow: {
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   headerText: {
     gap: 1,
   },
   title: {
     fontFamily: Fonts.bold,
-    fontSize: 26,
+    fontSize: 20,
     color: BrandColors.white,
     letterSpacing: -0.3,
   },
