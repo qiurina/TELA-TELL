@@ -4,6 +4,8 @@ export const BrandColors = {
   primaryLight: '#6BAEC4',
   gradientStart: '#7EC5DB',
   gradientEnd: '#4A8FA8',
+  splashGradientTop: '#2A8C9D',
+  splashGradientBottom: '#AEE8F5',
   lavender: '#EAF4F8',
   lavenderCard: '#DFEEF4',
   text: '#212121',
