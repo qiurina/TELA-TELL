@@ -14,11 +14,13 @@ function getBarStyle(material: string, index: number) {
 }
 
 export function CompositionCard({ compositions }: CompositionCardProps) {
+  const items = compositions ?? [];
+
   return (
     <View style={styles.card}>
       <Text style={styles.sectionLabel}>FABRIC COMPOSITION</Text>
       <View style={styles.list}>
-        {compositions.map((item, index) => {
+        {items.map((item, index) => {
           const barStyle = getBarStyle(item.material, index);
 
           return (

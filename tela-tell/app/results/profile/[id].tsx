@@ -7,12 +7,12 @@ import { ResultsScreenHeader } from '@/components/results/results-screen-header'
 import { ScanAnotherButton } from '@/components/results/scan-another-button';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getScanResult } from '@/constants/mock-data';
+import { getScanResult, resolveScanId } from '@/constants/mock-data';
 
 export default function FabricProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id: string | string[] }>();
   const router = useRouter();
-  const result = getScanResult(id ?? '1');
+  const result = getScanResult(resolveScanId(id));
 
   if (!result) {
     return (
@@ -41,7 +41,7 @@ export default function FabricProfileScreen() {
           sustainabilityScore={result.sustainability.score}
           sustainabilityRating={result.sustainability.rating}
         />
-        <CompositionCard compositions={result.compositions} />
+        <CompositionCard compositions={result.compositions ?? []} />
         <ScanAnotherButton onPress={handleScanAnother} />
       </ScrollView>
     </View>

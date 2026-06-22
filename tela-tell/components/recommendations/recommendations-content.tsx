@@ -17,6 +17,7 @@ import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import {
   SUITABILITY_COLOR,
+  type FabricComposition,
   type GarmentPurposeItem,
   type ScanRecommendations,
   type SuitabilityLevel,
@@ -26,12 +27,26 @@ function SectionLabel({ title }: { title: string }) {
   return <Text style={styles.sectionLabel}>{title}</Text>;
 }
 
-function DetectedTag({ label }: { label: string }) {
+function DetectedTag({ compositions }: { compositions?: FabricComposition[] }) {
+  const items = compositions ?? [];
+
+  if (items.length === 0) {
+    return null;
+  }
+
   return (
     <View style={[styles.detectedTag, faintCardShadow()]}>
       <ScanLine size={18} color={BrandColors.primary} strokeWidth={2.5} />
       <Text style={styles.detectedText}>
-        Detected: <Text style={styles.detectedValue}>{label}</Text>
+        Detected:{' '}
+        {items.map((item, index) => (
+          <Text key={`${item.material}-${item.percentage}`}>
+            {index > 0 ? ', ' : ''}
+            <Text style={styles.detectedValue}>
+              {item.material} ({item.percentage}%)
+            </Text>
+          </Text>
+        ))}
       </Text>
     </View>
   );
@@ -163,7 +178,7 @@ function GarmentPurposeSection({ items }: { items: GarmentPurposeItem[] }) {
 }
 
 type RecommendationsContentProps = {
-  detectedLabel: string;
+  detectedCompositions?: FabricComposition[];
   recommendations: ScanRecommendations;
   onScanAnother: () => void;
 };
@@ -209,15 +224,16 @@ function normalizeRecommendations(recommendations: LegacyRecommendations): ScanR
 }
 
 export function RecommendationsContent({
-  detectedLabel,
+  detectedCompositions,
   recommendations,
   onScanAnother,
 }: RecommendationsContentProps) {
   const safeRecommendations = normalizeRecommendations(recommendations);
+  const compositions = detectedCompositions ?? [];
 
   return (
     <View style={styles.container}>
-      <DetectedTag label={detectedLabel} />
+      <DetectedTag compositions={compositions} />
       <EcoAlternativesSection alternatives={safeRecommendations.ecoAlternatives} />
       <RecycledAwarenessSection message={safeRecommendations.recycledAwareness} />
       <GarmentActionsSection reuse={safeRecommendations.reuse} />

@@ -5,14 +5,19 @@ export type FabricComposition = {
   percentage: number;
 };
 
+export type CareInstruction = {
+  text: string;
+  recommended: boolean;
+};
+
 export type FabricProfile = {
   texture: string;
   weave: string;
   breathability: string;
   durability: string;
   stretch: string;
-  care: string;
-  useCases: string;
+  careInstructions: CareInstruction[];
+  useCases: string[];
 };
 
 export type SuitabilityLevel = 'Excellent' | 'Good' | 'Fair' | 'Poor';
@@ -89,8 +94,12 @@ export const SCAN_RESULTS: ScanResult[] = [
       breathability: 'High',
       durability: 'Medium',
       stretch: 'Low',
-      care: 'Machine wash warm',
-      useCases: 'Shirts, dresses, everyday wear',
+      careInstructions: [
+        { text: 'Machine wash warm', recommended: true },
+        { text: 'Tumble dry low heat', recommended: true },
+        { text: 'Avoid bleach', recommended: false },
+      ],
+      useCases: ['Casual wear', 'Shirts', 'Everyday dresses', 'Uniforms'],
     },
     recommendations: {
       garmentPurposes: [
@@ -163,8 +172,12 @@ export const SCAN_RESULTS: ScanResult[] = [
       breathability: 'Very high',
       durability: 'Moderate',
       stretch: 'None',
-      care: 'Hand wash, line dry',
-      useCases: 'Summer tops, loose trousers, breathable layers',
+      careInstructions: [
+        { text: 'Hand wash, line dry', recommended: true },
+        { text: 'Iron while damp', recommended: true },
+        { text: 'Avoid machine drying', recommended: false },
+      ],
+      useCases: ['Summer tops', 'Loose trousers', 'Breathable layers', 'Resort wear'],
     },
     recommendations: {
       garmentPurposes: [
@@ -218,12 +231,25 @@ export function getScanResult(id: string): ScanResult | undefined {
   return SCAN_RESULTS.find((result) => result.id === id);
 }
 
+export function resolveScanId(rawId: string | string[] | undefined): string {
+  if (Array.isArray(rawId)) {
+    return rawId[0] ?? '1';
+  }
+
+  return rawId ?? '1';
+}
+
+export function formatDetectedCompositions(compositions: FabricComposition[]): string {
+  return compositions.map((item) => `${item.material} (${item.percentage}%)`).join(', ');
+}
+
 export type RecentScanPreview = {
   id: string;
   primaryFabric: string;
   composition: string;
   scannedAt: string;
   sustainability: SustainabilityRating;
+  sustainabilityLabel: string;
   mislabeling: boolean;
   sellerLabel?: string;
 };
@@ -231,12 +257,10 @@ export type RecentScanPreview = {
 export const RECENT_SCANS_PREVIEW: RecentScanPreview[] = SCAN_RESULTS.map((scan) => ({
   id: scan.id,
   primaryFabric: scan.dominantFabric.replace(' dominant', ' Blend'),
-  composition: scan.compositions
-    .slice(0, 2)
-    .map((c) => `${c.material} ${c.percentage}%`)
-    .join(' · '),
+  composition: scan.compositions.map((c) => `${c.material} ${c.percentage}%`).join(' · '),
   scannedAt: scan.scannedAt,
   sustainability: scan.sustainability.rating,
+  sustainabilityLabel: scan.sustainability.label,
   mislabeling: scan.mislabeling.detected,
   sellerLabel: scan.sellerLabel,
 }));
@@ -265,3 +289,26 @@ export const SUITABILITY_COLOR: Record<SuitabilityLevel, string> = {
   Fair: '#ca8a04',
   Poor: '#dc2626',
 };
+
+export const FABRIC_PROPERTY_COLOR = {
+  high: '#16a34a',
+  medium: '#ca8a04',
+  low: '#dc2626',
+  neutral: '#212121',
+} as const;
+
+export function getFabricPropertyColor(value: string): string {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized.includes('very high') || normalized === 'high' || normalized.includes('excellent')) {
+    return FABRIC_PROPERTY_COLOR.high;
+  }
+  if (normalized.includes('medium') || normalized.includes('moderate') || normalized.includes('fair')) {
+    return FABRIC_PROPERTY_COLOR.medium;
+  }
+  if (normalized.includes('very low') || normalized === 'low' || normalized.includes('poor') || normalized === 'none') {
+    return FABRIC_PROPERTY_COLOR.low;
+  }
+
+  return FABRIC_PROPERTY_COLOR.neutral;
+}

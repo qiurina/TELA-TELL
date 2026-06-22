@@ -5,12 +5,12 @@ import { RecommendationsContent } from '@/components/recommendations/recommendat
 import { ResultsScreenHeader } from '@/components/results/results-screen-header';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getScanResult } from '@/constants/mock-data';
+import { getScanResult, resolveScanId } from '@/constants/mock-data';
 
 export default function RecommendationsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id: string | string[] }>();
   const router = useRouter();
-  const result = getScanResult(id ?? '1');
+  const result = getScanResult(resolveScanId(id));
 
   if (!result) {
     return (
@@ -22,8 +22,6 @@ export default function RecommendationsScreen() {
       </View>
     );
   }
-
-  const detectedLabel = `${result.compositions[0].material} (${result.compositions[0].percentage}%)`;
 
   const handleScanAnother = () => {
     router.push('/(tabs)/scan' as Href);
@@ -37,7 +35,7 @@ export default function RecommendationsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
         <RecommendationsContent
-          detectedLabel={detectedLabel}
+          detectedCompositions={result.compositions ?? []}
           recommendations={result.recommendations}
           onScanAnother={handleScanAnother}
         />

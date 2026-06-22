@@ -7,13 +7,13 @@ import { ResultsScreenHeader } from '@/components/results/results-screen-header'
 import { StatusBadges } from '@/components/results/status-badges';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getScanResult } from '@/constants/mock-data';
+import { getScanResult, resolveScanId } from '@/constants/mock-data';
 import { getLastCaptureUri } from '@/lib/last-capture';
 
 export default function ResultsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id: string | string[] }>();
   const router = useRouter();
-  const result = getScanResult(id ?? '1');
+  const result = getScanResult(resolveScanId(id));
   const capturedPhotoUri = getLastCaptureUri();
 
   if (!result) {
@@ -44,7 +44,7 @@ export default function ResultsScreen() {
         contentContainerStyle={styles.content}>
         <FabricPhotoPreview imageUri={capturedPhotoUri} />
 
-        <CompositionCard compositions={result.compositions} />
+        <CompositionCard compositions={result.compositions ?? []} />
 
         <StatusBadges sustainability={result.sustainability} mislabeling={result.mislabeling} />
 
