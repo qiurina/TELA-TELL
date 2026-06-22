@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CameraGuide } from '@/components/scan/camera-guide';
+import { CameraGuide, type ViewfinderSource } from '@/components/scan/camera-guide';
 import { DeviceStatusCard } from '@/components/scan/device-status-card';
 import { ScanActions } from '@/components/scan/scan-actions';
 import { ScanConfirmSheet } from '@/components/scan/scan-confirm-sheet';
@@ -12,6 +12,7 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/hooks/use-fabric-capture';
 import { clearLastCaptureUri, setLastCaptureUri } from '@/lib/last-capture';
+import { getDeviceMockCaptureUri } from '@/lib/device-mock-capture';
 import { clearLastSellerLabel, getLastSellerLabel } from '@/lib/last-seller-label';
 
 type ScanConfirmKind = 'device' | 'upload' | 'phone';
@@ -26,8 +27,7 @@ type ScanConfirmState = {
 const SCAN_CONFIRM_COPY: Record<ScanConfirmKind, Omit<ScanConfirmState, 'kind'>> = {
   device: {
     title: 'IoT Scanner',
-    message:
-      'Place the scanner over the fabric. This prototype uses sample analysis results for the demo.',
+    message: 'Place the scanner over the fabric.',
     confirmLabel: 'Start Scan',
   },
   upload: {
@@ -37,12 +37,14 @@ const SCAN_CONFIRM_COPY: Record<ScanConfirmKind, Omit<ScanConfirmState, 'kind'>>
     confirmLabel: 'Upload Photo',
   },
   phone: {
-    title: 'Scan with Your Phone',
+    title: 'Use Phone Camera',
     message:
       'Fabric results from phone photos may be less accurate. For the best results, please use the IoT scanner device.',
-    confirmLabel: 'Continue',
+    confirmLabel: 'Use Camera',
   },
 };
+
+const DEVICE_SCAN_DURATION_MS = 2500;
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -52,6 +54,8 @@ export default function ScanScreen() {
   const [guideVisible, setGuideVisible] = useState(true);
   const [savedSellerLabel, setSavedSellerLabel] = useState<string | null>(null);
   const [confirmSheet, setConfirmSheet] = useState<ScanConfirmState | null>(null);
+  const [viewfinderSource, setViewfinderSource] = useState<ViewfinderSource>('iot');
+  const [isDeviceScanning, setIsDeviceScanning] = useState(false);
   const { captureFromCamera, captureFromGallery } = useFabricCapture();
 
   useFocusEffect(
@@ -124,12 +128,30 @@ export default function ScanScreen() {
     setConfirmSheet(null);
 
     if (kind === 'device') {
-      runAnalysis();
+      setIsDeviceScanning(true);
+      setTimeout(() => {
+        void getDeviceMockCaptureUri().then((uri) => {
+          setIsDeviceScanning(false);
+          setPreviewUri(uri);
+        });
+      }, DEVICE_SCAN_DURATION_MS);
       return;
     }
 
-    const photoUri =
-      kind === 'phone' ? await captureFromCamera() : await captureFromGallery();
+    if (kind === 'phone') {
+      if (Platform.OS === 'web') {
+        const photoUri = await captureFromCamera();
+        if (photoUri) {
+          setPreviewUri(photoUri);
+        }
+        return;
+      }
+
+      setViewfinderSource('phone');
+      return;
+    }
+
+    const photoUri = await captureFromGallery();
 
     if (photoUri) {
       setPreviewUri(photoUri);
@@ -142,6 +164,8 @@ export default function ScanScreen() {
     }
 
     setPreviewUri(null);
+    setViewfinderSource('iot');
+    setIsDeviceScanning(false);
   };
 
   const handleAddLabel = () => {
@@ -177,6 +201,8 @@ export default function ScanScreen() {
 
             <CameraGuide
               previewUri={previewUri}
+              source={viewfinderSource}
+              isDeviceScanning={isDeviceScanning}
               onCapture={setPreviewUri}
               guideVisible={guideVisible}
               onDismissGuide={() => setGuideVisible(false)}
@@ -185,7 +211,7 @@ export default function ScanScreen() {
 
             <ScanActions
               hasPreview={Boolean(previewUri)}
-              showPhoneCapture={Platform.OS === 'web'}
+              showPhoneCapture
               savedSellerLabel={savedSellerLabel}
               onDeviceScan={handleDeviceScan}
               onPhoneScan={handlePhoneScan}
@@ -194,7 +220,7 @@ export default function ScanScreen() {
               onTryAnother={handleTryAnother}
               onAddLabel={handleAddLabel}
               onRemoveLabel={handleRemoveLabel}
-              isAnalyzing={isAnalyzing}
+              isAnalyzing={isAnalyzing || isDeviceScanning}
             />
           </ScrollView>
         </View>

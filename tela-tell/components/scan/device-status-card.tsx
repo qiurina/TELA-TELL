@@ -28,7 +28,7 @@ const STATUS_STYLES: Record<
 };
 
 export function DeviceStatusCard({
-  deviceName = 'TELA-TELL Scanner',
+  deviceName = 'IoT Scanner connected',
   status = 'online',
 }: DeviceStatusCardProps) {
   const statusStyle = STATUS_STYLES[status];

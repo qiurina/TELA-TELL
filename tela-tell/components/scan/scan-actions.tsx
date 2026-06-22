@@ -127,7 +127,7 @@ export function ScanActions({
           onPress={onPhoneScan}
           disabled={isAnalyzing}>
           <Camera size={18} color={BrandColors.primary} strokeWidth={2} />
-          <Text style={styles.outlineText}>Scan with Your Phone</Text>
+          <Text style={styles.outlineText}>Use Phone Camera</Text>
         </Pressable>
       ) : null}
 

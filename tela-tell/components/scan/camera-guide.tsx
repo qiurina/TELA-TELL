@@ -1,61 +1,47 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { ScanGuideFloat } from '@/components/scan/scan-guide-float';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
+import { DEVICE_MOCK_CAPTURE } from '@/lib/device-mock-capture';
 
-const SCAN_FRAME_HEIGHT = 200;
+export type ViewfinderSource = 'iot' | 'phone';
 
-function ScanLineOverlay() {
-  const reducedMotion = useReducedMotion();
-  const offset = useSharedValue(0);
-
-  useEffect(() => {
-    if (reducedMotion) {
-      offset.value = SCAN_FRAME_HEIGHT / 2;
-      return;
-    }
-
-    offset.value = withRepeat(
-      withTiming(SCAN_FRAME_HEIGHT - 4, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-  }, [offset, reducedMotion]);
-
-  const lineStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: offset.value }],
-  }));
-
-  return (
-    <View style={styles.scanLineFrame}>
-      <Animated.View style={[styles.scanLine, lineStyle]} />
-    </View>
-  );
-}
+const FRAME_INSET = {
+  top: 34,
+  bottom: 34,
+  horizontal: 22,
+};
 
 type CameraGuideProps = {
   previewUri?: string | null;
+  source?: ViewfinderSource;
+  isDeviceScanning?: boolean;
   onCapture: (uri: string) => void;
   guideVisible: boolean;
   onDismissGuide: () => void;
   onShowGuide: () => void;
 };
 
+function ViewfinderFrame() {
+  return (
+    <>
+      <View style={[styles.corner, styles.topLeft]} />
+      <View style={[styles.corner, styles.topRight]} />
+      <View style={[styles.corner, styles.bottomLeft]} />
+      <View style={[styles.corner, styles.bottomRight]} />
+    </>
+  );
+}
+
 export function CameraGuide({
   previewUri,
+  source = 'iot',
+  isDeviceScanning = false,
   onCapture,
   guideVisible,
   onDismissGuide,
@@ -65,7 +51,11 @@ export function CameraGuide({
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const hasPreview = Boolean(previewUri);
-  const canUseLiveCamera = Platform.OS !== 'web';
+  const usePhoneCamera = source === 'phone' && Platform.OS !== 'web';
+  const showIoTFeed = !hasPreview && !usePhoneCamera;
+  const showPhoneCamera = !hasPreview && usePhoneCamera && permission?.granted;
+  const showPhonePermission = !hasPreview && usePhoneCamera && !permission?.granted;
+  const phoneFrameBottom = 96;
 
   const handleCapture = useCallback(async () => {
     if (!cameraRef.current || isCapturing || hasPreview) {
@@ -83,51 +73,68 @@ export function CameraGuide({
     }
   }, [hasPreview, isCapturing, onCapture]);
 
-  const handleRequestPermission = async () => {
-    await requestPermission();
-  };
+  const instructionText = (() => {
+    if (isDeviceScanning) {
+      return 'Capturing fabric image...';
+    }
+
+    if (showPhoneCamera || showPhonePermission) {
+      return 'Position fabric inside the frame';
+    }
+
+    return 'Align fabric in frame';
+  })();
 
   return (
     <View style={styles.container}>
       <View style={styles.viewfinder}>
         {hasPreview && previewUri ? (
-          <Image source={{ uri: previewUri }} style={styles.previewImage} contentFit="cover" />
-        ) : canUseLiveCamera && permission?.granted ? (
-          <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+          <Image source={{ uri: previewUri }} style={styles.feedImage} contentFit="cover" />
+        ) : showPhoneCamera ? (
+          <CameraView ref={cameraRef} style={styles.feedImage} facing="back" />
+        ) : showIoTFeed ? (
+          <Image source={DEVICE_MOCK_CAPTURE} style={styles.feedImage} contentFit="cover" />
         ) : (
           <View style={styles.placeholder}>
-            <Text style={styles.placeholderTitle}>
-              {canUseLiveCamera ? 'Camera access needed' : 'Live camera preview'}
-            </Text>
+            <Text style={styles.placeholderTitle}>Phone camera</Text>
             <Text style={styles.placeholderText}>
-              {canUseLiveCamera
-                ? 'Allow camera access to scan fabric with your phone.'
-                : 'Use the capture button below or upload from gallery on web.'}
+              Allow camera access to capture fabric with your phone.
             </Text>
-            {canUseLiveCamera && !permission?.granted ? (
-              <Pressable style={styles.permissionButton} onPress={handleRequestPermission}>
+            {showPhonePermission ? (
+              <Pressable style={styles.permissionButton} onPress={() => requestPermission()}>
                 <Text style={styles.permissionButtonText}>Allow Camera</Text>
               </Pressable>
             ) : null}
           </View>
         )}
 
-        <View style={styles.dimOverlay} />
+        {showPhoneCamera ? <View style={styles.dimOverlay} /> : null}
 
-        <View style={[styles.corner, styles.topLeft]} />
-        <View style={[styles.corner, styles.topRight]} />
-        <View style={[styles.corner, styles.bottomLeft]} />
-        <View style={[styles.corner, styles.bottomRight]} />
+        <View
+          style={[
+            styles.frameLayer,
+            showPhoneCamera && { bottom: phoneFrameBottom },
+          ]}>
+          <ViewfinderFrame />
+        </View>
 
-        {!hasPreview && permission?.granted && canUseLiveCamera ? (
-          <>
-            <Text style={styles.instruction}>Position fabric inside the frame</Text>
-            <ScanLineOverlay />
-          </>
+        {!hasPreview && (showIoTFeed || showPhoneCamera || showPhonePermission) ? (
+          <View style={styles.instructionWrap}>
+            <View style={[styles.instructionBar, isDeviceScanning && styles.instructionBarActive]}>
+              <Text style={styles.instruction} numberOfLines={1}>
+                {instructionText}
+              </Text>
+            </View>
+          </View>
         ) : null}
 
         {!hasPreview ? (
-          <ScanGuideFloat visible={guideVisible} onDismiss={onDismissGuide} onShow={onShowGuide} />
+          <ScanGuideFloat
+            visible={guideVisible}
+            source={source}
+            onDismiss={onDismissGuide}
+            onShow={onShowGuide}
+          />
         ) : null}
 
         {hasPreview ? (
@@ -140,7 +147,7 @@ export function CameraGuide({
           </View>
         ) : null}
 
-        {!hasPreview && permission?.granted && canUseLiveCamera ? (
+        {showPhoneCamera ? (
           <View style={styles.shutterWrap}>
             <Pressable
               style={({ pressed }) => [
@@ -161,7 +168,11 @@ export function CameraGuide({
 
       {hasPreview ? (
         <Text style={styles.previewHint}>
-          Review your fabric photo. Tap Analyze when you are ready.
+          Review your fabric photo, then tap Analyze Fabric.
+        </Text>
+      ) : showIoTFeed ? (
+        <Text style={styles.previewHint}>
+          Tap Scan with Device when ready.
         </Text>
       ) : null}
     </View>
@@ -170,18 +181,17 @@ export function CameraGuide({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
+    gap: 10,
   },
   viewfinder: {
     height: 320,
     borderRadius: 20,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#101820',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  camera: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  previewImage: {
+  feedImage: {
     ...StyleSheet.absoluteFillObject,
   },
   placeholder: {
@@ -218,73 +228,81 @@ const styles = StyleSheet.create({
   },
   dimOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: 'rgba(0,0,0,0.22)',
     zIndex: 1,
     pointerEvents: 'none',
   },
-  scanLineFrame: {
+  frameLayer: {
     position: 'absolute',
-    top: 48,
-    left: 40,
-    right: 40,
-    height: SCAN_FRAME_HEIGHT,
-    overflow: 'hidden',
-    zIndex: 3,
+    top: FRAME_INSET.top,
+    left: FRAME_INSET.horizontal,
+    right: FRAME_INSET.horizontal,
+    bottom: FRAME_INSET.bottom,
+    zIndex: 2,
     pointerEvents: 'none',
   },
-  scanLine: {
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: 'rgba(134, 239, 172, 0.95)',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 0 6px rgba(134, 239, 172, 0.9)' }
-      : null),
+  instructionWrap: {
+    position: 'absolute',
+    top: 10,
+    left: 0,
+    right: 0,
+    zIndex: 4,
+    alignItems: 'center',
+    paddingHorizontal: 48,
+  },
+  instructionBar: {
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    maxWidth: '100%',
+  },
+  instructionBarActive: {
+    backgroundColor: 'rgba(74, 143, 168, 0.8)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   instruction: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    right: 16,
-    zIndex: 4,
     fontFamily: Fonts.medium,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.92)',
+    fontSize: 11,
+    color: BrandColors.white,
     textAlign: 'center',
+    lineHeight: 14,
   },
   corner: {
     position: 'absolute',
-    width: 32,
-    height: 32,
-    borderColor: BrandColors.white,
-    zIndex: 2,
+    width: 28,
+    height: 28,
+    borderColor: 'rgba(255,255,255,0.95)',
   },
   topLeft: {
-    top: 40,
-    left: 32,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderTopLeftRadius: 4,
+    top: 0,
+    left: 0,
+    borderTopWidth: 2.5,
+    borderLeftWidth: 2.5,
+    borderTopLeftRadius: 6,
   },
   topRight: {
-    top: 40,
-    right: 32,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderTopRightRadius: 4,
+    top: 0,
+    right: 0,
+    borderTopWidth: 2.5,
+    borderRightWidth: 2.5,
+    borderTopRightRadius: 6,
   },
   bottomLeft: {
-    bottom: 88,
-    left: 32,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: 4,
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 2.5,
+    borderLeftWidth: 2.5,
+    borderBottomLeftRadius: 6,
   },
   bottomRight: {
-    bottom: 88,
-    right: 32,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: 4,
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 2.5,
+    borderRightWidth: 2.5,
+    borderBottomRightRadius: 6,
   },
   captureCard: {
     position: 'absolute',
@@ -352,9 +370,10 @@ const styles = StyleSheet.create({
   },
   previewHint: {
     fontFamily: Fonts.regular,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: BrandColors.textMuted,
     textAlign: 'center',
+    paddingHorizontal: 8,
   },
 });

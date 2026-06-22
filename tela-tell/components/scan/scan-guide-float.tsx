@@ -1,23 +1,33 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { ViewfinderSource } from '@/components/scan/camera-guide';
 import { Info, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 
-const SCAN_TIPS = [
+const IOT_SCAN_TIPS = [
+  'Place fabric flat under the IoT scanner lens',
+  'Use even lighting on the material',
+  'Tap Scan with Device when the fabric is in frame',
+  'Phone and gallery uploads are backup options only',
+];
+
+const PHONE_SCAN_TIPS = [
   'Place fabric flat inside the frame',
   'Use even lighting on the material',
   'Hold steady, then tap the capture button',
-  'Review the photo before analyzing',
+  'Results may be less accurate than the IoT scanner',
 ];
 
 type ScanGuideFloatProps = {
   visible: boolean;
+  source?: ViewfinderSource;
   onDismiss: () => void;
   onShow: () => void;
 };
 
-export function ScanGuideFloat({ visible, onDismiss, onShow }: ScanGuideFloatProps) {
+export function ScanGuideFloat({ visible, source = 'iot', onDismiss, onShow }: ScanGuideFloatProps) {
+  const scanTips = source === 'phone' ? PHONE_SCAN_TIPS : IOT_SCAN_TIPS;
   return (
     <>
       {!visible ? (
@@ -42,7 +52,7 @@ export function ScanGuideFloat({ visible, onDismiss, onShow }: ScanGuideFloatPro
               <X size={16} color={BrandColors.textMuted} strokeWidth={2.5} />
             </Pressable>
           </View>
-          {SCAN_TIPS.map((tip) => (
+          {scanTips.map((tip) => (
             <View key={tip} style={styles.tipRow}>
               <View style={styles.bullet} />
               <Text style={styles.tip}>{tip}</Text>
