@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: BrandColors.white,
     borderTopWidth: 1,
-    borderTopColor: '#F0EDF8',
+    borderTopColor: BrandColors.borderLight,
   },
   bar: {
     flexDirection: 'row',

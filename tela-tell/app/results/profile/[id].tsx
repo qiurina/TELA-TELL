@@ -1,11 +1,10 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FabricProfileCard } from '@/components/profile/fabric-profile-card';
 import { CompositionCard } from '@/components/results/composition-card';
-import { ChevronLeft } from '@/components/ui/lucide-icons';
+import { ResultsScreenHeader } from '@/components/results/results-screen-header';
+import { ScanAnotherButton } from '@/components/results/scan-another-button';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getScanResult } from '@/constants/mock-data';
@@ -13,7 +12,6 @@ import { getScanResult } from '@/constants/mock-data';
 export default function FabricProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const result = getScanResult(id ?? '1');
 
   if (!result) {
@@ -27,36 +25,25 @@ export default function FabricProfileScreen() {
     );
   }
 
+  const handleScanAnother = () => {
+    router.push('/(tabs)/scan' as Href);
+  };
+
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
-        style={[styles.header, { paddingTop: insets.top + 8 }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ChevronLeft size={24} color={BrandColors.white} strokeWidth={2.5} />
-          <Text style={styles.headerTitle}>Fabric Profile</Text>
-        </Pressable>
-      </LinearGradient>
+      <ResultsScreenHeader title="Fabric Profile" onBack={() => router.back()} />
 
-      <View style={styles.sheet}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.sheetContent}>
-          <FabricProfileCard
-            profile={result.profile}
-            sustainabilityScore={result.sustainability.score}
-            sustainabilityRating={result.sustainability.rating}
-          />
-          <CompositionCard compositions={result.compositions} />
-        </ScrollView>
-      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}>
+        <FabricProfileCard
+          profile={result.profile}
+          sustainabilityScore={result.sustainability.score}
+          sustainabilityRating={result.sustainability.rating}
+        />
+        <CompositionCard compositions={result.compositions} />
+        <ScanAnotherButton onPress={handleScanAnother} />
+      </ScrollView>
     </View>
   );
 }
@@ -66,28 +53,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BrandColors.white,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  headerTitle: {
-    fontFamily: Fonts.bold,
-    fontSize: 20,
-    color: BrandColors.white,
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: BrandColors.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-  },
-  sheetContent: {
+  content: {
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 40,

@@ -42,7 +42,7 @@ export function heroCardShadow(): ViewStyle {
 
 /** Primary button shadow */
 export function primaryButtonShadow(): ViewStyle {
-  const color = 'rgba(74, 63, 140, 0.3)';
+  const color = 'rgba(74, 143, 168, 0.3)';
 
   return webOrNative(`0px 4px 8px ${color}`, {
     shadowColor: BrandColors.primary,
@@ -55,7 +55,7 @@ export function primaryButtonShadow(): ViewStyle {
 
 /** Center FAB shadow */
 export function fabShadow(): ViewStyle {
-  const color = 'rgba(74, 63, 140, 0.35)';
+  const color = 'rgba(74, 143, 168, 0.35)';
 
   return webOrNative(`0px 6px 10px ${color}`, {
     shadowColor: BrandColors.primary,

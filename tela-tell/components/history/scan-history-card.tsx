@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Eye } from '@/components/ui/lucide-icons';
@@ -31,9 +32,13 @@ export function ScanHistoryCard({ scan, onPress }: ScanHistoryCardProps) {
           <Text style={styles.verifiedTag}>Label check passed</Text>
         )}
       </View>
-      <View style={styles.eyeButton}>
+      <LinearGradient
+        colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.eyeButton}>
         <Eye size={18} color={BrandColors.white} strokeWidth={2} />
-      </View>
+      </LinearGradient>
     </Pressable>
   );
 }
@@ -46,7 +51,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#F0EDF8',
+    borderColor: BrandColors.borderLight,
     minHeight: 88,
   },
   cardPressed: {
@@ -99,7 +104,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: BrandColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,3 +1,4 @@
+import '@/lib/dev-console';
 import {
   Poppins_400Regular,
   Poppins_500Medium,
@@ -44,7 +45,15 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="results" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen
+          name="modal"
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            animation: 'slide_from_bottom',
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

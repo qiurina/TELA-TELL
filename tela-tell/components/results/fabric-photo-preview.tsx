@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: BrandColors.lavenderCard,
     borderWidth: 1,
-    borderColor: '#E0DBF0',
+    borderColor: BrandColors.border,
     minHeight: 320,
   },
   image: {

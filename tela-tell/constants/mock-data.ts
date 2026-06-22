@@ -23,13 +23,15 @@ export type GarmentPurposeItem = {
   note: string;
 };
 
+export type EcoAlternative = {
+  name: string;
+  description: string;
+};
+
 export type ScanRecommendations = {
   garmentPurposes: GarmentPurposeItem[];
-  ecoAwareness: {
-    summary: string;
-    tips: string[];
-    alternative: string;
-  };
+  ecoAlternatives: EcoAlternative[];
+  recycledAwareness: string;
   reuse: {
     resale: string;
     donate: string;
@@ -113,23 +115,26 @@ export const SCAN_RESULTS: ScanResult[] = [
           note: 'Too lightweight for jackets or heavy layered pieces.',
         },
       ],
-      ecoAwareness: {
-        summary:
-          'This blend mixes natural cotton with virgin polyester. When buying similar items, prioritize recycled or organic options.',
-        tips: [
-          'Look for GRS-certified recycled polyester blends',
-          'Choose organic cotton to reduce pesticide use',
-          'Support brands with transparent fabric sourcing',
-        ],
-        alternative: 'Recycled cotton–poly blend with a similar soft hand feel',
-      },
+      ecoAlternatives: [
+        {
+          name: 'Jusi',
+          description: 'Local Philippine fiber. Biodegradable.',
+        },
+        {
+          name: 'Abaca',
+          description: 'Strong natural fiber from Mindanao.',
+        },
+        {
+          name: 'Organic Cotton',
+          description: 'Less pesticides. Similar soft feel.',
+        },
+      ],
+      recycledAwareness:
+        'Choose GRS-certified recycled polyester (rPET) in cotton-poly blends.',
       reuse: {
-        resale:
-          'Good resale potential if gently used. List accurately as a cotton blend on secondhand marketplaces.',
-        donate:
-          'Accepted by most textile donation programs. Cotton content makes it easy to sort for reuse.',
-        upcycle:
-          'Repurpose into tote bags, cleaning cloths, or patchwork projects. Holds up well for craft use.',
+        resale: 'List as a cotton blend on secondhand apps if gently used.',
+        donate: 'Accepted by most textile donation programs.',
+        upcycle: 'Repurpose into tote bags, cloths, or patchwork.',
       },
     },
   },
@@ -184,23 +189,26 @@ export const SCAN_RESULTS: ScanResult[] = [
           note: 'Too breathable for cold-weather base layers.',
         },
       ],
-      ecoAwareness: {
-        summary:
-          'Linen is a low-impact natural fiber. This blend is a strong eco choice compared to fully synthetic fabrics.',
-        tips: [
-          'Linen requires less water than cotton during growing',
-          'Blend extends garment life by reducing wrinkling',
-          'Air-drying saves energy and preserves fiber quality',
-        ],
-        alternative: '100% European flax linen for maximum sustainability',
-      },
+      ecoAlternatives: [
+        {
+          name: 'European Flax Linen',
+          description: 'Low water use. Minimal processing.',
+        },
+        {
+          name: 'Hemp',
+          description: 'Durable natural fiber. Needs little water.',
+        },
+        {
+          name: 'Ramie',
+          description: 'Breathable plant fiber. Linen-like feel.',
+        },
+      ],
+      recycledAwareness:
+        'For linen blends, choose organic or European flax sourcing.',
       reuse: {
-        resale:
-          'Popular for summer vintage markets. Mention linen content to attract eco-conscious buyers.',
-        donate:
-          'Great for donation drives focused on warm-weather clothing and household textiles.',
-        upcycle:
-          'Use for napkins, table runners, or relaxed home decor. Natural texture suits rustic projects.',
+        resale: 'Popular for summer vintage markets.',
+        donate: 'Good for warm-weather clothing drives.',
+        upcycle: 'Use for napkins, runners, or home decor.',
       },
     },
   },

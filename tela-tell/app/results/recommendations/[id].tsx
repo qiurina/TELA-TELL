@@ -1,10 +1,8 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RecommendationsContent } from '@/components/recommendations/recommendations-content';
-import { ChevronLeft } from '@/components/ui/lucide-icons';
+import { ResultsScreenHeader } from '@/components/results/results-screen-header';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getScanResult } from '@/constants/mock-data';
@@ -12,7 +10,6 @@ import { getScanResult } from '@/constants/mock-data';
 export default function RecommendationsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const result = getScanResult(id ?? '1');
 
   if (!result) {
@@ -26,31 +23,25 @@ export default function RecommendationsScreen() {
     );
   }
 
+  const detectedLabel = `${result.compositions[0].material} (${result.compositions[0].percentage}%)`;
+
+  const handleScanAnother = () => {
+    router.push('/(tabs)/scan' as Href);
+  };
+
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
-        style={[styles.header, { paddingTop: insets.top + 8 }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ChevronLeft size={24} color={BrandColors.white} strokeWidth={2.5} />
-          <Text style={styles.headerTitle}>Recommendations</Text>
-        </Pressable>
-      </LinearGradient>
+      <ResultsScreenHeader title="Recommendations" onBack={() => router.back()} />
 
-      <View style={styles.sheet}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.sheetContent}>
-          <RecommendationsContent recommendations={result.recommendations} />
-        </ScrollView>
-      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}>
+        <RecommendationsContent
+          detectedLabel={detectedLabel}
+          recommendations={result.recommendations}
+          onScanAnother={handleScanAnother}
+        />
+      </ScrollView>
     </View>
   );
 }
@@ -60,28 +51,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BrandColors.white,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  headerTitle: {
-    fontFamily: Fonts.bold,
-    fontSize: 20,
-    color: BrandColors.white,
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: BrandColors.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-  },
-  sheetContent: {
+  content: {
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 40,

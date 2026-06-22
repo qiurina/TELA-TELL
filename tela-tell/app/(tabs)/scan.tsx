@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CameraGuide } from '@/components/scan/camera-guide';
@@ -11,13 +11,23 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/hooks/use-fabric-capture';
 import { clearLastCaptureUri, setLastCaptureUri } from '@/lib/last-capture';
+import { clearLastSellerLabel, getLastSellerLabel } from '@/lib/last-seller-label';
 
 export default function ScanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [guideVisible, setGuideVisible] = useState(true);
+  const [savedSellerLabel, setSavedSellerLabel] = useState<string | null>(null);
   const { captureFromCamera, captureFromGallery } = useFabricCapture();
+
+  useFocusEffect(
+    useCallback(() => {
+      setGuideVisible(true);
+      setSavedSellerLabel(getLastSellerLabel());
+    }, []),
+  );
 
   const runAnalysis = (photoUri?: string | null) => {
     if (photoUri) {
@@ -58,7 +68,15 @@ export default function ScanScreen() {
   };
 
   const handleAnalyze = () => {
-    if (!previewUri || isAnalyzing) {
+    if (isAnalyzing) {
+      return;
+    }
+
+    if (!previewUri) {
+      Alert.alert(
+        'No fabric photo',
+        'Capture or upload a fabric image first, then tap Analyze Fabric.',
+      );
       return;
     }
 
@@ -92,6 +110,11 @@ export default function ScanScreen() {
     router.push('/modal');
   };
 
+  const handleRemoveLabel = () => {
+    clearLastSellerLabel();
+    setSavedSellerLabel(null);
+  };
+
   return (
     <View style={styles.root}>
       <LinearGradient
@@ -105,7 +128,6 @@ export default function ScanScreen() {
         <View style={styles.topRow}>
           <View style={styles.headerText}>
             <Text style={styles.title}>Scan Fabric</Text>
-            <Text style={styles.subtitle}>Use the IoT scanner for best results</Text>
           </View>
         </View>
 
@@ -113,18 +135,27 @@ export default function ScanScreen() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.sheetContent}>
-            <DeviceStatusCard connectionType="wifi" status="ready" />
+            <DeviceStatusCard status="online" />
 
-            <CameraGuide previewUri={previewUri} />
+            <CameraGuide
+              previewUri={previewUri}
+              onCapture={setPreviewUri}
+              guideVisible={guideVisible}
+              onDismissGuide={() => setGuideVisible(false)}
+              onShowGuide={() => setGuideVisible(true)}
+            />
 
             <ScanActions
               hasPreview={Boolean(previewUri)}
+              showPhoneCapture={Platform.OS === 'web'}
+              savedSellerLabel={savedSellerLabel}
               onDeviceScan={handleDeviceScan}
               onPhoneScan={handlePhoneScan}
               onUpload={handleUpload}
               onAnalyze={handleAnalyze}
               onTryAnother={handleTryAnother}
               onAddLabel={handleAddLabel}
+              onRemoveLabel={handleRemoveLabel}
               isAnalyzing={isAnalyzing}
             />
           </ScrollView>

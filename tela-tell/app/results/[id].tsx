@@ -1,12 +1,10 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CompositionCard } from '@/components/results/composition-card';
 import { FabricPhotoPreview } from '@/components/results/fabric-photo-preview';
+import { ResultsScreenHeader } from '@/components/results/results-screen-header';
 import { StatusBadges } from '@/components/results/status-badges';
-import { ChevronLeft } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getScanResult } from '@/constants/mock-data';
@@ -15,7 +13,6 @@ import { getLastCaptureUri } from '@/lib/last-capture';
 export default function ResultsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const result = getScanResult(id ?? '1');
   const capturedPhotoUri = getLastCaptureUri();
 
@@ -40,49 +37,30 @@ export default function ResultsScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
-        style={[styles.header, { paddingTop: insets.top + 8 }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ChevronLeft size={24} color={BrandColors.white} strokeWidth={2.5} />
-          <Text style={styles.headerTitle}>Scan Results</Text>
-        </Pressable>
-      </LinearGradient>
+      <ResultsScreenHeader title="Scan Results" onBack={() => router.back()} />
 
-      <View style={styles.sheet}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.sheetContent}>
-            <FabricPhotoPreview imageUri={capturedPhotoUri} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}>
+        <FabricPhotoPreview imageUri={capturedPhotoUri} />
 
-            <CompositionCard compositions={result.compositions} />
+        <CompositionCard compositions={result.compositions} />
 
-            <StatusBadges
-              sustainability={result.sustainability}
-              mislabeling={result.mislabeling}
-            />
+        <StatusBadges sustainability={result.sustainability} mislabeling={result.mislabeling} />
 
-            <View style={styles.actions}>
-              <Pressable
-                style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
-                onPress={handleViewProfile}>
-                <Text style={styles.primaryActionText}>View Profile</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.outlineAction, pressed && styles.pressed]}
-                onPress={handleRecommendations}>
-                <Text style={styles.outlineActionText}>Recommendations</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
-      </View>
+        <View style={styles.actions}>
+          <Pressable
+            style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
+            onPress={handleViewProfile}>
+            <Text style={styles.primaryActionText}>View Profile</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.outlineAction, pressed && styles.pressed]}
+            onPress={handleRecommendations}>
+            <Text style={styles.outlineActionText}>Recommendations</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -92,28 +70,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BrandColors.white,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  headerTitle: {
-    fontFamily: Fonts.bold,
-    fontSize: 20,
-    color: BrandColors.white,
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: BrandColors.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-  },
-  sheetContent: {
+  content: {
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 40,
@@ -139,7 +96,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#E0DBF0',
+    borderColor: BrandColors.border,
   },
   primaryActionText: {
     fontFamily: Fonts.semiBold,

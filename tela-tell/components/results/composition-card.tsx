@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { BrandColors, FabricBarFallback, FabricBarStyles } from '@/constants/brand';
@@ -27,14 +28,11 @@ export function CompositionCard({ compositions }: CompositionCardProps) {
                 <Text style={styles.percentage}>{item.percentage}%</Text>
               </View>
               <View style={[styles.track, { backgroundColor: barStyle.track }]}>
-                <View
-                  style={[
-                    styles.fill,
-                    {
-                      width: `${item.percentage}%`,
-                      backgroundColor: barStyle.fill,
-                    },
-                  ]}
+                <LinearGradient
+                  colors={[...barStyle.gradient]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={[styles.fill, { width: `${item.percentage}%` }]}
                 />
               </View>
             </View>

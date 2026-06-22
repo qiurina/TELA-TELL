@@ -1,33 +1,35 @@
 export const BrandColors = {
-  primary: '#4A3F8C',
-  primaryDark: '#3D326F',
-  primaryLight: '#6B5B9A',
-  gradientStart: '#7A6AAC',
-  gradientEnd: '#4A3F8C',
-  lavender: '#EEEBF7',
-  lavenderCard: '#E8E4F3',
+  primary: '#4A8FA8',
+  primaryDark: '#3A7792',
+  primaryLight: '#6BAEC4',
+  gradientStart: '#7EC5DB',
+  gradientEnd: '#4A8FA8',
+  lavender: '#EAF4F8',
+  lavenderCard: '#DFEEF4',
   text: '#212121',
-  textMuted: '#8B85A8',
+  textMuted: '#6B8794',
   white: '#FFFFFF',
-  shadow: 'rgba(74, 63, 140, 0.15)',
+  shadow: 'rgba(74, 143, 168, 0.15)',
+  border: '#D4E4EB',
+  borderLight: '#E8F2F6',
 };
 
 export type FabricBarStyle = {
-  fill: string;
   track: string;
+  gradient: readonly string[];
 };
 
-/** Per-fabric bar colors — distinct but muted to sit with the purple brand */
+/** Per-fabric bar gradients — vivid pink / orange / yellow / violet */
 export const FabricBarStyles: Record<string, FabricBarStyle> = {
-  Cotton: { fill: '#5B6DB8', track: '#E8EBF5' },
-  Polyester: { fill: '#9B6B9E', track: '#F3EBF3' },
-  Linen: { fill: '#B8956A', track: '#F5F0E8' },
-  Silk: { fill: '#C97B9A', track: '#F9EFF3' },
-  Wool: { fill: '#6B8F7A', track: '#ECF3EF' },
+  Cotton: { gradient: ['#FF6B9D', '#FF8F6B', '#FFB347'], track: '#FCE8F0' },
+  Polyester: { gradient: ['#FF9F43', '#FFC14D', '#FFD93D'], track: '#FFF4E6' },
+  Linen: { gradient: ['#4ADE80', '#3B82F6'], track: '#ECFDF5' },
+  Silk: { gradient: ['#E879F9', '#C084FC', '#818CF8'], track: '#F3EEFF' },
+  Wool: { gradient: ['#FB7185', '#F472B6', '#A78BFA'], track: '#FCE8F0' },
 };
 
 export const FabricBarFallback: FabricBarStyle[] = [
-  { fill: '#4A3F8C', track: '#EDE9F7' },
-  { fill: '#5B8FAD', track: '#E8F2F7' },
-  { fill: '#8F7B5C', track: '#F3EFE9' },
+  { gradient: ['#FF6B9D', '#FF9F6B', '#FFB347'], track: '#FCE8F0' },
+  { gradient: ['#FF9F43', '#FFC14D', '#FFD93D'], track: '#FFF4E6' },
+  { gradient: ['#4ADE80', '#3B82F6'], track: '#ECFDF5' },
 ];

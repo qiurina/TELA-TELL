@@ -1,6 +1,17 @@
-import { type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import {
+  Frown,
+  Heart,
+  Leaf,
+  Meh,
+  Recycle,
+  ScanLine,
+  Scissors,
+  Smile,
+  Tag,
+} from '@/components/ui/lucide-icons';
+import { ScanAnotherButton } from '@/components/results/scan-another-button';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
@@ -8,23 +19,123 @@ import {
   SUITABILITY_COLOR,
   type GarmentPurposeItem,
   type ScanRecommendations,
+  type SuitabilityLevel,
 } from '@/constants/mock-data';
 
 function SectionLabel({ title }: { title: string }) {
   return <Text style={styles.sectionLabel}>{title}</Text>;
 }
 
-function Card({ children }: { children: ReactNode }) {
-  return <View style={[styles.card, faintCardShadow()]}>{children}</View>;
+function DetectedTag({ label }: { label: string }) {
+  return (
+    <View style={[styles.detectedTag, faintCardShadow()]}>
+      <ScanLine size={18} color={BrandColors.primary} strokeWidth={2.5} />
+      <Text style={styles.detectedText}>
+        Detected: <Text style={styles.detectedValue}>{label}</Text>
+      </Text>
+    </View>
+  );
 }
 
-function PurposeBox({ purpose, suitability }: { purpose: string; suitability: GarmentPurposeItem['suitability'] }) {
+function EcoAlternativesSection({
+  alternatives,
+}: {
+  alternatives: ScanRecommendations['ecoAlternatives'];
+}) {
+  return (
+    <View style={styles.section}>
+      <SectionLabel title="ECO-FRIENDLY ALTERNATIVES" />
+      <View style={styles.list}>
+        {alternatives.map((item) => (
+          <View key={item.name} style={styles.ecoCard}>
+            <View style={styles.ecoIconWrap}>
+              <Leaf size={18} color="#16a34a" strokeWidth={2.5} />
+            </View>
+            <View style={styles.ecoTextBlock}>
+              <Text style={styles.ecoName}>{item.name}</Text>
+              <Text style={styles.ecoDescription}>{item.description}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function RecycledAwarenessSection({ message }: { message: string }) {
+  return (
+    <View style={styles.section}>
+      <SectionLabel title="RECYCLED OPTIONS AWARENESS" />
+      <View style={styles.recycledCard}>
+        <View style={styles.recycledIconWrap}>
+          <Recycle size={20} color="#ca8a04" strokeWidth={2.5} />
+        </View>
+        <Text style={styles.recycledText}>{message}</Text>
+      </View>
+    </View>
+  );
+}
+
+function GarmentActionsSection({ reuse }: { reuse: ScanRecommendations['reuse'] }) {
+  const actions = [
+    { key: 'resale', label: 'Resale', icon: Tag, message: reuse.resale },
+    { key: 'donate', label: 'Donate', icon: Heart, message: reuse.donate },
+    { key: 'upcycle', label: 'Upcycle', icon: Scissors, message: reuse.upcycle },
+  ] as const;
+
+  return (
+    <View style={styles.section}>
+      <SectionLabel title="WHAT TO DO WITH THIS GARMENT" />
+      <View style={styles.actionRow}>
+        {actions.map((action) => {
+          const Icon = action.icon;
+
+          return (
+            <Pressable
+              key={action.key}
+              style={({ pressed }) => [styles.actionTile, pressed && styles.pressed]}
+              onPress={() => Alert.alert(action.label, action.message)}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}>
+              <Icon size={22} color={BrandColors.primary} strokeWidth={2} />
+              <Text style={styles.actionLabel}>{action.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function getSuitabilityIcon(suitability: SuitabilityLevel) {
+  if (suitability === 'Excellent' || suitability === 'Good') {
+    return Smile;
+  }
+
+  if (suitability === 'Fair') {
+    return Meh;
+  }
+
+  return Frown;
+}
+
+function PurposeBox({
+  purpose,
+  suitability,
+}: {
+  purpose: string;
+  suitability: GarmentPurposeItem['suitability'];
+}) {
+  const SuitabilityIcon = getSuitabilityIcon(suitability);
+  const ratingColor = SUITABILITY_COLOR[suitability];
+
   return (
     <View style={[styles.purposeBox, faintCardShadow()]}>
       <Text style={styles.purposeBoxName}>{purpose}</Text>
-      <Text style={[styles.purposeBoxRating, { color: SUITABILITY_COLOR[suitability] }]}>
-        {suitability}
-      </Text>
+      <View style={styles.purposeRatingRow}>
+        <SuitabilityIcon size={18} color={ratingColor} strokeWidth={2.5} />
+        <Text style={[styles.purposeBoxRating, { color: ratingColor }]}>{suitability}</Text>
+      </View>
     </View>
   );
 }
@@ -51,65 +162,67 @@ function GarmentPurposeSection({ items }: { items: GarmentPurposeItem[] }) {
   );
 }
 
-function EcoAwarenessSection({
-  ecoAwareness,
-}: {
-  ecoAwareness: ScanRecommendations['ecoAwareness'];
-}) {
-  return (
-    <View style={styles.section}>
-      <SectionLabel title="ECO + RECYCLED AWARENESS" />
-      <Card>
-        <Text style={styles.bodyText}>{ecoAwareness.summary}</Text>
-        <View style={styles.tipsList}>
-          {ecoAwareness.tips.map((tip) => (
-            <View key={tip} style={styles.tipRow}>
-              <View style={styles.bullet} />
-              <Text style={styles.tipText}>{tip}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.altBox}>
-          <Text style={styles.altLabel}>RECOMMENDED ALTERNATIVE</Text>
-          <Text style={styles.altValue}>{ecoAwareness.alternative}</Text>
-        </View>
-      </Card>
-    </View>
-  );
-}
-
-function ReuseSection({ reuse }: { reuse: ScanRecommendations['reuse'] }) {
-  const items = [
-    { label: 'RESALE', value: reuse.resale },
-    { label: 'DONATE', value: reuse.donate },
-    { label: 'UPCYCLE', value: reuse.upcycle },
-  ];
-
-  return (
-    <View style={styles.section}>
-      <SectionLabel title="RESALE / DONATE / UPCYCLE" />
-      <View style={styles.list}>
-        {items.map((item) => (
-          <Card key={item.label}>
-            <Text style={styles.reuseLabel}>{item.label}</Text>
-            <Text style={styles.bodyText}>{item.value}</Text>
-          </Card>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 type RecommendationsContentProps = {
+  detectedLabel: string;
   recommendations: ScanRecommendations;
+  onScanAnother: () => void;
 };
 
-export function RecommendationsContent({ recommendations }: RecommendationsContentProps) {
+type LegacyRecommendations = ScanRecommendations & {
+  ecoAwareness?: {
+    summary: string;
+    tips: string[];
+    alternative: string;
+  };
+};
+
+function normalizeRecommendations(recommendations: LegacyRecommendations): ScanRecommendations {
+  if (recommendations.ecoAlternatives?.length && recommendations.recycledAwareness) {
+    return recommendations;
+  }
+
+  const legacy = recommendations.ecoAwareness;
+
+  return {
+    garmentPurposes: recommendations.garmentPurposes ?? [],
+    ecoAlternatives:
+      recommendations.ecoAlternatives ??
+      (legacy
+        ? [
+            {
+              name: 'Eco alternative',
+              description: legacy.alternative || legacy.summary,
+            },
+          ]
+        : []),
+    recycledAwareness:
+      recommendations.recycledAwareness ??
+      legacy?.tips?.[0] ??
+      legacy?.summary ??
+      'Look for recycled fabric labels when shopping.',
+    reuse: recommendations.reuse ?? {
+      resale: 'List gently used items on secondhand apps.',
+      donate: 'Donate to local textile collection programs.',
+      upcycle: 'Repurpose into bags, cloths, or craft projects.',
+    },
+  };
+}
+
+export function RecommendationsContent({
+  detectedLabel,
+  recommendations,
+  onScanAnother,
+}: RecommendationsContentProps) {
+  const safeRecommendations = normalizeRecommendations(recommendations);
+
   return (
     <View style={styles.container}>
-      <GarmentPurposeSection items={recommendations.garmentPurposes} />
-      <EcoAwarenessSection ecoAwareness={recommendations.ecoAwareness} />
-      <ReuseSection reuse={recommendations.reuse} />
+      <DetectedTag label={detectedLabel} />
+      <EcoAlternativesSection alternatives={safeRecommendations.ecoAlternatives} />
+      <RecycledAwarenessSection message={safeRecommendations.recycledAwareness} />
+      <GarmentActionsSection reuse={safeRecommendations.reuse} />
+      <GarmentPurposeSection items={safeRecommendations.garmentPurposes} />
+      <ScanAnotherButton onPress={onScanAnother} />
     </View>
   );
 }
@@ -128,7 +241,108 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
   },
   list: {
+    gap: 10,
+  },
+  detectedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: BrandColors.lavenderCard,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: BrandColors.primary,
+  },
+  detectedText: {
+    flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: BrandColors.text,
+  },
+  detectedValue: {
+    fontFamily: Fonts.semiBold,
+    color: BrandColors.primary,
+  },
+  ecoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 12,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  ecoIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: BrandColors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ecoTextBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  ecoName: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: '#15803d',
+  },
+  ecoDescription: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BrandColors.textMuted,
+  },
+  recycledCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#fffbeb',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  recycledIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: BrandColors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recycledText: {
+    flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 20,
+    color: BrandColors.text,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionTile: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: BrandColors.lavenderCard,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderWidth: 1.5,
+    borderColor: BrandColors.primary,
+    minHeight: 88,
+  },
+  actionLabel: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: BrandColors.primary,
   },
   purposeGrid: {
     gap: 12,
@@ -144,7 +358,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 6,
     borderWidth: 1,
-    borderColor: '#F0EDF8',
+    borderColor: BrandColors.borderLight,
   },
   purposeBoxName: {
     fontFamily: Fonts.semiBold,
@@ -152,70 +366,16 @@ const styles = StyleSheet.create({
     color: BrandColors.text,
     lineHeight: 20,
   },
+  purposeRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   purposeBoxRating: {
     fontFamily: Fonts.bold,
     fontSize: 15,
   },
-  card: {
-    backgroundColor: BrandColors.white,
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#F0EDF8',
-  },
-  bodyText: {
-    fontFamily: Fonts.regular,
-    fontSize: 14,
-    lineHeight: 21,
-    color: BrandColors.text,
-  },
-  tipsList: {
-    gap: 8,
-    marginTop: 4,
-  },
-  tipRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  bullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: BrandColors.primary,
-    marginTop: 7,
-  },
-  tipText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    lineHeight: 20,
-    color: BrandColors.text,
-  },
-  altBox: {
-    marginTop: 4,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0EDF8',
-    gap: 4,
-  },
-  altLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: BrandColors.textMuted,
-  },
-  altValue: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    lineHeight: 20,
-    color: BrandColors.primary,
-  },
-  reuseLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: BrandColors.textMuted,
+  pressed: {
+    opacity: 0.88,
   },
 });
