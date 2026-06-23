@@ -7,14 +7,17 @@ import {
   SUSTAINABILITY_BG,
   SUSTAINABILITY_BORDER,
   SUSTAINABILITY_DOT,
+  type SustainabilityFactor,
   type SustainabilityRating,
 } from '@/constants/mock-data';
 
 type StatusBadgesProps = {
+  hasSellerLabel?: boolean;
   sustainability: {
     rating: SustainabilityRating;
     label: string;
     score: number;
+    factors: SustainabilityFactor[];
   };
   mislabeling: {
     detected: boolean;
@@ -23,7 +26,9 @@ type StatusBadgesProps = {
   };
 };
 
-export function StatusBadges({ sustainability, mislabeling }: StatusBadgesProps) {
+export function StatusBadges({ hasSellerLabel = false, sustainability, mislabeling }: StatusBadgesProps) {
+  const showMislabelAlert = hasSellerLabel && mislabeling.detected;
+  const mislabelStatus = !hasSellerLabel || !mislabeling.detected ? 'None' : 'Possible';
   const sustainColor = SUSTAINABILITY_DOT[sustainability.rating];
 
   return (
@@ -42,31 +47,51 @@ export function StatusBadges({ sustainability, mislabeling }: StatusBadgesProps)
           <Text style={[styles.badgeValue, { color: sustainColor }]}>{sustainability.label}</Text>
           <Text style={styles.score}>{sustainability.score}/10</Text>
         </View>
+        <View style={styles.factorList}>
+          {(sustainability.factors ?? []).map((factor) => (
+            <View key={factor.text} style={styles.factorRow}>
+              <Text style={[styles.factorBullet, factor.positive ? styles.factorUp : styles.factorDown]}>
+                {factor.positive ? '+' : '−'}
+              </Text>
+              <Text style={styles.factorText}>{factor.text}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       <View
         style={[
           styles.badge,
-          mislabeling.detected ? styles.mislabelBadgeAlert : styles.mislabelBadgeOk,
+          showMislabelAlert
+            ? styles.mislabelBadgeAlert
+            : hasSellerLabel
+              ? styles.mislabelBadgeOk
+              : styles.mislabelBadgeNeutral,
         ]}>
         <Text style={styles.badgeLabel}>MISLABELING</Text>
         <View style={styles.badgeValueRow}>
-          {mislabeling.detected ? (
+          {showMislabelAlert ? (
             <TriangleAlert size={14} color="#dc2626" strokeWidth={2.5} />
           ) : (
-            <View style={[styles.dot, { backgroundColor: '#16a34a' }]} />
+            <View style={[styles.dot, { backgroundColor: BrandColors.textMuted }]} />
           )}
-          <Text style={[styles.badgeValue, mislabeling.detected ? styles.alertText : styles.okText]}>
-            {mislabeling.detected ? 'Alert' : 'Clear'}
+          <Text
+            style={[
+              styles.badgeValue,
+              showMislabelAlert ? styles.alertText : styles.noneText,
+            ]}>
+            {mislabelStatus}
           </Text>
         </View>
-        {mislabeling.detected ? (
+        {showMislabelAlert ? (
           <View style={styles.alertDetail}>
             <Text style={styles.alertTitle}>{mislabeling.title}</Text>
             <Text style={styles.alertMessage}>{mislabeling.message}</Text>
           </View>
         ) : (
-          <Text style={styles.subtext}>no mismatch</Text>
+          <Text style={styles.subtext}>
+            {!hasSellerLabel ? 'add seller label to compare' : 'no mismatch flagged'}
+          </Text>
         )}
       </View>
     </View>
@@ -91,6 +116,10 @@ const styles = StyleSheet.create({
   mislabelBadgeOk: {
     borderColor: '#bbf7d0',
     backgroundColor: '#f0fdf4',
+  },
+  mislabelBadgeNeutral: {
+    borderColor: BrandColors.border,
+    backgroundColor: BrandColors.white,
   },
   badgeLabel: {
     fontFamily: Fonts.semiBold,
@@ -118,11 +147,39 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
     marginLeft: 'auto',
   },
+  factorList: {
+    gap: 6,
+    marginTop: 2,
+  },
+  factorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  factorBullet: {
+    fontFamily: Fonts.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    width: 12,
+  },
+  factorUp: {
+    color: '#16a34a',
+  },
+  factorDown: {
+    color: '#ca8a04',
+  },
+  factorText: {
+    flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: BrandColors.text,
+  },
   alertText: {
     color: '#dc2626',
   },
-  okText: {
-    color: '#16a34a',
+  noneText: {
+    color: BrandColors.textMuted,
   },
   subtext: {
     fontFamily: Fonts.regular,

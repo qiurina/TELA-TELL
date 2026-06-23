@@ -1,7 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Camera, ChevronLeft, ImagePlus, ScanLine, Tag, X } from '@/components/ui/lucide-icons';
+import { ScanConfirmSheet } from '@/components/scan/scan-confirm-sheet';
+import { Camera, ChevronLeft, ImagePlus, Info, ScanLine, Tag, X } from '@/components/ui/lucide-icons';
+import { BACKUP_SCAN_DISCLAIMER } from '@/constants/analysis';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
@@ -22,6 +25,46 @@ type ScanActionsProps = {
   isAnalyzing?: boolean;
 };
 
+function SellerLabelPill({
+  label,
+  onRemove,
+  disabled,
+}: {
+  label: string;
+  onRemove?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <View style={styles.savedLabelRow}>
+      <Text style={styles.savedLabelCaption}>Seller label</Text>
+      <View style={styles.savedLabelPill}>
+        <Text style={styles.savedLabelText}>{label}</Text>
+        <Pressable
+          onPress={onRemove}
+          hitSlop={8}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel="Remove label">
+          <X size={14} color={BrandColors.primary} strokeWidth={2.5} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function BackupScanInfoButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      style={styles.infoButton}
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="About backup scan accuracy">
+      <Info size={15} color={BrandColors.textMuted} strokeWidth={2.25} />
+    </Pressable>
+  );
+}
+
 export function ScanActions({
   hasPreview,
   showPhoneCapture = false,
@@ -35,27 +78,24 @@ export function ScanActions({
   onRemoveLabel,
   isAnalyzing,
 }: ScanActionsProps) {
-  const sellerLabelPill =
-    savedSellerLabel && savedSellerLabel.trim().length > 0 ? (
-      <View style={styles.savedLabelRow}>
-        <Text style={styles.savedLabelCaption}>Selected label</Text>
-        <View style={styles.savedLabelPill}>
-          <Text style={styles.savedLabelText}>{savedSellerLabel.trim()}</Text>
-          <Pressable
-            onPress={onRemoveLabel}
-            hitSlop={8}
-            disabled={isAnalyzing}
-            accessibilityRole="button"
-            accessibilityLabel="Remove label">
-            <X size={14} color={BrandColors.primary} strokeWidth={2.5} />
-          </Pressable>
-        </View>
-      </View>
-    ) : null;
+  const [showBackupInfo, setShowBackupInfo] = useState(false);
+  const trimmedLabel = savedSellerLabel?.trim() ?? '';
+  const hasSellerLabel = trimmedLabel.length > 0;
 
   if (hasPreview) {
     return (
       <View style={styles.container}>
+        <View style={styles.reviewBanner}>
+          <Text style={styles.reviewStep}>Step 2 — Review & analyze</Text>
+          <Text style={styles.reviewBody}>
+            Confirm the capture looks correct before running fabric analysis.
+          </Text>
+        </View>
+
+        {hasSellerLabel ? (
+          <SellerLabelPill label={trimmedLabel} onRemove={onRemoveLabel} disabled={isAnalyzing} />
+        ) : null}
+
         <Pressable
           style={({ pressed }) => [pressed && styles.pressed, isAnalyzing && styles.disabled]}
           onPress={onAnalyze}
@@ -81,7 +121,7 @@ export function ScanActions({
           onPress={onTryAnother}
           disabled={isAnalyzing}>
           <ChevronLeft size={18} color={BrandColors.primary} strokeWidth={2.5} />
-          <Text style={styles.outlineText}>Try Another</Text>
+          <Text style={styles.outlineText}>Try Another Capture</Text>
         </Pressable>
 
         <Pressable
@@ -89,16 +129,39 @@ export function ScanActions({
           onPress={onAddLabel}
           disabled={isAnalyzing}>
           <Tag size={18} color={BrandColors.primary} strokeWidth={2} />
-          <Text style={styles.secondaryText}>Add Seller Label</Text>
+          <Text style={styles.secondaryText}>
+            {hasSellerLabel ? 'Update Seller Label' : 'Add Seller Label'}
+          </Text>
         </Pressable>
-
-        {sellerLabelPill}
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <ScanConfirmSheet
+        visible={showBackupInfo}
+        variant="info"
+        title="Backup scan options"
+        message={BACKUP_SCAN_DISCLAIMER}
+        confirmLabel="Got it"
+        onConfirm={() => setShowBackupInfo(false)}
+        onCancel={() => setShowBackupInfo(false)}
+      />
+
+      <View style={styles.reviewBanner}>
+        <Text style={styles.reviewStep}>Step 1 — Capture fabric</Text>
+        <Text style={styles.reviewBody}>
+          {hasSellerLabel
+            ? 'Seller label saved. Scan fabric, review the capture, then analyze.'
+            : 'Scan or upload fabric, review the capture, then analyze.'}
+        </Text>
+      </View>
+
+      {hasSellerLabel ? (
+        <SellerLabelPill label={trimmedLabel} onRemove={onRemoveLabel} disabled={isAnalyzing} />
+      ) : null}
+
       <Pressable
         style={({ pressed }) => [pressed && styles.pressed, isAnalyzing && styles.disabled]}
         onPress={onDeviceScan}
@@ -119,7 +182,10 @@ export function ScanActions({
         </LinearGradient>
       </Pressable>
 
-      <Text style={styles.optionalLabel}>OR SCAN ANOTHER WAY</Text>
+      <View style={styles.optionalLabelRow}>
+        <Text style={styles.optionalLabel}>OR SCAN ANOTHER WAY</Text>
+        <BackupScanInfoButton onPress={() => setShowBackupInfo(true)} />
+      </View>
 
       {showPhoneCapture ? (
         <Pressable
@@ -146,8 +212,6 @@ export function ScanActions({
         <Tag size={18} color={BrandColors.primary} strokeWidth={2} />
         <Text style={styles.secondaryText}>Add Seller Label</Text>
       </Pressable>
-
-      {sellerLabelPill}
     </View>
   );
 }
@@ -157,6 +221,26 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 4,
   },
+  reviewBanner: {
+    backgroundColor: BrandColors.lavenderCard,
+    borderRadius: 14,
+    padding: 14,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+  },
+  reviewStep: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 12,
+    color: BrandColors.primaryDark,
+    letterSpacing: 0.2,
+  },
+  reviewBody: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: BrandColors.textMuted,
+  },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,13 +249,29 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 999,
   },
+  optionalLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
   optionalLabel: {
     fontFamily: Fonts.semiBold,
     fontSize: 11,
     letterSpacing: 1,
     color: BrandColors.textMuted,
     textAlign: 'center',
-    marginTop: 4,
+  },
+  infoButton: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.lavenderCard,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
   },
   outlineButton: {
     flexDirection: 'row',
@@ -218,7 +318,6 @@ const styles = StyleSheet.create({
   savedLabelRow: {
     alignItems: 'flex-start',
     gap: 6,
-    marginTop: -4,
   },
   savedLabelCaption: {
     fontFamily: Fonts.semiBold,

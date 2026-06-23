@@ -7,42 +7,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraGuide, type ViewfinderSource } from '@/components/scan/camera-guide';
 import { DeviceStatusCard } from '@/components/scan/device-status-card';
 import { ScanActions } from '@/components/scan/scan-actions';
-import { ScanConfirmSheet } from '@/components/scan/scan-confirm-sheet';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/hooks/use-fabric-capture';
 import { clearLastCaptureUri, setLastCaptureUri } from '@/lib/last-capture';
 import { getDeviceMockCaptureUri } from '@/lib/device-mock-capture';
 import { clearLastSellerLabel, getLastSellerLabel } from '@/lib/last-seller-label';
-
-type ScanConfirmKind = 'device' | 'upload' | 'phone';
-
-type ScanConfirmState = {
-  kind: ScanConfirmKind;
-  title: string;
-  message: string;
-  confirmLabel: string;
-};
-
-const SCAN_CONFIRM_COPY: Record<ScanConfirmKind, Omit<ScanConfirmState, 'kind'>> = {
-  device: {
-    title: 'IoT Scanner',
-    message: 'Place the scanner over the fabric.',
-    confirmLabel: 'Start Scan',
-  },
-  upload: {
-    title: 'Upload from Gallery',
-    message:
-      'Fabric results from gallery photos may be less accurate. For the best results, please use the IoT scanner device.',
-    confirmLabel: 'Upload Photo',
-  },
-  phone: {
-    title: 'Use Phone Camera',
-    message:
-      'Fabric results from phone photos may be less accurate. For the best results, please use the IoT scanner device.',
-    confirmLabel: 'Use Camera',
-  },
-};
+import { consumeFreshScan } from '@/lib/scan-fresh';
 
 const DEVICE_SCAN_DURATION_MS = 2500;
 
@@ -53,13 +24,19 @@ export default function ScanScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
   const [savedSellerLabel, setSavedSellerLabel] = useState<string | null>(null);
-  const [confirmSheet, setConfirmSheet] = useState<ScanConfirmState | null>(null);
   const [viewfinderSource, setViewfinderSource] = useState<ViewfinderSource>('iot');
   const [isDeviceScanning, setIsDeviceScanning] = useState(false);
+  const [isBackupCapture, setIsBackupCapture] = useState(false);
   const { captureFromCamera, captureFromGallery } = useFabricCapture();
 
   useFocusEffect(
     useCallback(() => {
+      if (consumeFreshScan()) {
+        setPreviewUri(null);
+        setViewfinderSource('iot');
+        setIsDeviceScanning(false);
+        setIsBackupCapture(false);
+      }
       setGuideVisible(true);
       setSavedSellerLabel(getLastSellerLabel());
     }, []),
@@ -72,27 +49,44 @@ export default function ScanScreen() {
       clearLastCaptureUri();
     }
 
+    const resultId = isBackupCapture ? '3' : '1';
+
     setIsAnalyzing(true);
     setTimeout(() => {
       setIsAnalyzing(false);
-      router.push('/results/1' as Href);
+      router.push(`/results/${resultId}` as Href);
     }, 1500);
   };
 
-  const handlePhoneScan = () => {
-    if (isAnalyzing) {
+  const handlePhoneScan = async () => {
+    if (isAnalyzing || isDeviceScanning) {
       return;
     }
 
-    setConfirmSheet({ kind: 'phone', ...SCAN_CONFIRM_COPY.phone });
+    if (Platform.OS === 'web') {
+      const photoUri = await captureFromCamera();
+      if (photoUri) {
+        setIsBackupCapture(true);
+        setPreviewUri(photoUri);
+      }
+      return;
+    }
+
+    setIsBackupCapture(true);
+    setViewfinderSource('phone');
   };
 
-  const handleUpload = () => {
-    if (isAnalyzing) {
+  const handleUpload = async () => {
+    if (isAnalyzing || isDeviceScanning) {
       return;
     }
 
-    setConfirmSheet({ kind: 'upload', ...SCAN_CONFIRM_COPY.upload });
+    const photoUri = await captureFromGallery();
+
+    if (photoUri) {
+      setIsBackupCapture(true);
+      setPreviewUri(photoUri);
+    }
   };
 
   const handleAnalyze = () => {
@@ -111,51 +105,23 @@ export default function ScanScreen() {
     runAnalysis(previewUri);
   };
 
-  const handleDeviceScan = () => {
-    if (isAnalyzing) {
-      return;
-    }
-
-    setConfirmSheet({ kind: 'device', ...SCAN_CONFIRM_COPY.device });
+  const startDeviceScan = () => {
+    setIsDeviceScanning(true);
+    setTimeout(() => {
+      void getDeviceMockCaptureUri().then((uri) => {
+        setIsDeviceScanning(false);
+        setIsBackupCapture(false);
+        setPreviewUri(uri);
+      });
+    }, DEVICE_SCAN_DURATION_MS);
   };
 
-  const handleConfirmSheet = async () => {
-    if (!confirmSheet) {
+  const handleDeviceScan = () => {
+    if (isAnalyzing || isDeviceScanning) {
       return;
     }
 
-    const { kind } = confirmSheet;
-    setConfirmSheet(null);
-
-    if (kind === 'device') {
-      setIsDeviceScanning(true);
-      setTimeout(() => {
-        void getDeviceMockCaptureUri().then((uri) => {
-          setIsDeviceScanning(false);
-          setPreviewUri(uri);
-        });
-      }, DEVICE_SCAN_DURATION_MS);
-      return;
-    }
-
-    if (kind === 'phone') {
-      if (Platform.OS === 'web') {
-        const photoUri = await captureFromCamera();
-        if (photoUri) {
-          setPreviewUri(photoUri);
-        }
-        return;
-      }
-
-      setViewfinderSource('phone');
-      return;
-    }
-
-    const photoUri = await captureFromGallery();
-
-    if (photoUri) {
-      setPreviewUri(photoUri);
-    }
+    startDeviceScan();
   };
 
   const handleTryAnother = () => {
@@ -166,6 +132,7 @@ export default function ScanScreen() {
     setPreviewUri(null);
     setViewfinderSource('iot');
     setIsDeviceScanning(false);
+    setIsBackupCapture(false);
   };
 
   const handleAddLabel = () => {
@@ -203,7 +170,12 @@ export default function ScanScreen() {
               previewUri={previewUri}
               source={viewfinderSource}
               isDeviceScanning={isDeviceScanning}
-              onCapture={setPreviewUri}
+              onCapture={(uri) => {
+                if (viewfinderSource === 'phone') {
+                  setIsBackupCapture(true);
+                }
+                setPreviewUri(uri);
+              }}
               guideVisible={guideVisible}
               onDismissGuide={() => setGuideVisible(false)}
               onShowGuide={() => setGuideVisible(true)}
@@ -225,15 +197,6 @@ export default function ScanScreen() {
           </ScrollView>
         </View>
       </View>
-
-      <ScanConfirmSheet
-        visible={confirmSheet !== null}
-        title={confirmSheet?.title ?? ''}
-        message={confirmSheet?.message ?? ''}
-        confirmLabel={confirmSheet?.confirmLabel ?? 'Continue'}
-        onConfirm={handleConfirmSheet}
-        onCancel={() => setConfirmSheet(null)}
-      />
     </View>
   );
 }
@@ -265,12 +228,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: BrandColors.white,
     letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    lineHeight: 18,
   },
   sheet: {
     flex: 1,

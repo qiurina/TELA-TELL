@@ -1,23 +1,22 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { FabricProfileCard } from '@/components/profile/fabric-profile-card';
-import { CompositionCard } from '@/components/results/composition-card';
+import { RecommendationsContent } from '@/components/recommendations/recommendations-content';
 import { ResultsScreenHeader } from '@/components/results/results-screen-header';
-import { ScanAnotherButton } from '@/components/results/scan-another-button';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getScanResult, resolveScanId } from '@/constants/mock-data';
+import { requestFreshScan } from '@/lib/scan-fresh';
 
-export default function FabricProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string | string[] }>();
+export default function RecommendationsScreen() {
+  const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
   const router = useRouter();
-  const result = getScanResult(resolveScanId(id));
+  const result = getScanResult(resolveScanId(scanId));
 
   if (!result) {
     return (
       <View style={styles.fallback}>
-        <Text style={styles.fallbackText}>Profile not found.</Text>
+        <Text style={styles.fallbackText}>Recommendations not found.</Text>
         <Pressable onPress={() => router.back()}>
           <Text style={styles.fallbackLink}>Go back</Text>
         </Pressable>
@@ -26,23 +25,22 @@ export default function FabricProfileScreen() {
   }
 
   const handleScanAnother = () => {
+    requestFreshScan();
     router.push('/(tabs)/scan' as Href);
   };
 
   return (
     <View style={styles.root}>
-      <ResultsScreenHeader title="Fabric Profile" onBack={() => router.back()} />
+      <ResultsScreenHeader title="Recommendations" onBack={() => router.back()} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
-        <FabricProfileCard
-          profile={result.profile}
-          sustainabilityScore={result.sustainability.score}
-          sustainabilityRating={result.sustainability.rating}
+        <RecommendationsContent
+          detectedCompositions={result.compositions ?? []}
+          recommendations={result.recommendations}
+          onScanAnother={handleScanAnother}
         />
-        <CompositionCard compositions={result.compositions ?? []} />
-        <ScanAnotherButton onPress={handleScanAnother} />
       </ScrollView>
     </View>
   );
@@ -57,7 +55,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 40,
-    gap: 20,
     flexGrow: 1,
   },
   fallback: {

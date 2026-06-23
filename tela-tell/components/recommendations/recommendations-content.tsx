@@ -1,5 +1,7 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ScanConfirmSheet } from '@/components/scan/scan-confirm-sheet';
 import {
   Frown,
   Heart,
@@ -92,6 +94,11 @@ function RecycledAwarenessSection({ message }: { message: string }) {
 }
 
 function GarmentActionsSection({ reuse }: { reuse: ScanRecommendations['reuse'] }) {
+  const [activeAction, setActiveAction] = useState<{
+    label: string;
+    message: string;
+  } | null>(null);
+
   const actions = [
     { key: 'resale', label: 'Resale', icon: Tag, message: reuse.resale },
     { key: 'donate', label: 'Donate', icon: Heart, message: reuse.donate },
@@ -100,6 +107,16 @@ function GarmentActionsSection({ reuse }: { reuse: ScanRecommendations['reuse'] 
 
   return (
     <View style={styles.section}>
+      <ScanConfirmSheet
+        visible={activeAction !== null}
+        variant="info"
+        title={activeAction?.label ?? ''}
+        message={activeAction?.message ?? ''}
+        confirmLabel="Got it"
+        onConfirm={() => setActiveAction(null)}
+        onCancel={() => setActiveAction(null)}
+      />
+
       <SectionLabel title="WHAT TO DO WITH THIS GARMENT" />
       <View style={styles.actionRow}>
         {actions.map((action) => {
@@ -109,7 +126,7 @@ function GarmentActionsSection({ reuse }: { reuse: ScanRecommendations['reuse'] 
             <Pressable
               key={action.key}
               style={({ pressed }) => [styles.actionTile, pressed && styles.pressed]}
-              onPress={() => Alert.alert(action.label, action.message)}
+              onPress={() => setActiveAction({ label: action.label, message: action.message })}
               accessibilityRole="button"
               accessibilityLabel={action.label}>
               <Icon size={22} color={BrandColors.primary} strokeWidth={2} />

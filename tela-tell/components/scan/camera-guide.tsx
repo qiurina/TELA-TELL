@@ -142,7 +142,6 @@ export function CameraGuide({
             <Image source={{ uri: previewUri! }} style={styles.captureThumb} contentFit="cover" />
             <View style={styles.captureTextBlock}>
               <Text style={styles.captureTitle}>Fabric captured</Text>
-              <Text style={styles.captureSubtitle}>Ready to analyze</Text>
             </View>
           </View>
         ) : null}
@@ -165,16 +164,6 @@ export function CameraGuide({
           </View>
         ) : null}
       </View>
-
-      {hasPreview ? (
-        <Text style={styles.previewHint}>
-          Review your fabric photo, then tap Analyze Fabric.
-        </Text>
-      ) : showIoTFeed ? (
-        <Text style={styles.previewHint}>
-          Tap Scan with Device when ready.
-        </Text>
-      ) : null}
     </View>
   );
 }
@@ -333,11 +322,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: BrandColors.text,
   },
-  captureSubtitle: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-  },
   shutterWrap: {
     position: 'absolute',
     bottom: 20,
@@ -367,13 +351,5 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: BrandColors.white,
-  },
-  previewHint: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: BrandColors.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: 8,
   },
 });

@@ -1,22 +1,22 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ViewfinderSource } from '@/components/scan/camera-guide';
-import { Info, X } from '@/components/ui/lucide-icons';
+import { CircleCheck, Info, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 
-const IOT_SCAN_TIPS = [
-  'Place fabric flat under the IoT scanner lens',
-  'Use even lighting on the material',
-  'Tap Scan with Device when the fabric is in frame',
-  'Phone and gallery uploads are backup options only',
+const IOT_QUALITY_CHECKLIST = [
+  'Lay fabric flat',
+  'Use IoT scanner',
+  'Fill the frame',
+  'Even lighting',
 ];
 
-const PHONE_SCAN_TIPS = [
-  'Place fabric flat inside the frame',
-  'Use even lighting on the material',
-  'Hold steady, then tap the capture button',
-  'Results may be less accurate than the IoT scanner',
+const PHONE_QUALITY_CHECKLIST = [
+  'Lay fabric flat',
+  'Fill the frame',
+  'Even lighting',
+  'Hold steady before capture',
 ];
 
 type ScanGuideFloatProps = {
@@ -27,7 +27,9 @@ type ScanGuideFloatProps = {
 };
 
 export function ScanGuideFloat({ visible, source = 'iot', onDismiss, onShow }: ScanGuideFloatProps) {
-  const scanTips = source === 'phone' ? PHONE_SCAN_TIPS : IOT_SCAN_TIPS;
+  const isIot = source === 'iot' || source === 'phone-permission';
+  const checklist = isIot ? IOT_QUALITY_CHECKLIST : PHONE_QUALITY_CHECKLIST;
+
   return (
     <>
       {!visible ? (
@@ -35,7 +37,7 @@ export function ScanGuideFloat({ visible, source = 'iot', onDismiss, onShow }: S
           style={styles.infoButton}
           onPress={onShow}
           accessibilityRole="button"
-          accessibilityLabel="Show scanning tips">
+          accessibilityLabel="Show scan quality checklist">
           <Info size={16} color={BrandColors.white} strokeWidth={2.5} />
         </Pressable>
       ) : null}
@@ -43,19 +45,19 @@ export function ScanGuideFloat({ visible, source = 'iot', onDismiss, onShow }: S
       {visible ? (
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Scanning tips</Text>
+            <Text style={styles.cardTitle}>Scan quality checklist</Text>
             <Pressable
               onPress={onDismiss}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Dismiss tips">
+              accessibilityLabel="Dismiss checklist">
               <X size={16} color={BrandColors.textMuted} strokeWidth={2.5} />
             </Pressable>
           </View>
-          {scanTips.map((tip) => (
-            <View key={tip} style={styles.tipRow}>
-              <View style={styles.bullet} />
-              <Text style={styles.tip}>{tip}</Text>
+          {checklist.map((item) => (
+            <View key={item} style={styles.checkRow}>
+              <CircleCheck size={16} color={BrandColors.primary} strokeWidth={2.25} />
+              <Text style={styles.checkText}>{item}</Text>
             </View>
           ))}
         </View>
@@ -101,23 +103,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: BrandColors.text,
   },
-  tipRow: {
+  checkRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 8,
   },
-  bullet: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: BrandColors.primary,
-    marginTop: 6,
-  },
-  tip: {
+  checkText: {
     flex: 1,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.medium,
     fontSize: 12,
-    lineHeight: 18,
-    color: BrandColors.textMuted,
+    lineHeight: 17,
+    color: BrandColors.text,
   },
 });

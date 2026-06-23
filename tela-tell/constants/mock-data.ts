@@ -1,5 +1,10 @@
 export type SustainabilityRating = 'green' | 'yellow' | 'red';
 
+export type SustainabilityFactor = {
+  text: string;
+  positive: boolean;
+};
+
 export type FabricComposition = {
   material: string;
   percentage: number;
@@ -55,6 +60,7 @@ export type ScanResult = {
     rating: SustainabilityRating;
     label: string;
     score: number;
+    factors: SustainabilityFactor[];
   };
   mislabeling: {
     detected: boolean;
@@ -81,6 +87,11 @@ export const SCAN_RESULTS: ScanResult[] = [
       rating: 'green',
       label: 'Good',
       score: 7,
+      factors: [
+        { text: 'Natural cotton is the dominant fiber', positive: true },
+        { text: 'Contains polyester synthetic blend', positive: false },
+        { text: 'Suitable for everyday reuse and donation', positive: true },
+      ],
     },
     mislabeling: {
       detected: true,
@@ -160,6 +171,11 @@ export const SCAN_RESULTS: ScanResult[] = [
       rating: 'green',
       label: 'Good',
       score: 8,
+      factors: [
+        { text: 'High linen content — breathable natural fiber', positive: true },
+        { text: 'Low synthetic content in blend', positive: true },
+        { text: 'Wrinkles easily — moderate care impact', positive: false },
+      ],
     },
     mislabeling: {
       detected: false,
@@ -222,6 +238,66 @@ export const SCAN_RESULTS: ScanResult[] = [
         resale: 'Popular for summer vintage markets.',
         donate: 'Good for warm-weather clothing drives.',
         upcycle: 'Use for napkins, runners, or home decor.',
+      },
+    },
+  },
+  {
+    id: '3',
+    dominantFabric: 'Mixed fibers',
+    compositions: [
+      { material: 'Cotton', percentage: 38 },
+      { material: 'Polyester', percentage: 35 },
+      { material: 'Rayon', percentage: 27 },
+    ],
+    confidence: 45,
+    scannedAt: 'Today, just now',
+    sustainability: {
+      rating: 'yellow',
+      label: 'Moderate',
+      score: 5,
+      factors: [
+        { text: 'Blend composition unclear at low confidence', positive: false },
+        { text: 'Contains synthetic fibers', positive: false },
+        { text: 'Rescan recommended before reuse decisions', positive: true },
+      ],
+    },
+    mislabeling: {
+      detected: false,
+      title: 'Label Check Passed',
+      message: 'No seller label was provided or the label matches the detected composition.',
+    },
+    profile: {
+      texture: 'Unclear',
+      weave: 'Unknown',
+      breathability: 'Moderate',
+      durability: 'Moderate',
+      stretch: 'Low',
+      careInstructions: [
+        { text: 'Rescan under even lighting before relying on care guidance', recommended: true },
+        { text: 'Cold wash if fiber type is uncertain', recommended: true },
+        { text: 'High-heat drying', recommended: false },
+      ],
+      useCases: ['Rescan recommended', 'Handle with care until verified'],
+    },
+    recommendations: {
+      garmentPurposes: [
+        {
+          purpose: 'Everyday wear',
+          suitability: 'Fair',
+          note: 'Low scan confidence — verify fabric before committing to a garment plan.',
+        },
+      ],
+      ecoAlternatives: [
+        {
+          name: 'Recycled cotton blend',
+          description: 'Choose verified natural-dominant blends when composition is uncertain.',
+        },
+      ],
+      recycledAwareness: 'Rescan with the IoT device for a clearer fiber estimate before buying alternatives.',
+      reuse: {
+        resale: 'Verify fabric type before listing.',
+        donate: 'Only donate after a clearer scan or label check.',
+        upcycle: 'Test a small swatch before cutting into projects.',
       },
     },
   },

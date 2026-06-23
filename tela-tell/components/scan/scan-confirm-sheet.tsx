@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { X } from '@/components/ui/lucide-icons';
@@ -15,6 +16,7 @@ type ScanConfirmSheetProps = {
   message: string;
   confirmLabel: string;
   cancelLabel?: string;
+  variant?: 'confirm' | 'info';
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -25,13 +27,31 @@ export function ScanConfirmSheet({
   message,
   confirmLabel,
   cancelLabel = 'Cancel',
+  variant = 'confirm',
   onConfirm,
   onCancel,
 }: ScanConfirmSheetProps) {
+  const isInfoOnly = variant === 'info';
   const insets = useSafeAreaInsets();
 
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'web') {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+  }, [visible]);
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+      accessibilityViewIsModal>
       <View style={styles.root}>
         <Pressable
           style={styles.backdrop}
@@ -54,15 +74,20 @@ export function ScanConfirmSheet({
             <Text style={styles.message}>{message}</Text>
           </View>
 
-          <View style={styles.actions}>
-            <Pressable
-              style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
-              onPress={onCancel}>
-              <Text style={styles.cancelText}>{cancelLabel}</Text>
-            </Pressable>
+          <View style={isInfoOnly ? styles.infoActions : styles.actions}>
+            {!isInfoOnly ? (
+              <Pressable
+                style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
+                onPress={onCancel}>
+                <Text style={styles.cancelText}>{cancelLabel}</Text>
+              </Pressable>
+            ) : null}
 
             <Pressable
-              style={({ pressed }) => [styles.confirmWrap, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                isInfoOnly ? styles.infoConfirmWrap : styles.confirmWrap,
+                pressed && styles.pressed,
+              ]}
               onPress={onConfirm}>
               <LinearGradient
                 colors={[...primaryGradient]}
@@ -133,6 +158,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  infoActions: {
+    alignItems: 'stretch',
+  },
+  infoConfirmWrap: {
+    width: '100%',
   },
   cancelButton: {
     flex: 1,
