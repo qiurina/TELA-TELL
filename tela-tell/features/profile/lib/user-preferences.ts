@@ -112,7 +112,7 @@ export function getUserPreferencesSummary(): string | null {
   }
 
   if (preferences.preferredFabrics.length > 0) {
-    parts.push(`${preferences.preferredFabrics.length} preferred fabrics`);
+    parts.push(`${preferences.preferredFabrics.length} preferred fiber types`);
   }
 
   if ((preferences.dressingContexts ?? []).length > 0) {

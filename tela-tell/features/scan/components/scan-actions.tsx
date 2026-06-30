@@ -1,17 +1,16 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
-import { Camera, ChevronLeft, ImagePlus, Info, ScanLine, Settings, Tag, X } from '@/components/ui/lucide-icons';
+import { Camera, ChevronLeft, ImagePlus, Info, ScanLine, X } from '@/components/ui/lucide-icons';
 import { BACKUP_SCAN_DISCLAIMER } from '@/data/scans/analysis';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
 import { getScanMode } from '@/features/scan/lib/scan-session';
 import {
-  getUserPreferencesSummary,
   hasActiveUserPreferences,
 } from '@/features/profile/lib/user-preferences';
 
@@ -30,6 +29,7 @@ type ScanActionsProps = {
   onRemoveLabel?: () => void;
   onOpenPreferences?: () => void;
   isAnalyzing?: boolean;
+  isDeviceScanning?: boolean;
 };
 
 function SellerLabelPill({
@@ -72,6 +72,82 @@ function BackupScanInfoButton({ onPress }: { onPress: () => void }) {
   );
 }
 
+function CompactCaptureButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+}: {
+  icon: ReactNode;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.compactButton,
+        pressed && styles.pressed,
+        disabled && styles.disabled,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}>
+      {icon}
+      <Text style={styles.compactButtonText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function OptionalLinks({
+  hasSellerLabel,
+  hasPreferences,
+  onAddLabel,
+  onOpenPreferences,
+  disabled,
+}: {
+  hasSellerLabel: boolean;
+  hasPreferences: boolean;
+  onAddLabel: () => void;
+  onOpenPreferences?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <View style={styles.optionalBlock}>
+      <Text style={styles.optionalHeading}>Optional</Text>
+      <View style={styles.optionalLinksRow}>
+        <Pressable
+          onPress={onAddLabel}
+          disabled={disabled}
+          hitSlop={4}
+          accessibilityRole="button"
+          accessibilityLabel={hasSellerLabel ? 'Update seller label' : 'Add seller label'}>
+          <Text style={styles.optionalLink}>
+            {hasSellerLabel ? 'Update seller label' : '+ Seller label'}
+          </Text>
+        </Pressable>
+
+        {onOpenPreferences ? (
+          <>
+            <Text style={styles.optionalDot}>·</Text>
+            <Pressable
+              onPress={onOpenPreferences}
+              disabled={disabled}
+              hitSlop={4}
+              accessibilityRole="button"
+              accessibilityLabel="Open preferences">
+              <Text style={styles.optionalLink}>
+                {hasPreferences ? 'Preferences' : 'Set preferences'}
+              </Text>
+            </Pressable>
+          </>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 export function ScanActions({
   hasPreview,
   showPhoneCapture = false,
@@ -85,79 +161,65 @@ export function ScanActions({
   onRemoveLabel,
   onOpenPreferences,
   isAnalyzing,
+  isDeviceScanning,
 }: ScanActionsProps) {
   const [showBackupInfo, setShowBackupInfo] = useState(false);
-  const [preferencesSummary, setPreferencesSummary] = useState<string | null>(() => {
-    const parts: string[] = [];
-    if (getScanMode() === 'dual') {
-      parts.push('Two swatches');
-    }
-    const profile = getUserPreferencesSummary();
-    if (profile) {
-      parts.push(profile);
-    }
-    return parts.length > 0 ? parts.join(' · ') : null;
-  });
   const [hasPreferences, setHasPreferences] = useState(
     () => hasActiveUserPreferences() || getScanMode() === 'dual',
   );
   const [isDualScanMode, setIsDualScanMode] = useState(() => getScanMode() === 'dual');
   const trimmedLabel = savedSellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
+  const isCaptureBusy = Boolean(isAnalyzing || isDeviceScanning);
 
   useFocusEffect(
     useCallback(() => {
-      const parts: string[] = [];
-      if (getScanMode() === 'dual') {
-        parts.push('Two swatches');
-      }
-      const profile = getUserPreferencesSummary();
-      if (profile) {
-        parts.push(profile);
-      }
-      setPreferencesSummary(parts.length > 0 ? parts.join(' · ') : null);
       setHasPreferences(hasActiveUserPreferences() || getScanMode() === 'dual');
       setIsDualScanMode(getScanMode() === 'dual');
     }, []),
   );
 
-  const preferencesButton = onOpenPreferences ? (
-    <View style={styles.preferencesBlock}>
-      <Pressable
-        style={({ pressed }) => [styles.preferencesButton, pressed && styles.pressed]}
-        onPress={onOpenPreferences}
-        disabled={isAnalyzing}
-        accessibilityRole="button"
-        accessibilityLabel="Open user preferences">
-        <Settings size={18} color={BrandColors.primary} strokeWidth={2} />
-        <View style={styles.preferencesTextBlock}>
-          <Text style={styles.preferencesText}>
-            {hasPreferences ? 'Update User Preferences' : 'User Preferences'}
-          </Text>
-          {preferencesSummary ? (
-            <Text style={styles.preferencesSummary} numberOfLines={2}>
-              {preferencesSummary}
-            </Text>
-          ) : (
-            <Text style={styles.preferencesHint}>
-              Skin tone, allergies, preferred fabrics, dressing guide
-            </Text>
-          )}
-        </View>
-      </Pressable>
-    </View>
-  ) : null;
+  const captureAlternatives = (
+    <>
+      <View style={styles.optionalLabelRow}>
+        <Text style={styles.optionalLabel}>OR SCAN ANOTHER WAY</Text>
+        <BackupScanInfoButton onPress={() => setShowBackupInfo(true)} />
+      </View>
+
+      <View style={styles.compactRow}>
+        {showPhoneCapture ? (
+          <CompactCaptureButton
+            icon={<Camera size={18} color={BrandColors.primary} strokeWidth={2} />}
+            label="Phone"
+            onPress={onPhoneScan}
+            disabled={isCaptureBusy}
+          />
+        ) : null}
+        <CompactCaptureButton
+          icon={<ImagePlus size={18} color={BrandColors.primary} strokeWidth={2} />}
+          label="Gallery"
+          onPress={onUpload}
+          disabled={isCaptureBusy}
+        />
+      </View>
+    </>
+  );
+
+  const optionalLinks = (
+    <OptionalLinks
+      hasSellerLabel={hasSellerLabel}
+      hasPreferences={hasPreferences}
+      onAddLabel={onAddLabel}
+      onOpenPreferences={onOpenPreferences}
+      disabled={isCaptureBusy}
+    />
+  );
 
   if (hasPreview) {
     return (
       <View style={styles.container}>
         <View style={styles.reviewBanner}>
           <Text style={styles.reviewStep}>Step 2 — Review & analyze</Text>
-          <Text style={styles.reviewBody}>
-            {isDualScanMode
-              ? 'Mark a box around each fabric swatch, then analyze both regions.'
-              : 'Confirm the capture looks correct before running fabric analysis.'}
-          </Text>
         </View>
 
         {hasSellerLabel ? (
@@ -191,22 +253,14 @@ export function ScanActions({
         <Pressable
           style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
           onPress={onTryAnother}
-          disabled={isAnalyzing}>
+          disabled={isAnalyzing}
+          accessibilityRole="button"
+          accessibilityLabel="Try another capture">
           <ChevronLeft size={18} color={BrandColors.primary} strokeWidth={2.5} />
           <Text style={styles.outlineText}>Try Another Capture</Text>
         </Pressable>
 
-        <Pressable
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-          onPress={onAddLabel}
-          disabled={isAnalyzing}>
-          <Tag size={18} color={BrandColors.primary} strokeWidth={2} />
-          <Text style={styles.secondaryText}>
-            {hasSellerLabel ? 'Update Seller Label' : 'Add Seller Label'}
-          </Text>
-        </Pressable>
-
-        {preferencesButton}
+        {optionalLinks}
       </View>
     );
   }
@@ -225,133 +279,58 @@ export function ScanActions({
 
       <View style={styles.reviewBanner}>
         <Text style={styles.reviewStep}>Step 1 — Capture fabric</Text>
-        <Text style={styles.reviewBody}>
-          {isDualScanMode
-            ? 'Two-swatches mode is on. Capture both fabrics in one photo — you will mark regions next.'
-            : hasSellerLabel
-              ? 'Seller label saved. Scan fabric, review the capture, then analyze.'
-              : 'Scan or upload fabric, review the capture, then analyze.'}
-        </Text>
       </View>
-
-      {isDualScanMode ? (
-        <View style={styles.dualModeBanner}>
-          <Text style={styles.dualModeTitle}>Two swatches mode</Text>
-          <Text style={styles.dualModeBody}>
-            After capture, the main button becomes Mark Regions & Analyze.
-          </Text>
-        </View>
-      ) : null}
 
       {hasSellerLabel ? (
         <SellerLabelPill label={trimmedLabel} onRemove={onRemoveLabel} disabled={isAnalyzing} />
       ) : null}
 
       <Pressable
-        style={({ pressed }) => [pressed && styles.pressed, isAnalyzing && styles.disabled]}
+        style={({ pressed }) => [pressed && styles.pressed, isCaptureBusy && styles.disabled]}
         onPress={onDeviceScan}
-        disabled={isAnalyzing}>
+        disabled={isCaptureBusy}>
         <LinearGradient
           colors={[...primaryGradient]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={[styles.primaryButton, primaryButtonShadow()]}>
-          {isAnalyzing ? (
+          {isDeviceScanning ? (
             <ActivityIndicator color={BrandColors.white} />
           ) : (
             <ScanLine size={18} color={BrandColors.white} strokeWidth={2.5} />
           )}
           <Text style={styles.primaryText}>
-            {isAnalyzing ? 'Analyzing...' : 'Scan with Device'}
+            {isDeviceScanning ? 'Capturing...' : 'Capture with Device'}
           </Text>
         </LinearGradient>
       </Pressable>
 
-      <View style={styles.optionalLabelRow}>
-        <Text style={styles.optionalLabel}>OR SCAN ANOTHER WAY</Text>
-        <BackupScanInfoButton onPress={() => setShowBackupInfo(true)} />
-      </View>
-
-      {showPhoneCapture ? (
-        <Pressable
-          style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
-          onPress={onPhoneScan}
-          disabled={isAnalyzing}>
-          <Camera size={18} color={BrandColors.primary} strokeWidth={2} />
-          <Text style={styles.outlineText}>Use Phone Camera</Text>
-        </Pressable>
-      ) : null}
-
-      <Pressable
-        style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
-        onPress={onUpload}
-        disabled={isAnalyzing}>
-        <ImagePlus size={18} color={BrandColors.primary} strokeWidth={2} />
-        <Text style={styles.outlineText}>Upload from Gallery</Text>
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-        onPress={onAddLabel}
-        disabled={isAnalyzing}>
-        <Tag size={18} color={BrandColors.primary} strokeWidth={2} />
-        <Text style={styles.secondaryText}>Add Seller Label</Text>
-      </Pressable>
-
-      {preferencesButton}
+      {captureAlternatives}
+      {optionalLinks}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
-    marginTop: 4,
+    gap: 10,
+    marginTop: 1,
   },
   reviewBanner: {
-    backgroundColor: BrandColors.lavenderCard,
-    borderRadius: 14,
-    padding: 14,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
+    alignItems: 'center',
   },
   reviewStep: {
     fontFamily: Fonts.semiBold,
     fontSize: 12,
-    color: BrandColors.primaryDark,
+    color: BrandColors.textMuted,
     letterSpacing: 0.2,
-  },
-  reviewBody: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.textMuted,
-  },
-  dualModeBanner: {
-    backgroundColor: BrandColors.lavender,
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: BrandColors.primary,
-  },
-  dualModeTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 12,
-    color: BrandColors.primaryDark,
-  },
-  dualModeBody: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.textMuted,
+    textAlign: 'center',
   },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     paddingVertical: 14,
     borderRadius: 999,
   },
@@ -360,7 +339,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 4,
+    marginTop: 2,
   },
   optionalLabel: {
     fontFamily: Fonts.semiBold,
@@ -379,6 +358,57 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BrandColors.border,
   },
+  compactRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  compactButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: BrandColors.white,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: BrandColors.primary,
+  },
+  compactButtonText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: BrandColors.primary,
+  },
+  optionalBlock: {
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 2,
+  },
+  optionalHeading: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    color: BrandColors.textMuted,
+    textTransform: 'uppercase',
+  },
+  optionalLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  optionalLink: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: BrandColors.primary,
+  },
+  optionalDot: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    color: BrandColors.textMuted,
+  },
   outlineButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -390,30 +420,15 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: BrandColors.primary,
   },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: BrandColors.lavender,
-    paddingVertical: 14,
-    borderRadius: 999,
-    marginTop: 4,
-  },
-  primaryText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.white,
-  },
   outlineText: {
     fontFamily: Fonts.semiBold,
     fontSize: 15,
     color: BrandColors.primary,
   },
-  secondaryText: {
+  primaryText: {
     fontFamily: Fonts.semiBold,
     fontSize: 15,
-    color: BrandColors.primary,
+    color: BrandColors.white,
   },
   pressed: {
     opacity: 0.88,
@@ -449,40 +464,5 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
     fontSize: 13,
     color: BrandColors.primary,
-  },
-  preferencesBlock: {
-    marginTop: 4,
-  },
-  preferencesButton: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: BrandColors.white,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-  },
-  preferencesTextBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  preferencesText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.primary,
-  },
-  preferencesHint: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.textMuted,
-  },
-  preferencesSummary: {
-    fontFamily: Fonts.medium,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.textMuted,
   },
 });

@@ -36,7 +36,7 @@ export function ScanConfidenceBanner({
           </View>
         </View>
         <Text style={styles.lowConfidenceDetected}>
-          Best estimate: {dominantFabric} ({confidence}%)
+          Primary material: {dominantFabric} ({confidence}%)
         </Text>
       </View>
     );
@@ -61,7 +61,7 @@ export function ScanConfidenceBanner({
           level === 'moderate' && styles.bannerModerate,
         ]}>
         <View style={styles.topRow}>
-          <Text style={styles.dominantLabel}>Dominant detection</Text>
+          <Text style={styles.dominantLabel}>Primary material</Text>
           <View style={styles.confidencePill}>
             <Text style={styles.confidenceValue}>{confidence}%</Text>
           </View>

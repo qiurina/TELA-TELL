@@ -59,14 +59,6 @@ export function FabricReferenceComparison({
 
       <Text style={styles.detectedLine}>{confidenceLine}</Text>
       <Text style={styles.compareHint}>Compare your fabric to the reference image above.</Text>
-
-      {!compact ? (
-        <View style={styles.traitsBox}>
-          <Text style={styles.traitsLabel}>What to look for</Text>
-          <Text style={styles.traitsText}>{reference.lookFor}</Text>
-          <Text style={styles.traitsNote}>{reference.textureNote}</Text>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -132,33 +124,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     fontSize: 13,
     lineHeight: 19,
-    color: BrandColors.textMuted,
-  },
-  traitsBox: {
-    gap: 4,
-    backgroundColor: BrandColors.lavenderCard,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-  },
-  traitsLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: BrandColors.textMuted,
-    textTransform: 'uppercase',
-  },
-  traitsText: {
-    fontFamily: Fonts.medium,
-    fontSize: 13,
-    lineHeight: 19,
-    color: BrandColors.text,
-  },
-  traitsNote: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
     color: BrandColors.textMuted,
   },
 });

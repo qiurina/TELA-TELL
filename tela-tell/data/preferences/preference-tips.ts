@@ -1,5 +1,5 @@
 import type { FabricComposition } from '@/data/scans/mock-data';
-import { ALLERGY_DISCLAIMER, getAllergyAlert } from '@/data/fabrics/fabric-allergies';
+import { getAllergyAlert } from '@/data/fabrics/fabric-allergies';
 import {
   getDressingContextLabel,
   getOccasionWeatherGuide,
@@ -27,7 +27,7 @@ function buildAllergyClearedTip(
     return null;
   }
 
-  return `${alert.message} ${ALLERGY_DISCLAIMER}`;
+  return alert.message;
 }
 
 function buildDressingContextTip(
@@ -55,12 +55,12 @@ function buildDressingContextTip(
     );
 
     if (matchesBest) {
-      return `${getDressingContextLabel(dressingContext)}: this fabric fits your dressing plan — ${guide.bestChoices[0]?.reason ?? 'a strong match for this occasion.'}`;
+      return `${getDressingContextLabel(dressingContext)}: this material fits your dressing plan — ${guide.bestChoices[0]?.reason ?? 'a strong match for this occasion.'}`;
     }
 
     if (matchesAvoid) {
       const avoid = guide.avoid[0];
-      return `${getDressingContextLabel(dressingContext)}: this fabric may not be ideal — ${avoid?.fabric ?? 'consider'} ${avoid?.reason?.toLowerCase() ?? 'another option'}. Try ${guide.bestChoices[0]?.fabric ?? 'linen or cotton'}.`;
+      return `${getDressingContextLabel(dressingContext)}: this material may not be ideal — ${avoid?.fabric ?? 'consider'} ${avoid?.reason?.toLowerCase() ?? 'another option'}. Try ${guide.bestChoices[0]?.fabric ?? 'linen or cotton'}.`;
     }
   }
 
@@ -89,7 +89,7 @@ function buildPreferredFabricTip(
   );
 
   if (match) {
-    return `Matches your preferred fabric type (${match}) — a good find if you shop for ${preferredFabrics.join(', ')}.`;
+    return `Matches your preferred fiber type (${match}) — a good find if you shop for ${preferredFabrics.join(', ')}.`;
   }
 
   return `You usually prefer ${preferredFabrics.join(', ')} — this scan is a different fiber mix to compare.`;

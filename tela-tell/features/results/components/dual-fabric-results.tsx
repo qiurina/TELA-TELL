@@ -29,7 +29,7 @@ function CompositionBars({ region }: { region: DualSwatchRegion }) {
             <Text style={styles.barLabel}>{item.material}</Text>
             <View style={[styles.barTrack, { backgroundColor: barStyle.track }]}>
               <LinearGradient
-                colors={[...barStyle.gradient]}
+                colors={barStyle.gradient as [string, string, ...string[]]}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={[styles.barFill, { width: `${item.percentage}%` }]}

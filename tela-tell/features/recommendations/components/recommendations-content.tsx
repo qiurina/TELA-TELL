@@ -41,7 +41,7 @@ function DetectedTag({ compositions }: { compositions?: FabricComposition[] }) {
     <View style={[styles.detectedTag, faintCardShadow()]}>
       <ScanLine size={18} color={BrandColors.primary} strokeWidth={2.5} />
       <Text style={styles.detectedText}>
-        Detected:{' '}
+        Fiber mix:{' '}
         {items.map((item, index) => (
           <Text key={`${item.material}-${item.percentage}`}>
             {index > 0 ? ', ' : ''}

@@ -58,10 +58,10 @@ export const SYSTEM_LIMITATIONS = [
 ] as const;
 
 export const BACKUP_SCAN_DISCLAIMER =
-  'Fabric results from phone photos or gallery uploads may be less accurate. For the best results, please use the IoT scanner device.';
+  'Scan results from phone photos or gallery uploads may be less accurate. For the best results, please use the IoT scanner device.';
 
 export const COMPOSITION_DISCLAIMER =
-  "These percentages represent the model's visual confidence scores, not laboratory-verified composition percentages.";
+  "These fiber percentages represent the model's visual confidence scores, not laboratory-verified composition.";
 
 /** Fibers at or above this share count as "significant" for blend detection (Revision 12). */
 export const BLEND_SIGNIFICANT_MIN_PERCENT = 15;
@@ -122,8 +122,8 @@ export function getBlendNotice(
     confidence !== undefined && getConfidenceLevel(confidence) === 'low';
 
   return {
-    title: 'Multiple fabric types detected.',
-    body: `This garment may contain a blend of ${fiberPhrase}. Results reflect visual texture analysis only.`,
+    title: 'Multiple fiber types detected.',
+    body: `This fabric may contain a blend of ${fiberPhrase}. Results reflect visual texture analysis only.`,
     caution: isLowConfidence ? 'Blend estimate is uncertain — rescan recommended.' : undefined,
   };
 }

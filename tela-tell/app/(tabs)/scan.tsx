@@ -208,7 +208,8 @@ export default function ScanScreen() {
               onAddLabel={handleAddLabel}
               onRemoveLabel={handleRemoveLabel}
               onOpenPreferences={handleOpenPreferences}
-              isAnalyzing={isAnalyzing || isDeviceScanning}
+              isAnalyzing={isAnalyzing}
+              isDeviceScanning={isDeviceScanning}
             />
           </ScrollView>
         </View>
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 32,
-    gap: 20,
+    gap: 12,
     flexGrow: 1,
   },
 });

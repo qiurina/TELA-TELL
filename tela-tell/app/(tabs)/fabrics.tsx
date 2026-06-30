@@ -3,11 +3,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FabricCatalog } from '@/features/fabrics/components/fabric-catalog';
-import { Layers } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { faintCardShadow } from '@/constants/shadows';
-import { FABRIC_REGISTRY } from '@/data/fabrics/fabrics';
 
 export default function FabricsScreen() {
   const insets = useSafeAreaInsets();
@@ -24,7 +21,7 @@ export default function FabricsScreen() {
       <View style={[styles.page, { paddingTop: insets.top + 16 }]}>
         <View style={styles.topRow}>
           <View style={styles.headerText}>
-            <Text style={styles.title}>Fabrics</Text>
+            <Text style={styles.title}>Fiber guide</Text>
           </View>
         </View>
 
@@ -32,16 +29,6 @@ export default function FabricsScreen() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.sheetContent}>
-            <View style={[styles.introCard, faintCardShadow()]}>
-              <Layers size={22} color={BrandColors.primary} strokeWidth={2} />
-              <View style={styles.introText}>
-                <Text style={styles.introTitle}>{FABRIC_REGISTRY.length} supported fabrics</Text>
-                <Text style={styles.introBody}>
-                  Quick reference for what to look for when browsing ukay or thrift finds.
-                </Text>
-              </View>
-            </View>
-
             <FabricCatalog />
           </ScrollView>
         </View>

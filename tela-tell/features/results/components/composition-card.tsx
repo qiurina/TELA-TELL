@@ -30,7 +30,7 @@ export function CompositionCard({ compositions, confidence }: CompositionCardPro
       <ScanConfirmSheet
         visible={showDisclaimer}
         variant="info"
-        title="Estimated composition"
+        title="Estimated fiber composition"
         message={COMPOSITION_DISCLAIMER}
         confirmLabel="Got it"
         onConfirm={() => setShowDisclaimer(false)}
@@ -38,13 +38,13 @@ export function CompositionCard({ compositions, confidence }: CompositionCardPro
       />
 
       <View style={styles.headerRow}>
-        <Text style={styles.sectionLabel}>ESTIMATED FABRIC COMPOSITION</Text>
+        <Text style={styles.sectionLabel}>ESTIMATED FIBER COMPOSITION</Text>
         <Pressable
           style={styles.infoButton}
           onPress={() => setShowDisclaimer(true)}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="About estimated composition">
+          accessibilityLabel="About estimated fiber composition">
           <Info size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
         </Pressable>
       </View>
@@ -79,7 +79,7 @@ export function CompositionCard({ compositions, confidence }: CompositionCardPro
               </View>
               <View style={[styles.track, { backgroundColor: barStyle.track }]}>
                 <LinearGradient
-                  colors={[...barStyle.gradient]}
+                  colors={barStyle.gradient as [string, string, ...string[]]}
                   start={{ x: 0, y: 0.5 }}
                   end={{ x: 1, y: 0.5 }}
                   style={[styles.fill, { width: `${item.percentage}%` }]}

@@ -1,4 +1,4 @@
-import { Asset } from 'expo-asset';
+import { Image } from 'react-native';
 
 export const DEVICE_MOCK_CAPTURE = require('@/assets/images/testfabric.jpg');
 
@@ -9,12 +9,7 @@ export async function getDeviceMockCaptureUri(): Promise<string> {
     return cachedUri;
   }
 
-  const asset = Asset.fromModule(DEVICE_MOCK_CAPTURE);
-
-  if (!asset.downloaded) {
-    await asset.downloadAsync();
-  }
-
-  cachedUri = asset.localUri ?? asset.uri;
-  return cachedUri;
+  const { uri } = Image.resolveAssetSource(DEVICE_MOCK_CAPTURE);
+  cachedUri = uri;
+  return uri;
 }

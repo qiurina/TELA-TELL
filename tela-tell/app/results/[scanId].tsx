@@ -128,22 +128,17 @@ export default function ResultsScreen() {
           </>
         )}
 
+        <StatusBadges sustainability={result.sustainability} />
+
         {!isDualDemo ? (
           <SellerComparisonCard
             sellerLabel={sellerLabel}
             detectedDominant={result.dominantFabric}
             compositions={result.compositions ?? []}
-            confidence={result.confidence}
             mislabelingDetected={hasSellerLabel && result.mislabeling.detected}
             onAddLabel={handleAddLabel}
           />
         ) : null}
-
-        <StatusBadges
-          hasSellerLabel={hasSellerLabel}
-          sustainability={result.sustainability}
-          mislabeling={result.mislabeling}
-        />
 
         <ResultsExploreActions
           onProfile={handleViewProfile}

@@ -61,7 +61,7 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             route="fabrics"
             currentRoute={currentRoute}
             onPress={() => navigation.navigate('fabrics')}
-            label="Fabrics">
+            label="Fibers">
             <Layers
               size={24}
               color={currentRoute === 'fabrics' ? BrandColors.primary : BrandColors.textMuted}

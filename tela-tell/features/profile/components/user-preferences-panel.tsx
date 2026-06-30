@@ -51,7 +51,7 @@ const UNDERTONE_OPTIONS: { value: SkinUndertone; label: string }[] = [
 ];
 
 const SCAN_MODE_OPTIONS: { value: ScanMode; label: string }[] = [
-  { value: 'single', label: 'Single fabric' },
+  { value: 'single', label: 'Single swatch' },
   { value: 'dual', label: 'Two swatches' },
 ];
 
@@ -312,7 +312,7 @@ export function UserPreferencesPanel({
         <>
           <Text style={styles.panelTitle}>Your profile</Text>
           <Text style={styles.panelHint}>
-            Set once — personalizes color tips, allergy alerts, and fabric guidance across scans.
+            Set once — personalizes color tips, fiber sensitivity alerts, and scan guidance.
           </Text>
         </>
       ) : null}
@@ -351,8 +351,8 @@ export function UserPreferencesPanel({
       />
 
       <FabricToggleSection
-        title="Fabric allergies"
-        hint="Select fabrics you are sensitive to"
+        title="Fiber sensitivities"
+        hint="Fiber types you react to or want to avoid"
         fabrics={fabricNames}
         selected={prefs.sensitiveFabrics}
         variant="allergy"
@@ -364,8 +364,8 @@ export function UserPreferencesPanel({
       />
 
       <FabricToggleSection
-        title="Preferred fabrics"
-        hint="Fabrics you like or prefer"
+        title="Preferred fiber types"
+        hint="Materials you like or usually shop for"
         fabrics={fabricNames}
         selected={prefs.preferredFabrics}
         variant="preferred"

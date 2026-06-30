@@ -12,31 +12,27 @@ type ExploreCardProps = {
   label: string;
   subtitle: string;
   onPress: () => void;
-  fullWidth?: boolean;
 };
 
-function ExploreCard({ icon: Icon, label, subtitle, onPress, fullWidth = false }: ExploreCardProps) {
+function ExploreCard({ icon: Icon, label, subtitle, onPress }: ExploreCardProps) {
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        fullWidth && styles.cardFullWidth,
-        faintCardShadow(),
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.card, faintCardShadow(), pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}>
       <View style={styles.iconWrap}>
-        <Icon size={18} color={BrandColors.primary} strokeWidth={2.25} />
+        <Icon size={16} color={BrandColors.primary} strokeWidth={2.25} />
       </View>
       <View style={styles.cardText}>
-        <Text style={styles.cardLabel}>{label}</Text>
+        <Text style={styles.cardLabel} numberOfLines={2}>
+          {label}
+        </Text>
         <Text style={styles.cardSubtitle} numberOfLines={2}>
           {subtitle}
         </Text>
       </View>
-      <ChevronRight size={16} color={BrandColors.textMuted} strokeWidth={2.25} />
+      <ChevronRight size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
     </Pressable>
   );
 }
@@ -61,15 +57,13 @@ export function ResultsExploreActions({
       <View style={styles.cardRow}>
         <ExploreCard icon={Layers} label="Profile" subtitle="Traits & care" onPress={onProfile} />
         <ExploreCard icon={Leaf} label="Eco tips" subtitle="Reuse ideas" onPress={onEcoTips} />
+        <ExploreCard
+          icon={Sparkles}
+          label="Personalized Insights"
+          subtitle="Colors, fit & allergies"
+          onPress={onPersonalizedInsights}
+        />
       </View>
-
-      <ExploreCard
-        icon={Sparkles}
-        label="Personalized Insights"
-        subtitle="Colors, fit & allergies"
-        onPress={onPersonalizedInsights}
-        fullWidth
-      />
 
       <ScanAnotherButton onPress={onScanAgain} />
     </View>
@@ -89,29 +83,22 @@ const styles = StyleSheet.create({
   },
   cardRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   card: {
     flex: 1,
     backgroundColor: BrandColors.white,
-    borderRadius: 16,
-    padding: 12,
-    gap: 10,
-    minHeight: 118,
+    borderRadius: 14,
+    padding: 10,
+    gap: 8,
+    minHeight: 108,
     borderWidth: 1,
     borderColor: BrandColors.border,
   },
-  cardFullWidth: {
-    flex: undefined,
-    width: '100%',
-    minHeight: 88,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: BrandColors.lavenderCard,
@@ -123,13 +110,14 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     fontFamily: Fonts.semiBold,
-    fontSize: 14,
+    fontSize: 12,
+    lineHeight: 16,
     color: BrandColors.primaryDark,
   },
   cardSubtitle: {
     fontFamily: Fonts.regular,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 10,
+    lineHeight: 14,
     color: BrandColors.textMuted,
   },
   pressed: {

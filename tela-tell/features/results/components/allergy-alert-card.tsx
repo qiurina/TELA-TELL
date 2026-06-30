@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { TriangleAlert } from '@/components/ui/lucide-icons';
+import { CircleCheck, TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
-import { ALLERGY_DISCLAIMER, type AllergyAlert } from '@/data/fabrics/fabric-allergies';
+import type { AllergyAlert } from '@/data/fabrics/fabric-allergies';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 
@@ -12,6 +12,7 @@ type AllergyAlertCardProps = {
 
 export function AllergyAlertCard({ alert }: AllergyAlertCardProps) {
   const isConflict = alert.conflictDetected;
+  const alternativeNames = alert.alternatives.map((item) => item.name).join(' · ');
 
   return (
     <View
@@ -21,55 +22,40 @@ export function AllergyAlertCard({ alert }: AllergyAlertCardProps) {
         isConflict ? styles.cardConflict : styles.cardClear,
       ]}>
       <View style={styles.headerRow}>
-        <TriangleAlert
-          size={20}
-          color={isConflict ? '#b45309' : BrandColors.primary}
-          strokeWidth={2.5}
-        />
+        {isConflict ? (
+          <TriangleAlert size={20} color="#b45309" strokeWidth={2.5} />
+        ) : (
+          <CircleCheck size={20} color="#15803d" strokeWidth={2.25} />
+        )}
         <Text style={[styles.title, isConflict && styles.titleConflict]}>
-          {isConflict ? 'Allergy alert' : 'Allergy check'}
+          {isConflict ? 'Sensitivity alert' : 'All clear'}
         </Text>
       </View>
 
-      <Text style={[styles.message, isConflict && styles.messageConflict]}>{alert.message}</Text>
-
       {isConflict ? (
         <>
-          <Text style={styles.listTitle}>Hypoallergenic alternatives</Text>
-          <View style={styles.list}>
-            {alert.alternatives.map((item) => (
-              <View key={item.name} style={styles.altRow}>
-                <Text style={styles.altBullet}>●</Text>
-                <Text style={styles.altText}>
-                  <Text style={styles.altName}>{item.name}</Text>
-                  {' — '}
-                  {item.note}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <Text style={styles.messageConflict}>{alert.message}</Text>
+          {alternativeNames ? <Text style={styles.altNames}>{alternativeNames}</Text> : null}
         </>
       ) : null}
-
-      <Text style={styles.disclaimer}>{ALLERGY_DISCLAIMER}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    gap: 12,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.5,
+    gap: 6,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
   },
   cardConflict: {
     backgroundColor: '#fffbeb',
-    borderColor: '#fcd34d',
+    borderColor: '#fde68a',
   },
   cardClear: {
-    backgroundColor: BrandColors.lavenderCard,
-    borderColor: BrandColors.border,
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
   },
   headerRow: {
     flexDirection: 'row',
@@ -77,58 +63,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontFamily: Fonts.bold,
-    fontSize: 16,
-    color: BrandColors.primaryDark,
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: '#15803d',
   },
   titleConflict: {
     color: '#b45309',
   },
-  message: {
-    fontFamily: Fonts.medium,
-    fontSize: 14,
-    lineHeight: 21,
-    color: BrandColors.text,
-  },
   messageConflict: {
     fontFamily: Fonts.semiBold,
-    color: '#92400e',
-  },
-  listTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 12,
-    letterSpacing: 0.3,
-    color: BrandColors.textMuted,
-    textTransform: 'uppercase',
-  },
-  list: {
-    gap: 10,
-  },
-  altRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  altBullet: {
-    fontFamily: Fonts.bold,
-    fontSize: 12,
-    lineHeight: 19,
-    color: '#16a34a',
-  },
-  altText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
     fontSize: 13,
     lineHeight: 19,
-    color: BrandColors.text,
+    color: '#92400e',
   },
-  altName: {
-    fontFamily: Fonts.semiBold,
-  },
-  disclaimer: {
-    fontFamily: Fonts.regular,
-    fontSize: 11,
-    lineHeight: 16,
-    color: BrandColors.textMuted,
+  altNames: {
+    fontFamily: Fonts.medium,
+    fontSize: 12,
+    lineHeight: 17,
+    color: BrandColors.primaryDark,
   },
 });

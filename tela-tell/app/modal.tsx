@@ -95,12 +95,12 @@ export default function SellerLabelModal() {
             keyboardShouldPersistTaps="handled"
             bounces={false}>
             <Text style={styles.intro}>
-              Enter what the seller claimed the fabric is made of. TELA-TELL will compare it against
+              Enter the fiber content the seller claimed. TELA-TELL will compare it against your
               scan results.
             </Text>
 
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>DECLARED FABRIC LABEL</Text>
+              <Text style={styles.sectionLabel}>DECLARED FIBER LABEL</Text>
               <View style={[styles.card, faintCardShadow()]}>
                 <TextInput
                   style={styles.input}
@@ -127,33 +127,29 @@ export default function SellerLabelModal() {
                         selected && styles.chipSelected,
                         pressed && styles.chipPressed,
                       ]}
-                      onPress={() => setSellerLabel(example)}>
+                      onPress={() => {
+                        if (selected) {
+                          setSellerLabel('');
+                          clearLastSellerLabel();
+                        } else {
+                          setSellerLabel(example);
+                        }
+                      }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={
+                        selected ? `Deselect ${example}` : `Select ${example}`
+                      }>
                       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
                         {example}
                       </Text>
+                      {selected ? (
+                        <X size={14} color={BrandColors.primary} strokeWidth={2.5} />
+                      ) : null}
                     </Pressable>
                   );
                 })}
               </View>
-
-              {hasLabel ? (
-                <View style={styles.badgeRow}>
-                  <Text style={styles.badgeLabel}>Selected</Text>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{trimmedLabel}</Text>
-                    <Pressable
-                      onPress={() => {
-                        setSellerLabel('');
-                        clearLastSellerLabel();
-                      }}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel="Remove label">
-                      <X size={14} color={BrandColors.primary} strokeWidth={2.5} />
-                    </Pressable>
-                  </View>
-                </View>
-              ) : null}
             </View>
 
             <Pressable
@@ -257,6 +253,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 11,
     borderRadius: 14,
@@ -280,34 +280,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   chipTextSelected: {
-    color: BrandColors.primary,
-  },
-  badgeRow: {
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  badgeLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: BrandColors.textMuted,
-    textTransform: 'uppercase',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: BrandColors.lavenderCard,
-    borderRadius: 999,
-    paddingLeft: 12,
-    paddingRight: 8,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: BrandColors.primary,
-  },
-  badgeText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 13,
     color: BrandColors.primary,
   },
   saveButton: {

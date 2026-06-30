@@ -131,7 +131,7 @@ export function getSkinToneColorGuidance(
   const base = SKIN_TONE_GUIDANCE[skinTone];
   const fabric = resolveSupportedFabric(dominantFabric, compositions);
   const cleanedLabel = dominantFabric.replace(/\s*dominant\s*/i, '').trim();
-  const detectedFabricLabel = fabric ?? (cleanedLabel || 'this fabric');
+  const detectedFabricLabel = fabric ?? (cleanedLabel || 'this material');
 
   let recommended = [...base.recommended];
   let avoid = [...base.avoid];

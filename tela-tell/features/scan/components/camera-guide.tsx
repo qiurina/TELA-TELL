@@ -137,15 +137,6 @@ export function CameraGuide({
           />
         ) : null}
 
-        {hasPreview ? (
-          <View style={styles.captureCard}>
-            <Image source={{ uri: previewUri! }} style={styles.captureThumb} contentFit="cover" />
-            <View style={styles.captureTextBlock}>
-              <Text style={styles.captureTitle}>Fabric captured</Text>
-            </View>
-          </View>
-        ) : null}
-
         {showPhoneCamera ? (
           <View style={styles.shutterWrap}>
             <Pressable
@@ -292,35 +283,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2.5,
     borderRightWidth: 2.5,
     borderBottomRightRadius: 6,
-  },
-  captureCard: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 16,
-    zIndex: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: BrandColors.white,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
-  },
-  captureThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-  },
-  captureTextBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  captureTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.text,
   },
   shutterWrap: {
     position: 'absolute',

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Eye } from '@/components/ui/lucide-icons';
@@ -42,13 +43,23 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
         ) : null}
       </View>
 
-      <View style={styles.detailRow}>
-        <Eye size={14} color={BrandColors.primary} strokeWidth={2} />
-        <Text style={styles.detailLabel}>Look for</Text>
-      </View>
-      <Text style={styles.detailText}>{reference.lookFor}</Text>
+      <View style={styles.cardBody}>
+        <Image
+          source={reference.image}
+          style={styles.referenceImage}
+          contentFit="cover"
+          accessibilityLabel={`${fabric} reference swatch`}
+        />
 
-      <Text style={styles.textureText}>{reference.textureNote}</Text>
+        <View style={styles.copyColumn}>
+          <View style={styles.detailRow}>
+            <Eye size={14} color={BrandColors.primary} strokeWidth={2} />
+            <Text style={styles.detailLabel}>Look for</Text>
+          </View>
+          <Text style={styles.detailText}>{reference.lookFor}</Text>
+          <Text style={styles.textureText}>{reference.textureNote}</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -57,7 +68,7 @@ export function FabricCatalog() {
   const grouped = CATEGORY_ORDER.map((category) => ({
     category,
     fabrics: FABRIC_REGISTRY.filter((fabric) => fabric.category === category).map(
-      (fabric) => fabric.name,
+      (fabric) => fabric.name as SupportedFabric,
     ),
   }));
 
@@ -68,7 +79,7 @@ export function FabricCatalog() {
           <Text style={styles.sectionLabel}>{category.toUpperCase()}</Text>
           <View style={styles.list}>
             {fabrics.map((fabric) => (
-              <FabricCard key={fabric} fabric={fabric} />
+              <FabricCard key={fabric} fabric={fabric as SupportedFabric} />
             ))}
           </View>
         </View>
@@ -99,7 +110,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: BrandColors.border,
-    gap: 8,
+    gap: 12,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -107,6 +118,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     flexWrap: 'wrap',
+  },
+  cardBody: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  referenceImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.lavenderCard,
+  },
+  copyColumn: {
+    flex: 1,
+    gap: 6,
   },
   fabricName: {
     fontFamily: Fonts.bold,
@@ -128,7 +156,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 2,
   },
   detailLabel: {
     fontFamily: Fonts.semiBold,

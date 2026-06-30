@@ -356,7 +356,7 @@ export function getDetectedFiberName(
   dominantFabric: string,
   compositions?: FabricComposition[],
 ): string {
-  return resolvePrimaryFiber(dominantFabric, compositions) ?? 'this fabric';
+  return resolvePrimaryFiber(dominantFabric, compositions) ?? 'this material';
 }
 
 export function getEcoGuidance(
@@ -378,7 +378,7 @@ export function formatDetectedLabel(dominantFabric: string): string {
     return trimmed;
   }
 
-  return `Detected: ${trimmed}`;
+  return `Primary material: ${trimmed}`;
 }
 
 export function getEcoAlternativeText(alternative: EcoAlternative): string {

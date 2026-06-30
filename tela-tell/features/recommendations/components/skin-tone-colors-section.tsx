@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { BrandColors } from '@/constants/brand';
 import type { SkinToneColorGuidance } from '@/data/preferences/skin-tone-colors';
+import { tokenizeColorString, type ColorToken } from '@/data/preferences/color-swatches';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 
@@ -9,153 +10,153 @@ type SkinToneColorsSectionProps = {
   guidance: SkinToneColorGuidance;
 };
 
-export function SkinToneColorsSection({ guidance }: SkinToneColorsSectionProps) {
+function ColorSwatchChip({ token, variant }: { token: ColorToken; variant: 'recommend' | 'avoid' }) {
+  const isLight =
+    token.hex === '#FFFFFF' ||
+    token.hex === '#FAFAFA' ||
+    token.hex === '#F5F5F0' ||
+    token.hex === '#FFFDD0' ||
+    token.hex === '#FFFFE0';
+
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionLabel}>COLORS FOR YOUR SKIN TONE</Text>
-      <Text style={styles.sectionSubtitle}>
-        Rule-based color guidance — not a medical or beauty diagnosis
+    <View style={styles.swatchChip}>
+      <View
+        style={[
+          styles.swatchDot,
+          { backgroundColor: token.hex },
+          isLight && styles.swatchDotLight,
+          variant === 'avoid' && styles.swatchDotAvoid,
+        ]}
+      />
+      <Text style={[styles.swatchLabel, variant === 'avoid' && styles.swatchLabelAvoid]} numberOfLines={2}>
+        {token.label}
       </Text>
+    </View>
+  );
+}
 
-      <View style={[styles.card, faintCardShadow()]}>
-        <Text style={styles.fabricLine}>{guidance.detectedFabricLabel} detected</Text>
-        <Text style={styles.skinToneLine}>
-          You selected:{' '}
-          {guidance.skinTone === 'Deep Dark' ? 'Deep / Dark' : guidance.skinTone} skin tone
-          {guidance.skinUndertone ? ` · ${guidance.skinUndertone} undertone` : ''}
+function SwatchGrid({ tokens, variant }: { tokens: ColorToken[]; variant: 'recommend' | 'avoid' }) {
+  return (
+    <View style={styles.swatchGrid}>
+      {tokens.map((token) => (
+        <ColorSwatchChip key={`${variant}-${token.label}`} token={token} variant={variant} />
+      ))}
+    </View>
+  );
+}
+
+export function SkinToneColorsSection({ guidance }: SkinToneColorsSectionProps) {
+  const avoidTokens = guidance.avoid.flatMap((item) => tokenizeColorString(item));
+
+  return (
+    <View style={[styles.card, faintCardShadow()]}>
+      <View style={styles.metaRow}>
+        <Text style={styles.metaPrimary}>{guidance.detectedFabricLabel}</Text>
+        <Text style={styles.metaSecondary}>
+          {guidance.skinTone === 'Deep Dark' ? 'Deep / Dark' : guidance.skinTone}
+          {guidance.skinUndertone ? ` · ${guidance.skinUndertone}` : ''}
         </Text>
+      </View>
 
-        <Text style={styles.listTitle}>Recommended colors for you</Text>
-        <View style={styles.list}>
-          {guidance.recommended.map((group) => (
-            <View key={group.category} style={styles.recommendedRow}>
-              <Text style={styles.bullet}>●</Text>
-              <Text style={styles.recommendedText}>
-                <Text style={styles.recommendedCategory}>{group.category}</Text>
-                {' — '}
-                {group.colors}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        <Text style={styles.listTitle}>Colors to avoid</Text>
-        <View style={styles.list}>
-          {guidance.avoid.map((color) => (
-            <View key={color} style={styles.avoidRow}>
-              <Text style={styles.avoidBullet}>●</Text>
-              <Text style={styles.avoidText}>{color}</Text>
-            </View>
-          ))}
-        </View>
-
-        {guidance.fabricNote ? (
-          <View style={styles.fabricNoteBox}>
-            <Text style={styles.fabricNoteText}>{guidance.fabricNote}</Text>
+      <View style={styles.block}>
+        <Text style={styles.blockTitle}>Recommended</Text>
+        {guidance.recommended.map((group) => (
+          <View key={group.category} style={styles.group}>
+            <Text style={styles.groupLabel}>{group.category}</Text>
+            <SwatchGrid tokens={tokenizeColorString(group.colors)} variant="recommend" />
           </View>
-        ) : null}
+        ))}
+      </View>
+
+      <View style={styles.divider} />
+
+      <View style={styles.block}>
+        <Text style={styles.blockTitle}>Avoid near face</Text>
+        <SwatchGrid tokens={avoidTokens} variant="avoid" />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {
-    gap: 12,
-  },
-  sectionLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: BrandColors.textMuted,
-  },
-  sectionSubtitle: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: BrandColors.textMuted,
-    marginTop: -6,
-  },
   card: {
-    gap: 12,
+    gap: 14,
     backgroundColor: BrandColors.white,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: BrandColors.border,
+    borderColor: BrandColors.borderLight,
   },
-  fabricLine: {
+  metaRow: {
+    gap: 2,
+  },
+  metaPrimary: {
     fontFamily: Fonts.semiBold,
     fontSize: 15,
-    color: BrandColors.primaryDark,
+    color: BrandColors.text,
   },
-  skinToneLine: {
+  metaSecondary: {
     fontFamily: Fonts.medium,
-    fontSize: 14,
-    color: BrandColors.text,
-  },
-  listTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 12,
-    letterSpacing: 0.3,
+    fontSize: 13,
     color: BrandColors.textMuted,
+  },
+  block: {
+    gap: 10,
+  },
+  blockTitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
-    marginTop: 4,
-  },
-  list: {
-    gap: 8,
-  },
-  recommendedRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  bullet: {
-    fontFamily: Fonts.bold,
-    fontSize: 12,
-    lineHeight: 19,
-    color: '#16a34a',
-  },
-  recommendedText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
-    color: BrandColors.text,
-  },
-  recommendedCategory: {
-    fontFamily: Fonts.semiBold,
-    color: BrandColors.text,
-  },
-  avoidRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  avoidBullet: {
-    fontFamily: Fonts.bold,
-    fontSize: 12,
-    lineHeight: 19,
-    color: '#dc2626',
-  },
-  avoidText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
     color: BrandColors.textMuted,
   },
-  fabricNoteBox: {
-    backgroundColor: BrandColors.lavenderCard,
-    borderRadius: 12,
-    padding: 12,
+  group: {
+    gap: 8,
+  },
+  groupLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    color: BrandColors.text,
+  },
+  swatchGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  swatchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingRight: 4,
+    maxWidth: '48%',
+    flexGrow: 1,
+  },
+  swatchDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  swatchDotLight: {
     borderColor: BrandColors.border,
   },
-  fabricNoteText: {
+  swatchDotAvoid: {
+    borderColor: '#fca5a5',
+    borderWidth: 1.5,
+  },
+  swatchLabel: {
+    flex: 1,
     fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 15,
+    color: BrandColors.text,
+  },
+  swatchLabelAvoid: {
     color: BrandColors.textMuted,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: BrandColors.borderLight,
   },
 });

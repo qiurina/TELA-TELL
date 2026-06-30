@@ -27,7 +27,7 @@ type ScanGuideFloatProps = {
 };
 
 export function ScanGuideFloat({ visible, source = 'iot', onDismiss, onShow }: ScanGuideFloatProps) {
-  const isIot = source === 'iot' || source === 'phone-permission';
+  const isIot = source === 'iot';
   const checklist = isIot ? IOT_QUALITY_CHECKLIST : PHONE_QUALITY_CHECKLIST;
 
   return (
@@ -43,24 +43,32 @@ export function ScanGuideFloat({ visible, source = 'iot', onDismiss, onShow }: S
       ) : null}
 
       {visible ? (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Scan quality checklist</Text>
-            <Pressable
-              onPress={onDismiss}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss checklist">
-              <X size={16} color={BrandColors.textMuted} strokeWidth={2.5} />
-            </Pressable>
-          </View>
-          {checklist.map((item) => (
-            <View key={item} style={styles.checkRow}>
-              <CircleCheck size={16} color={BrandColors.primary} strokeWidth={2.25} />
-              <Text style={styles.checkText}>{item}</Text>
+        <>
+          <Pressable
+            style={styles.backdrop}
+            onPress={onDismiss}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss scan quality checklist"
+          />
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Scan quality checklist</Text>
+              <Pressable
+                onPress={onDismiss}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss checklist">
+                <X size={16} color="rgba(255,255,255,0.85)" strokeWidth={2.5} />
+              </Pressable>
             </View>
-          ))}
-        </View>
+            {checklist.map((item) => (
+              <View key={item} style={styles.checkRow}>
+                <CircleCheck size={16} color="rgba(255,255,255,0.9)" strokeWidth={2.25} />
+                <Text style={styles.checkText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        </>
       ) : null}
     </>
   );
@@ -79,18 +87,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
   card: {
     position: 'absolute',
     left: 12,
     right: 12,
     bottom: 72,
     zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
     borderRadius: 16,
     padding: 14,
     gap: 8,
     borderWidth: 1,
-    borderColor: BrandColors.borderLight,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -101,7 +114,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily: Fonts.semiBold,
     fontSize: 13,
-    color: BrandColors.text,
+    color: BrandColors.white,
   },
   checkRow: {
     flexDirection: 'row',
@@ -113,6 +126,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 12,
     lineHeight: 17,
-    color: BrandColors.text,
+    color: 'rgba(255, 255, 255, 0.92)',
   },
 });

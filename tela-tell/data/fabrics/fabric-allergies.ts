@@ -15,9 +15,6 @@ export type AllergyAlert = {
   alternatives: HypoallergenicAlternative[];
 };
 
-export const ALLERGY_DISCLAIMER =
-  'General fabric information only — not medical advice. Consult a doctor for allergies.';
-
 const DEFAULT_ALTERNATIVES: HypoallergenicAlternative[] = [
   { name: 'Cotton', note: 'Naturally hypoallergenic and breathable for everyday wear' },
   { name: 'Linen', note: 'Airy weave with low irritation in hot, humid weather' },
@@ -74,7 +71,7 @@ function formatDetectedFabric(dominantFabric: string, compositions: FabricCompos
   }
 
   const cleaned = dominantFabric.replace(/\s*dominant\s*/i, '').trim();
-  return cleaned || 'this fabric';
+  return cleaned || 'this material';
 }
 
 function fabricMatchesScan(fabric: SupportedFabric, dominantFabric: string, top: string): boolean {
@@ -106,7 +103,7 @@ export function getAllergyAlert(
       sensitiveFabric: sensitiveFabrics[0],
       detectedFabric,
       conflictDetected: false,
-      message: 'No sensitive fabric conflict detected in this scan.',
+      message: 'No conflict',
       alternatives: getAlternatives(sensitiveFabrics[0]),
     };
   }
@@ -115,7 +112,7 @@ export function getAllergyAlert(
     sensitiveFabric: matchedSensitive,
     detectedFabric,
     conflictDetected: true,
-    message: `${detectedFabric} detected — you marked this as a fabric you are sensitive to.`,
+    message: `${detectedFabric} detected`,
     alternatives: getAlternatives(matchedSensitive),
   };
 }

@@ -78,7 +78,7 @@ export default function UserPreferencesScreen() {
           bounces={false}>
           <Text style={styles.intro}>
             Set your profile once — Tela-Tell personalizes allergy alerts, color suggestions, and
-            fabric guidance on every scan.
+            personalized scan guidance on every scan.
           </Text>
 
           <UserPreferencesPanel key={formKey} embedded />

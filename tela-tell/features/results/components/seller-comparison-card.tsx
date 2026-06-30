@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Tag } from '@/components/ui/lucide-icons';
-import { MISLABEL_ALERT_MIN_CONFIDENCE } from '@/data/scans/analysis';
+import { CircleCheck, Tag, TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
@@ -11,27 +10,14 @@ type SellerComparisonCardProps = {
   sellerLabel: string | null;
   detectedDominant: string;
   compositions: FabricComposition[];
-  confidence: number;
   mislabelingDetected: boolean;
   onAddLabel?: () => void;
 };
-
-function getMismatchFootnote(
-  mislabelingDetected: boolean,
-  confidence: number,
-): string {
-  if (mislabelingDetected) {
-    return `Possible mismatch flagged at ${confidence}% confidence (threshold: ${MISLABEL_ALERT_MIN_CONFIDENCE}%). This is guidance only — not proof of mislabeling.`;
-  }
-
-  return `Possible mislabel: None. Detection confidence: ${confidence}%.`;
-}
 
 export function SellerComparisonCard({
   sellerLabel,
   detectedDominant,
   compositions,
-  confidence,
   mislabelingDetected,
   onAddLabel,
 }: SellerComparisonCardProps) {
@@ -43,11 +29,13 @@ export function SellerComparisonCard({
 
   if (!hasSellerLabel) {
     return (
-      <View style={[styles.card, faintCardShadow()]}>
+      <View style={[styles.card, styles.cardNeutral, faintCardShadow()]}>
         <View style={styles.header}>
           <Tag size={16} color={BrandColors.primary} strokeWidth={2} />
           <Text style={styles.headerTitle}>Seller label comparison</Text>
         </View>
+
+        <Text style={styles.neutralPrompt}>Add seller label to compare</Text>
 
         {onAddLabel ? (
           <Pressable
@@ -63,11 +51,25 @@ export function SellerComparisonCard({
     );
   }
 
+  const isConflict = mislabelingDetected;
+  const cardTitle = isConflict ? 'MISLABELED' : 'NOT MISLABELED';
+
   return (
-    <View style={[styles.card, faintCardShadow()]}>
+    <View
+      style={[
+        styles.card,
+        isConflict ? styles.cardConflict : styles.cardClear,
+        faintCardShadow(),
+      ]}>
       <View style={styles.header}>
-        <Tag size={16} color={BrandColors.primary} strokeWidth={2} />
-        <Text style={styles.headerTitle}>Seller label comparison</Text>
+        {isConflict ? (
+          <TriangleAlert size={16} color="#dc2626" strokeWidth={2.5} />
+        ) : (
+          <CircleCheck size={16} color="#15803d" strokeWidth={2.25} />
+        )}
+        <Text style={[styles.headerTitle, isConflict ? styles.headerConflict : styles.headerClear]}>
+          {cardTitle}
+        </Text>
       </View>
 
       <View style={styles.compareRow}>
@@ -77,15 +79,11 @@ export function SellerComparisonCard({
         </View>
         <View style={styles.divider} />
         <View style={styles.compareCol}>
-          <Text style={styles.compareLabel}>DETECTED</Text>
+          <Text style={styles.compareLabel}>DETECTED MATERIAL</Text>
           <Text style={styles.compareValue}>{detectedDominant}</Text>
           <Text style={styles.compareSub}>{detectedSummary}</Text>
         </View>
       </View>
-
-      <Text style={styles.footnote}>
-        {getMismatchFootnote(mislabelingDetected, confidence)}
-      </Text>
     </View>
   );
 }
@@ -96,8 +94,18 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     borderWidth: 1,
+  },
+  cardNeutral: {
     borderColor: BrandColors.borderLight,
     backgroundColor: BrandColors.white,
+  },
+  cardConflict: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+  },
+  cardClear: {
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
   },
   header: {
     flexDirection: 'row',
@@ -106,8 +114,20 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Fonts.semiBold,
-    fontSize: 14,
+    fontSize: 12,
+    letterSpacing: 0.8,
     color: BrandColors.text,
+  },
+  headerConflict: {
+    color: '#dc2626',
+  },
+  headerClear: {
+    color: '#15803d',
+  },
+  neutralPrompt: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: BrandColors.textMuted,
   },
   addButton: {
     flexDirection: 'row',
@@ -154,12 +174,6 @@ const styles = StyleSheet.create({
   divider: {
     width: 1,
     backgroundColor: BrandColors.borderLight,
-  },
-  footnote: {
-    fontFamily: Fonts.regular,
-    fontSize: 11,
-    lineHeight: 16,
-    color: BrandColors.textMuted,
   },
   pressed: {
     opacity: 0.88,

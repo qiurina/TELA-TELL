@@ -78,7 +78,7 @@ export function getDressingContextFits(
       context,
       label,
       status: 'okay' as const,
-      summary: `${detectedLabel} can work for ${label.toLowerCase()}, but other fabrics may feel better.`,
+      summary: `${detectedLabel} can work for ${label.toLowerCase()}, but other materials may feel better.`,
       alternatives: guide.bestChoices.slice(0, 3),
     };
   });
