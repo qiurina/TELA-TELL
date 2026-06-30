@@ -4,16 +4,18 @@ import { useCallback, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CameraGuide, type ViewfinderSource } from '@/components/scan/camera-guide';
-import { DeviceStatusCard } from '@/components/scan/device-status-card';
-import { ScanActions } from '@/components/scan/scan-actions';
+import { CameraGuide, type ViewfinderSource } from '@/features/scan/components/camera-guide';
+import { DeviceStatusCard } from '@/features/scan/components/device-status-card';
+import { ScanActions } from '@/features/scan/components/scan-actions';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { useFabricCapture } from '@/hooks/use-fabric-capture';
-import { clearLastCaptureUri, setLastCaptureUri } from '@/lib/last-capture';
-import { getDeviceMockCaptureUri } from '@/lib/device-mock-capture';
-import { clearLastSellerLabel, getLastSellerLabel } from '@/lib/last-seller-label';
-import { consumeFreshScan } from '@/lib/scan-fresh';
+import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
+import { clearLastCaptureUri, setLastCaptureUri } from '@/features/scan/lib/last-capture';
+import { getDeviceMockCaptureUri } from '@/features/scan/lib/device-mock-capture';
+import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
+import { clearRegionSelection } from '@/features/scan/lib/region-selection';
+import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
+import { getScanMode } from '@/features/scan/lib/scan-session';
 
 const DEVICE_SCAN_DURATION_MS = 2500;
 
@@ -36,6 +38,7 @@ export default function ScanScreen() {
         setViewfinderSource('iot');
         setIsDeviceScanning(false);
         setIsBackupCapture(false);
+        clearRegionSelection();
       }
       setGuideVisible(true);
       setSavedSellerLabel(getLastSellerLabel());
@@ -49,7 +52,7 @@ export default function ScanScreen() {
       clearLastCaptureUri();
     }
 
-    const resultId = isBackupCapture ? '3' : '1';
+    const resultId = getScanMode() === 'dual' ? 'dual' : isBackupCapture ? '3' : '1';
 
     setIsAnalyzing(true);
     setTimeout(() => {
@@ -102,6 +105,13 @@ export default function ScanScreen() {
       return;
     }
 
+    if (getScanMode() === 'dual') {
+      setLastCaptureUri(previewUri);
+      clearRegionSelection();
+      router.push('/region-select' as Href);
+      return;
+    }
+
     runAnalysis(previewUri);
   };
 
@@ -133,10 +143,15 @@ export default function ScanScreen() {
     setViewfinderSource('iot');
     setIsDeviceScanning(false);
     setIsBackupCapture(false);
+    clearRegionSelection();
   };
 
   const handleAddLabel = () => {
     router.push('/modal');
+  };
+
+  const handleOpenPreferences = () => {
+    router.push('/user-preferences');
   };
 
   const handleRemoveLabel = () => {
@@ -192,6 +207,7 @@ export default function ScanScreen() {
               onTryAnother={handleTryAnother}
               onAddLabel={handleAddLabel}
               onRemoveLabel={handleRemoveLabel}
+              onOpenPreferences={handleOpenPreferences}
               isAnalyzing={isAnalyzing || isDeviceScanning}
             />
           </ScrollView>

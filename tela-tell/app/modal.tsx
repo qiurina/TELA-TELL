@@ -15,18 +15,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
+import { SUPPORTED_FABRICS } from '@/data/fabrics/fabrics';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow, primaryButtonShadow } from '@/constants/shadows';
-import { clearLastSellerLabel, getLastSellerLabel, setLastSellerLabel } from '@/lib/last-seller-label';
+import { clearLastSellerLabel, getLastSellerLabel, setLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
-const QUICK_LABELS = ['100% Cotton', 'Polyester', 'Linen blend', 'Silk'];
+const QUICK_LABELS = [...SUPPORTED_FABRICS];
 
 export default function SellerLabelModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [sellerLabel, setSellerLabel] = useState(() => getLastSellerLabel() ?? '');
-  const sheetHeight = windowHeight * 0.5;
+  const sheetHeight = Math.min(windowHeight * 0.62, 520);
   const trimmedLabel = sellerLabel.trim();
   const hasLabel = trimmedLabel.length > 0;
   const keyboardVerticalOffset = Platform.select({

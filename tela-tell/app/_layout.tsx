@@ -63,8 +63,18 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="results" options={{ headerShown: false }} />
+            <Stack.Screen name="region-select" options={{ headerShown: false }} />
             <Stack.Screen
               name="modal"
+              options={{
+                headerShown: false,
+                presentation: 'transparentModal',
+                animation: 'slide_from_bottom',
+                contentStyle: { backgroundColor: 'transparent' },
+              }}
+            />
+            <Stack.Screen
+              name="user-preferences"
               options={{
                 headerShown: false,
                 presentation: 'transparentModal',

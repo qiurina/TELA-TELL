@@ -1,11 +1,41 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { History, Home, ScanLine } from '@/components/ui/lucide-icons';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { History as HistoryIcon, Home, Layers, ScanLine, User } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { fabShadow } from '@/constants/shadows';
+
+type TabRoute = 'index' | 'fabrics' | 'scan' | 'history' | 'profile';
+
+function TabIconButton({
+  route,
+  currentRoute,
+  onPress,
+  label,
+  children,
+}: {
+  route: TabRoute;
+  currentRoute: string | undefined;
+  onPress: () => void;
+  label: string;
+  children: ReactNode;
+}) {
+  const active = currentRoute === route;
+
+  return (
+    <Pressable
+      style={styles.sideButton}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}>
+      {children}
+    </Pressable>
+  );
+}
 
 export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -14,19 +44,30 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       <View style={styles.bar}>
-        <View style={styles.slot}>
-          <Pressable
-            style={styles.sideButton}
+        <View style={styles.sideGroup}>
+          <TabIconButton
+            route="index"
+            currentRoute={currentRoute}
             onPress={() => navigation.navigate('index')}
-            accessibilityRole="button"
-            accessibilityLabel="Home">
+            label="Home">
             <Home
-              size={26}
+              size={24}
               color={currentRoute === 'index' ? BrandColors.primary : BrandColors.textMuted}
               fill={currentRoute === 'index' ? BrandColors.primary : 'transparent'}
               strokeWidth={2}
             />
-          </Pressable>
+          </TabIconButton>
+          <TabIconButton
+            route="fabrics"
+            currentRoute={currentRoute}
+            onPress={() => navigation.navigate('fabrics')}
+            label="Fabrics">
+            <Layers
+              size={24}
+              color={currentRoute === 'fabrics' ? BrandColors.primary : BrandColors.textMuted}
+              strokeWidth={2}
+            />
+          </TabIconButton>
         </View>
 
         <View style={styles.centerSlot}>
@@ -44,18 +85,29 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           </Pressable>
         </View>
 
-        <View style={styles.slot}>
-          <Pressable
-            style={styles.sideButton}
+        <View style={styles.sideGroup}>
+          <TabIconButton
+            route="history"
+            currentRoute={currentRoute}
             onPress={() => navigation.navigate('history')}
-            accessibilityRole="button"
-            accessibilityLabel="History">
-            <History
-              size={26}
+            label="History">
+            <HistoryIcon
+              size={24}
               color={currentRoute === 'history' ? BrandColors.primary : BrandColors.textMuted}
               strokeWidth={2}
             />
-          </Pressable>
+          </TabIconButton>
+          <TabIconButton
+            route="profile"
+            currentRoute={currentRoute}
+            onPress={() => navigation.navigate('profile')}
+            label="Profile">
+            <User
+              size={24}
+              color={currentRoute === 'profile' ? BrandColors.primary : BrandColors.textMuted}
+              strokeWidth={2}
+            />
+          </TabIconButton>
         </View>
       </View>
     </View>
@@ -71,25 +123,26 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingTop: 8,
     minHeight: 56,
   },
-  slot: {
+  sideGroup: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-evenly',
   },
   centerSlot: {
-    flex: 1,
+    width: 88,
     alignItems: 'center',
     justifyContent: 'flex-end',
     marginBottom: 4,
     marginTop: -28,
   },
   sideButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

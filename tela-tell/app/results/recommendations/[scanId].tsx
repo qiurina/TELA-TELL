@@ -1,12 +1,12 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { RecommendationsContent } from '@/components/recommendations/recommendations-content';
-import { ResultsScreenHeader } from '@/components/results/results-screen-header';
+import { RecommendationsContent } from '@/features/recommendations/components/recommendations-content';
+import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getScanResult, resolveScanId } from '@/constants/mock-data';
-import { requestFreshScan } from '@/lib/scan-fresh';
+import { getScanResult, resolveScanId } from '@/data/scans/mock-data';
+import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 
 export default function RecommendationsScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
@@ -31,12 +31,13 @@ export default function RecommendationsScreen() {
 
   return (
     <View style={styles.root}>
-      <ResultsScreenHeader title="Recommendations" onBack={() => router.back()} />
+      <ResultsScreenHeader title="Eco Tips" onBack={() => router.back()} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
         <RecommendationsContent
+          dominantFabric={result.dominantFabric}
           detectedCompositions={result.compositions ?? []}
           recommendations={result.recommendations}
           onScanAnother={handleScanAnother}

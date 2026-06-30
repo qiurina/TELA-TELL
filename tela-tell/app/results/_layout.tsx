@@ -7,7 +7,11 @@ export default function ResultsLayout() {
       <Stack.Screen name="profile/[scanId]" options={{ title: 'Fabric Profile', headerShown: false }} />
       <Stack.Screen
         name="recommendations/[scanId]"
-        options={{ title: 'Recommendations', headerShown: false }}
+        options={{ title: 'Eco Tips', headerShown: false }}
+      />
+      <Stack.Screen
+        name="insights/[scanId]"
+        options={{ title: 'Personalized Insights', headerShown: false }}
       />
     </Stack>
   );

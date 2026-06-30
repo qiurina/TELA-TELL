@@ -423,6 +423,47 @@ export const Shirt: FC<IconProps> = (props) => {
   );
 };
 
+export const User: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path
+        d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx="12" cy="7" r="4" stroke={color} strokeWidth={strokeWidth} />
+    </Svg>
+  );
+};
+
+export const Plus: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path d="M5 12h14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M12 5v14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+};
+
+export const Check: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path
+        d="M20 6 9 17l-5-5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+};
+
 export const CircleCheck: FC<IconProps> = (props) => {
   const { color, strokeWidth } = { ...defaults, ...props };
   return (
@@ -446,6 +487,23 @@ export const CircleX: FC<IconProps> = (props) => {
       <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={strokeWidth} />
       <Path d="m15 9-6 6" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
       <Path d="m9 9 6 6" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+};
+
+export const Sparkles: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path
+        d="M9.94 2.94 8 8 2.94 9.94 8 11.88l1.94 5.06L11.88 16l5.06-1.94L18.88 11l-5.06-1.94L16 4l-5.06 1.94Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M20 3v4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M22 5h-4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
     </Svg>
   );
 };

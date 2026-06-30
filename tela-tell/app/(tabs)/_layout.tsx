@@ -12,8 +12,10 @@ export default function TabLayout() {
         tabBarStyle: { display: 'none' },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      <Tabs.Screen name="fabrics" options={{ title: 'Fabrics' }} />
       <Tabs.Screen name="scan" options={{ title: 'Scan', href: null }} />
       <Tabs.Screen name="history" options={{ title: 'History' }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
     </Tabs>
   );
 }

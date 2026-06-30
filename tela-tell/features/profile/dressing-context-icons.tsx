@@ -1,0 +1,48 @@
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  Building2,
+  Cloud,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSun,
+  Dumbbell,
+  GraduationCap,
+  Heart,
+  Home,
+  Moon,
+  PartyPopper,
+  Plane,
+  Shirt,
+  Snowflake,
+  Sun,
+  Tent,
+  Umbrella,
+  UserRound,
+  Wind,
+} from 'lucide-react-native';
+
+import type { DressingContext } from '@/data/preferences/occasion-weather';
+
+export const DRESSING_CONTEXT_ICONS: Record<DressingContext, LucideIcon> = {
+  sunny: Sun,
+  partly_cloudy: CloudSun,
+  cloudy: Cloud,
+  rainy: CloudRain,
+  thunderstorms: CloudLightning,
+  windy: Wind,
+  foggy: CloudFog,
+  cool: Snowflake,
+  casual: Shirt,
+  office_work: Building2,
+  school: GraduationCap,
+  formal: UserRound,
+  wedding: Heart,
+  party: PartyPopper,
+  sports_gym: Dumbbell,
+  beach: Umbrella,
+  travel: Plane,
+  outdoor_activities: Tent,
+  home_wear: Home,
+  sleepwear: Moon,
+};

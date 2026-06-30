@@ -4,12 +4,12 @@ import { useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScanHistoryCard } from '@/components/history/scan-history-card';
+import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
 import { ScanLine } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { heroCardShadow, primaryButtonShadow } from '@/constants/shadows';
-import { RECENT_SCANS_PREVIEW } from '@/constants/mock-data';
+import { RECENT_SCANS_PREVIEW } from '@/data/scans/mock-data';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -26,9 +26,7 @@ export default function HomeScreen() {
 
       <View style={[styles.page, { paddingTop: insets.top + 16 }]}>
         <View style={styles.topRow}>
-          <View style={styles.headerText}>
-            <Text style={styles.brand}>Tela-Tell</Text>
-          </View>
+          <Text style={styles.brand}>Tela-Tell</Text>
         </View>
 
         <View style={styles.sheet}>
@@ -74,7 +72,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.recentList}>
-              {RECENT_SCANS_PREVIEW.map((scan) => (
+              {RECENT_SCANS_PREVIEW.slice(0, 4).map((scan) => (
                 <ScanHistoryCard
                   key={scan.id}
                   scan={scan}
@@ -107,9 +105,6 @@ const styles = StyleSheet.create({
   topRow: {
     paddingHorizontal: 24,
     marginBottom: 8,
-  },
-  headerText: {
-    gap: 2,
   },
   brand: {
     fontFamily: Fonts.bold,

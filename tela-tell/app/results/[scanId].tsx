@@ -2,25 +2,32 @@ import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { CompositionCard } from '@/components/results/composition-card';
-import { FabricPhotoPreview } from '@/components/results/fabric-photo-preview';
-import { ResultsExploreActions } from '@/components/results/results-explore-actions';
-import { ResultsScreenHeader } from '@/components/results/results-screen-header';
-import { ScanConfidenceBanner } from '@/components/results/scan-confidence-banner';
-import { SellerComparisonCard } from '@/components/results/seller-comparison-card';
-import { StatusBadges } from '@/components/results/status-badges';
+import { CompositionCard } from '@/features/results/components/composition-card';
+import { DualFabricResults } from '@/features/results/components/dual-fabric-results';
+import { FabricPhotoPreview } from '@/features/results/components/fabric-photo-preview';
+import { FabricReferenceComparison } from '@/features/results/components/fabric-reference-comparison';
+import { ResultsExploreActions } from '@/features/results/components/results-explore-actions';
+import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
+import { ScanConfidenceBanner } from '@/features/results/components/scan-confidence-banner';
+import { SellerComparisonCard } from '@/features/results/components/seller-comparison-card';
+import { StatusBadges } from '@/features/results/components/status-badges';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getScanResult, resolveScanId } from '@/constants/mock-data';
-import { getLastCaptureUri } from '@/lib/last-capture';
-import { getLastSellerLabel } from '@/lib/last-seller-label';
-import { requestFreshScan } from '@/lib/scan-fresh';
+import { getDualSwatchRegions } from '@/features/scan/lib/dual-swatch-results';
+import { getScanResult, resolveScanId } from '@/data/scans/mock-data';
+import { getFabricReference } from '@/data/fabrics/fabric-references';
+import { getLastCaptureUri } from '@/features/scan/lib/last-capture';
+import { getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
+import { clearRegionSelection } from '@/features/scan/lib/region-selection';
+import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 
 export default function ResultsScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
   const router = useRouter();
   const resolvedScanId = resolveScanId(scanId);
+  const isDualDemo = resolvedScanId === 'dual';
   const result = getScanResult(resolvedScanId);
+  const dualRegions = isDualDemo ? getDualSwatchRegions() : [];
   const capturedPhotoUri = getLastCaptureUri();
   const [sellerLabel, setSellerLabel] = useState<string | null>(() => getLastSellerLabel());
 
@@ -47,11 +54,16 @@ export default function ResultsScreen() {
     router.push(`/results/profile/${resolvedScanId}` as Href);
   };
 
-  const handleRecommendations = () => {
+  const handleEcoTips = () => {
     router.push(`/results/recommendations/${resolvedScanId}` as Href);
   };
 
+  const handlePersonalizedInsights = () => {
+    router.push(`/results/insights/${resolvedScanId}` as Href);
+  };
+
   const handleScanAnother = () => {
+    clearRegionSelection();
     requestFreshScan();
     router.push('/(tabs)/scan' as Href);
   };
@@ -60,6 +72,10 @@ export default function ResultsScreen() {
     router.push('/modal');
   };
 
+  const primaryReference = !isDualDemo
+    ? getFabricReference(result.dominantFabric, result.compositions)
+    : null;
+
   return (
     <View style={styles.root}>
       <ResultsScreenHeader title="Scan Results" onBack={() => router.back()} />
@@ -67,20 +83,61 @@ export default function ResultsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
-        <FabricPhotoPreview imageUri={capturedPhotoUri} />
-
-        <ScanConfidenceBanner confidence={result.confidence} dominantFabric={result.dominantFabric} />
-
-        <CompositionCard compositions={result.compositions ?? []} confidence={result.confidence} />
-
-        <SellerComparisonCard
-          sellerLabel={sellerLabel}
-          detectedDominant={result.dominantFabric}
-          compositions={result.compositions ?? []}
-          confidence={result.confidence}
-          mislabelingDetected={hasSellerLabel && result.mislabeling.detected}
-          onAddLabel={handleAddLabel}
+        <FabricPhotoPreview
+          imageUri={capturedPhotoUri}
+          detectedFabric={
+            isDualDemo ? 'Linen + Cotton swatches' : result.dominantFabric
+          }
+          confidence={
+            isDualDemo
+              ? Math.round(
+                  dualRegions.reduce((sum, region) => sum + region.confidence, 0) /
+                    Math.max(dualRegions.length, 1),
+                )
+              : result.confidence
+          }
+          markedRegions={
+            isDualDemo
+              ? dualRegions
+                  .map((region) => region.region)
+                  .filter((region): region is NonNullable<typeof region> => Boolean(region))
+              : undefined
+          }
         />
+
+        {primaryReference ? (
+          <FabricReferenceComparison
+            scanImageUri={capturedPhotoUri}
+            reference={primaryReference}
+            detectedLabel={result.dominantFabric}
+            confidence={result.confidence}
+          />
+        ) : null}
+
+        {isDualDemo ? (
+          <DualFabricResults regions={dualRegions} />
+        ) : (
+          <>
+            <ScanConfidenceBanner
+              confidence={result.confidence}
+              dominantFabric={result.dominantFabric}
+              compact
+            />
+
+            <CompositionCard compositions={result.compositions ?? []} confidence={result.confidence} />
+          </>
+        )}
+
+        {!isDualDemo ? (
+          <SellerComparisonCard
+            sellerLabel={sellerLabel}
+            detectedDominant={result.dominantFabric}
+            compositions={result.compositions ?? []}
+            confidence={result.confidence}
+            mislabelingDetected={hasSellerLabel && result.mislabeling.detected}
+            onAddLabel={handleAddLabel}
+          />
+        ) : null}
 
         <StatusBadges
           hasSellerLabel={hasSellerLabel}
@@ -90,7 +147,8 @@ export default function ResultsScreen() {
 
         <ResultsExploreActions
           onProfile={handleViewProfile}
-          onEcoTips={handleRecommendations}
+          onEcoTips={handleEcoTips}
+          onPersonalizedInsights={handlePersonalizedInsights}
           onScanAgain={handleScanAnother}
         />
       </ScrollView>

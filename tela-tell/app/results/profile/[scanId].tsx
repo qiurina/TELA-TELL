@@ -1,14 +1,16 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { FabricProfileCard } from '@/components/profile/fabric-profile-card';
-import { CompositionCard } from '@/components/results/composition-card';
-import { ResultsScreenHeader } from '@/components/results/results-screen-header';
-import { ScanAnotherButton } from '@/components/results/scan-another-button';
+import { FabricProfileCard } from '@/features/profile/components/fabric-profile-card';
+import { FabricReferenceComparison } from '@/features/results/components/fabric-reference-comparison';
+import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
+import { ScanAnotherButton } from '@/features/results/components/scan-another-button';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getScanResult, resolveScanId } from '@/constants/mock-data';
-import { requestFreshScan } from '@/lib/scan-fresh';
+import { getScanResult, resolveScanId } from '@/data/scans/mock-data';
+import { getFabricReference } from '@/data/fabrics/fabric-references';
+import { getLastCaptureUri } from '@/features/scan/lib/last-capture';
+import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 
 export default function FabricProfileScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
@@ -31,6 +33,9 @@ export default function FabricProfileScreen() {
     router.push('/(tabs)/scan' as Href);
   };
 
+  const fabricReference = getFabricReference(result.dominantFabric, result.compositions);
+  const capturedPhotoUri = getLastCaptureUri();
+
   return (
     <View style={styles.root}>
       <ResultsScreenHeader title="Fabric Profile" onBack={() => router.back()} />
@@ -38,12 +43,20 @@ export default function FabricProfileScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
+        {fabricReference ? (
+          <FabricReferenceComparison
+            scanImageUri={capturedPhotoUri}
+            reference={fabricReference}
+            detectedLabel={result.dominantFabric}
+            confidence={result.confidence}
+          />
+        ) : null}
+
         <FabricProfileCard
           profile={result.profile}
           sustainabilityScore={result.sustainability.score}
           sustainabilityRating={result.sustainability.rating}
         />
-        <CompositionCard compositions={result.compositions ?? []} confidence={result.confidence} />
         <ScanAnotherButton onPress={handleScanAnother} />
       </ScrollView>
     </View>

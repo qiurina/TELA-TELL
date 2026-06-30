@@ -1,0 +1,164 @@
+import { Image } from 'expo-image';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { ScanLine } from '@/components/ui/lucide-icons';
+import { BrandColors } from '@/constants/brand';
+import type { FabricReference } from '@/data/fabrics/fabric-references';
+import { Fonts } from '@/constants/fonts';
+import { faintCardShadow } from '@/constants/shadows';
+
+type FabricReferenceComparisonProps = {
+  scanImageUri?: string | null;
+  reference: FabricReference;
+  detectedLabel: string;
+  confidence?: number;
+  compact?: boolean;
+};
+
+function ReferenceSwatch({ reference }: { reference: FabricReference }) {
+  return <Image source={reference.image} style={styles.swatchImage} contentFit="cover" />;
+}
+
+function ScanThumb({ uri }: { uri?: string | null }) {
+  if (uri) {
+    return <Image source={{ uri }} style={styles.swatchImage} contentFit="cover" />;
+  }
+
+  return (
+    <View style={styles.scanPlaceholder}>
+      <ScanLine size={28} color={BrandColors.textMuted} strokeWidth={1.5} />
+    </View>
+  );
+}
+
+export function FabricReferenceComparison({
+  scanImageUri,
+  reference,
+  detectedLabel,
+  confidence,
+  compact = false,
+}: FabricReferenceComparisonProps) {
+  const confidenceLine =
+    confidence !== undefined ? `${detectedLabel} — ${confidence}% confidence` : detectedLabel;
+
+  return (
+    <View style={[styles.container, compact && styles.containerCompact, faintCardShadow()]}>
+      <Text style={styles.sectionLabel}>FABRIC REFERENCE COMPARISON</Text>
+
+      <View style={styles.compareRow}>
+        <View style={styles.compareColumn}>
+          <ScanThumb uri={scanImageUri} />
+          <Text style={styles.columnCaption}>Your scan</Text>
+        </View>
+
+        <View style={styles.compareColumn}>
+          <ReferenceSwatch reference={reference} />
+          <Text style={styles.columnCaption}>Reference: {reference.title}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.detectedLine}>{confidenceLine}</Text>
+      <Text style={styles.compareHint}>Compare your fabric to the reference image above.</Text>
+
+      {!compact ? (
+        <View style={styles.traitsBox}>
+          <Text style={styles.traitsLabel}>What to look for</Text>
+          <Text style={styles.traitsText}>{reference.lookFor}</Text>
+          <Text style={styles.traitsNote}>{reference.textureNote}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    gap: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+    backgroundColor: BrandColors.white,
+    padding: 14,
+  },
+  containerCompact: {
+    padding: 12,
+    gap: 10,
+  },
+  sectionLabel: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: BrandColors.textMuted,
+  },
+  compareRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  compareColumn: {
+    flex: 1,
+    gap: 6,
+  },
+  swatchImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.lavenderCard,
+  },
+  scanPlaceholder: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.lavenderCard,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  columnCaption: {
+    fontFamily: Fonts.medium,
+    fontSize: 11,
+    color: BrandColors.textMuted,
+    textAlign: 'center',
+  },
+  detectedLine: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: BrandColors.primaryDark,
+    lineHeight: 21,
+  },
+  compareHint: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BrandColors.textMuted,
+  },
+  traitsBox: {
+    gap: 4,
+    backgroundColor: BrandColors.lavenderCard,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+  },
+  traitsLabel: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: BrandColors.textMuted,
+    textTransform: 'uppercase',
+  },
+  traitsText: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BrandColors.text,
+  },
+  traitsNote: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: BrandColors.textMuted,
+  },
+});

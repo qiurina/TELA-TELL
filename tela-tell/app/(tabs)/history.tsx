@@ -3,12 +3,12 @@ import { useRouter, type Href } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScanHistoryCard } from '@/components/history/scan-history-card';
+import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
 import { Leaf, ScanLine, TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
-import { RECENT_SCANS_PREVIEW, SCAN_RESULTS, SUSTAINABILITY_DOT } from '@/constants/mock-data';
+import { RECENT_SCANS_PREVIEW, SCAN_RESULTS, SUSTAINABILITY_DOT } from '@/data/scans/mock-data';
 
 export default function HistoryScreen() {
   const router = useRouter();
