@@ -3,14 +3,24 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import {
+  GarmentConditionIcon,
+  GarmentConditionSheet,
+  getGarmentConditionLabel,
+} from '@/features/scan/components/garment-condition-picker';
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
-import { Camera, ChevronLeft, ImagePlus, Info, ScanLine, X } from '@/components/ui/lucide-icons';
+import { Camera, ChevronLeft, ChevronRight, ImagePlus, Info, ScanLine, Settings, Tag, X } from '@/components/ui/lucide-icons';
 import { BACKUP_SCAN_DISCLAIMER } from '@/data/scans/analysis';
+import {
+  DEFAULT_GARMENT_CONDITION,
+  type GarmentCondition,
+} from '@/data/scans/garment-condition';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
 import { getScanMode } from '@/features/scan/lib/scan-session';
 import {
+  getUserPreferencesSummary,
   hasActiveUserPreferences,
 } from '@/features/profile/lib/user-preferences';
 
@@ -25,6 +35,8 @@ type ScanActionsProps = {
   onUpload: () => void;
   onAnalyze: () => void;
   onTryAnother: () => void;
+  garmentCondition: GarmentCondition;
+  onGarmentConditionChange: (condition: GarmentCondition) => void;
   onAddLabel: () => void;
   onRemoveLabel?: () => void;
   onOpenPreferences?: () => void;
@@ -100,50 +112,162 @@ function CompactCaptureButton({
   );
 }
 
-function OptionalLinks({
-  hasSellerLabel,
-  hasPreferences,
-  onAddLabel,
-  onOpenPreferences,
+function DetailActionRow({
+  icon,
+  label,
+  value,
+  isSet,
+  onPress,
   disabled,
+  accessibilityLabel,
+  isLast = false,
 }: {
-  hasSellerLabel: boolean;
-  hasPreferences: boolean;
-  onAddLabel: () => void;
-  onOpenPreferences?: () => void;
+  icon: ReactNode;
+  label: string;
+  value: string;
+  isSet: boolean;
+  onPress: () => void;
   disabled?: boolean;
+  accessibilityLabel: string;
+  isLast?: boolean;
 }) {
   return (
-    <View style={styles.optionalBlock}>
-      <Text style={styles.optionalHeading}>Optional</Text>
-      <View style={styles.optionalLinksRow}>
-        <Pressable
-          onPress={onAddLabel}
-          disabled={disabled}
-          hitSlop={4}
-          accessibilityRole="button"
-          accessibilityLabel={hasSellerLabel ? 'Update seller label' : 'Add seller label'}>
-          <Text style={styles.optionalLink}>
-            {hasSellerLabel ? 'Update seller label' : '+ Seller label'}
-          </Text>
-        </Pressable>
+    <Pressable
+      style={({ pressed }) => [
+        styles.detailRow,
+        isLast && styles.detailRowLast,
+        pressed && styles.pressed,
+        disabled && styles.disabled,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}>
+      <View style={styles.detailRowIcon}>{icon}</View>
+      <Text style={styles.detailRowLabel}>{label}</Text>
+      <Text
+        style={[styles.detailRowValue, isSet ? styles.detailRowValueSet : styles.detailRowValueEmpty]}
+        numberOfLines={1}>
+        {value}
+      </Text>
+      <ChevronRight size={16} color={BrandColors.textMuted} strokeWidth={2.25} />
+    </Pressable>
+  );
+}
 
-        {onOpenPreferences ? (
-          <>
-            <Text style={styles.optionalDot}>·</Text>
-            <Pressable
-              onPress={onOpenPreferences}
+function AddDetailsAccordion({
+  expanded,
+  onToggle,
+  hasSellerLabel,
+  sellerLabel,
+  hasPreferences,
+  garmentCondition,
+  onGarmentConditionChange,
+  onAddLabel,
+  onOpenPreferences,
+  isDualScanMode,
+  disabled,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  hasSellerLabel: boolean;
+  sellerLabel: string;
+  hasPreferences: boolean;
+  garmentCondition: GarmentCondition;
+  onGarmentConditionChange: (condition: GarmentCondition) => void;
+  onAddLabel: () => void;
+  onOpenPreferences?: () => void;
+  isDualScanMode: boolean;
+  disabled?: boolean;
+}) {
+  const [showConditionSheet, setShowConditionSheet] = useState(false);
+  const hasCustomCondition = garmentCondition !== DEFAULT_GARMENT_CONDITION;
+  const summaryParts: string[] = [];
+
+  if (hasCustomCondition) {
+    summaryParts.push(garmentCondition);
+  }
+  if (hasSellerLabel) {
+    summaryParts.push(sellerLabel);
+  }
+  if (hasPreferences) {
+    summaryParts.push('Preferences set');
+  }
+
+  const summary = summaryParts.length > 0 ? summaryParts.join(' · ') : null;
+  const preferencesSummary = getUserPreferencesSummary();
+  const preferencesStatus = !hasPreferences
+    ? 'Not set'
+    : preferencesSummary ?? (isDualScanMode ? 'Two swatches' : 'Set');
+
+  return (
+    <View style={styles.accordionBlock}>
+      <Pressable
+        style={({ pressed }) => [styles.accordionTrigger, pressed && styles.pressed]}
+        onPress={onToggle}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={expanded ? 'Hide add details' : 'Add details'}>
+        <View style={[styles.accordionChevron, expanded && styles.accordionChevronOpen]}>
+          <ChevronRight size={16} color={BrandColors.primary} strokeWidth={2.5} />
+        </View>
+        <View style={styles.accordionTriggerText}>
+          <Text style={styles.accordionTriggerTitle}>Add details</Text>
+          <Text style={styles.accordionTriggerHint}>
+            {expanded ? 'Condition, seller label, preferences' : summary ?? 'Condition, seller label, preferences'}
+          </Text>
+        </View>
+      </Pressable>
+
+      {expanded ? (
+        <View style={styles.accordionPanel}>
+          <View style={styles.detailRowsBlock}>
+            <DetailActionRow
+              icon={<GarmentConditionIcon condition={garmentCondition} />}
+              label="Fabric condition"
+              value={getGarmentConditionLabel(garmentCondition)}
+              isSet
+              onPress={() => setShowConditionSheet(true)}
               disabled={disabled}
-              hitSlop={4}
-              accessibilityRole="button"
-              accessibilityLabel="Open preferences">
-              <Text style={styles.optionalLink}>
-                {hasPreferences ? 'Preferences' : 'Set preferences'}
-              </Text>
-            </Pressable>
-          </>
-        ) : null}
-      </View>
+              accessibilityLabel={`Fabric condition, ${getGarmentConditionLabel(garmentCondition)}. Change`}
+            />
+
+            <DetailActionRow
+              icon={<Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />}
+              label="Seller label"
+              value={hasSellerLabel ? sellerLabel : 'Not set'}
+              isSet={hasSellerLabel}
+              onPress={onAddLabel}
+              disabled={disabled}
+              isLast={!onOpenPreferences}
+              accessibilityLabel={hasSellerLabel ? `Seller label, ${sellerLabel}. Update` : 'Seller label, not set. Add'}
+            />
+
+            {onOpenPreferences ? (
+              <DetailActionRow
+                icon={<Settings size={16} color={BrandColors.primary} strokeWidth={2.25} />}
+                label="Preferences"
+                value={preferencesStatus}
+                isSet={hasPreferences}
+                onPress={onOpenPreferences}
+                disabled={disabled}
+                isLast
+                accessibilityLabel={
+                  hasPreferences ? `Preferences, ${preferencesStatus}. Edit` : 'Preferences, not set. Set'
+                }
+              />
+            ) : null}
+          </View>
+
+          <GarmentConditionSheet
+            visible={showConditionSheet}
+            value={garmentCondition}
+            onChange={onGarmentConditionChange}
+            onClose={() => setShowConditionSheet(false)}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -157,6 +281,8 @@ export function ScanActions({
   onUpload,
   onAnalyze,
   onTryAnother,
+  garmentCondition,
+  onGarmentConditionChange,
   onAddLabel,
   onRemoveLabel,
   onOpenPreferences,
@@ -168,6 +294,7 @@ export function ScanActions({
     () => hasActiveUserPreferences() || getScanMode() === 'dual',
   );
   const [isDualScanMode, setIsDualScanMode] = useState(() => getScanMode() === 'dual');
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const trimmedLabel = savedSellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
   const isCaptureBusy = Boolean(isAnalyzing || isDeviceScanning);
@@ -176,7 +303,10 @@ export function ScanActions({
     useCallback(() => {
       setHasPreferences(hasActiveUserPreferences() || getScanMode() === 'dual');
       setIsDualScanMode(getScanMode() === 'dual');
-    }, []),
+      if (!hasPreview) {
+        setDetailsExpanded(false);
+      }
+    }, [hasPreview]),
   );
 
   const captureAlternatives = (
@@ -205,26 +335,12 @@ export function ScanActions({
     </>
   );
 
-  const optionalLinks = (
-    <OptionalLinks
-      hasSellerLabel={hasSellerLabel}
-      hasPreferences={hasPreferences}
-      onAddLabel={onAddLabel}
-      onOpenPreferences={onOpenPreferences}
-      disabled={isCaptureBusy}
-    />
-  );
-
   if (hasPreview) {
     return (
       <View style={styles.container}>
         <View style={styles.reviewBanner}>
           <Text style={styles.reviewStep}>Step 2 — Review & analyze</Text>
         </View>
-
-        {hasSellerLabel ? (
-          <SellerLabelPill label={trimmedLabel} onRemove={onRemoveLabel} disabled={isAnalyzing} />
-        ) : null}
 
         <Pressable
           style={({ pressed }) => [pressed && styles.pressed, isAnalyzing && styles.disabled]}
@@ -260,7 +376,19 @@ export function ScanActions({
           <Text style={styles.outlineText}>Try Another Capture</Text>
         </Pressable>
 
-        {optionalLinks}
+        <AddDetailsAccordion
+          expanded={detailsExpanded}
+          onToggle={() => setDetailsExpanded((open) => !open)}
+          hasSellerLabel={hasSellerLabel}
+          sellerLabel={trimmedLabel}
+          hasPreferences={hasPreferences}
+          garmentCondition={garmentCondition}
+          onGarmentConditionChange={onGarmentConditionChange}
+          onAddLabel={onAddLabel}
+          onOpenPreferences={onOpenPreferences}
+          isDualScanMode={isDualScanMode}
+          disabled={isAnalyzing}
+        />
       </View>
     );
   }
@@ -306,7 +434,6 @@ export function ScanActions({
       </Pressable>
 
       {captureAlternatives}
-      {optionalLinks}
     </View>
   );
 }
@@ -380,34 +507,91 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: BrandColors.primary,
   },
-  optionalBlock: {
-    alignItems: 'center',
-    gap: 6,
-    paddingTop: 2,
+  accordionBlock: {
+    width: '100%',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.white,
+    overflow: 'hidden',
   },
-  optionalHeading: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    color: BrandColors.textMuted,
-    textTransform: 'uppercase',
-  },
-  optionalLinksRow: {
+  accordionTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 4,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  optionalLink: {
+  accordionChevron: {
+    marginTop: 1,
+  },
+  accordionChevronOpen: {
+    transform: [{ rotate: '90deg' }],
+  },
+  accordionTriggerText: {
+    flex: 1,
+    gap: 2,
+  },
+  accordionTriggerTitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: BrandColors.primaryDark,
+  },
+  accordionTriggerHint: {
+    fontFamily: Fonts.regular,
+    fontSize: 11,
+    lineHeight: 15,
+    color: BrandColors.textMuted,
+  },
+  accordionPanel: {
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: BrandColors.borderLight,
+  },
+  detailRowsBlock: {
+    gap: 0,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.lavenderCard,
+    overflow: 'hidden',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: BrandColors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: BrandColors.borderLight,
+  },
+  detailRowLast: {
+    borderBottomWidth: 0,
+  },
+  detailRowIcon: {
+    width: 22,
+    alignItems: 'center',
+  },
+  detailRowLabel: {
     fontFamily: Fonts.semiBold,
     fontSize: 13,
-    color: BrandColors.primary,
+    color: BrandColors.text,
   },
-  optionalDot: {
-    fontFamily: Fonts.medium,
-    fontSize: 13,
+  detailRowValue: {
+    flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    textAlign: 'right',
+  },
+  detailRowValueEmpty: {
     color: BrandColors.textMuted,
+  },
+  detailRowValueSet: {
+    color: BrandColors.primary,
+    fontFamily: Fonts.medium,
   },
   outlineButton: {
     flexDirection: 'row',

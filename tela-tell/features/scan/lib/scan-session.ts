@@ -1,3 +1,5 @@
+import { clearLastGarmentCondition } from '@/features/scan/lib/garment-condition';
+
 export type ScanMode = 'single' | 'dual';
 
 let scanMode: ScanMode = 'single';
@@ -12,4 +14,5 @@ export function setScanMode(mode: ScanMode): void {
 
 export function resetScanSession(): void {
   scanMode = 'single';
+  clearLastGarmentCondition();
 }

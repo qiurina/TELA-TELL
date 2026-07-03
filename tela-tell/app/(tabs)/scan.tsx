@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraGuide, type ViewfinderSource } from '@/features/scan/components/camera-guide';
 import { DeviceStatusCard } from '@/features/scan/components/device-status-card';
 import { ScanActions } from '@/features/scan/components/scan-actions';
+import { DEFAULT_GARMENT_CONDITION, type GarmentCondition } from '@/data/scans/garment-condition';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
@@ -14,6 +15,7 @@ import { clearLastCaptureUri, setLastCaptureUri } from '@/features/scan/lib/last
 import { getDeviceMockCaptureUri } from '@/features/scan/lib/device-mock-capture';
 import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 import { clearRegionSelection } from '@/features/scan/lib/region-selection';
+import { clearLastGarmentCondition, getLastGarmentCondition, setLastGarmentCondition } from '@/features/scan/lib/garment-condition';
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
 import { getScanMode } from '@/features/scan/lib/scan-session';
 
@@ -29,6 +31,9 @@ export default function ScanScreen() {
   const [viewfinderSource, setViewfinderSource] = useState<ViewfinderSource>('iot');
   const [isDeviceScanning, setIsDeviceScanning] = useState(false);
   const [isBackupCapture, setIsBackupCapture] = useState(false);
+  const [garmentCondition, setGarmentCondition] = useState<GarmentCondition>(
+    () => getLastGarmentCondition(),
+  );
   const { captureFromCamera, captureFromGallery } = useFabricCapture();
 
   useFocusEffect(
@@ -39,6 +44,8 @@ export default function ScanScreen() {
         setIsDeviceScanning(false);
         setIsBackupCapture(false);
         clearRegionSelection();
+        clearLastGarmentCondition();
+        setGarmentCondition(DEFAULT_GARMENT_CONDITION);
       }
       setGuideVisible(true);
       setSavedSellerLabel(getLastSellerLabel());
@@ -105,6 +112,8 @@ export default function ScanScreen() {
       return;
     }
 
+    setLastGarmentCondition(garmentCondition);
+
     if (getScanMode() === 'dual') {
       setLastCaptureUri(previewUri);
       clearRegionSelection();
@@ -144,6 +153,13 @@ export default function ScanScreen() {
     setIsDeviceScanning(false);
     setIsBackupCapture(false);
     clearRegionSelection();
+    clearLastGarmentCondition();
+    setGarmentCondition(DEFAULT_GARMENT_CONDITION);
+  };
+
+  const handleGarmentConditionChange = (condition: GarmentCondition) => {
+    setGarmentCondition(condition);
+    setLastGarmentCondition(condition);
   };
 
   const handleAddLabel = () => {
@@ -205,6 +221,8 @@ export default function ScanScreen() {
               onUpload={handleUpload}
               onAnalyze={handleAnalyze}
               onTryAnother={handleTryAnother}
+              garmentCondition={garmentCondition}
+              onGarmentConditionChange={handleGarmentConditionChange}
               onAddLabel={handleAddLabel}
               onRemoveLabel={handleRemoveLabel}
               onOpenPreferences={handleOpenPreferences}

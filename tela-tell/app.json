@@ -50,7 +50,8 @@
         {
           "cameraPermission": "Allow TELA-TELL to access your camera to scan fabric."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
