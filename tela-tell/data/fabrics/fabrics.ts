@@ -1,4 +1,4 @@
-/** Eleven supported fiber / material types — aligned with capstone study taxonomy. */
+/** Ten supported fiber / material types — aligned with capstone study taxonomy. */
 
 export type FabricCategory =
   | 'Natural'
@@ -23,7 +23,6 @@ export const FABRIC_REGISTRY: FabricDefinition[] = [
   { id: 8, name: 'Rayon', category: 'Semi-synthetic' },
   { id: 9, name: 'Abaca', category: 'Philippine native fiber' },
   { id: 10, name: 'Piña', category: 'Philippine native fiber' },
-  { id: 11, name: 'Jusi', category: 'Philippine native fiber' },
 ];
 
 export const SUPPORTED_FABRICS = [
@@ -37,7 +36,6 @@ export const SUPPORTED_FABRICS = [
   'Rayon',
   'Abaca',
   'Piña',
-  'Jusi',
 ] as const;
 
 export type SupportedFabric = (typeof SUPPORTED_FABRICS)[number];

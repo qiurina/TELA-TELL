@@ -58,6 +58,7 @@ export type ScanResult = {
   compositions: FabricComposition[];
   confidence: number;
   scannedAt: string;
+  scannedAtDate: string;
   sellerLabel?: string;
   sustainability: {
     rating: SustainabilityRating;
@@ -85,6 +86,7 @@ export const SCAN_RESULTS: ScanResult[] = [
     ],
     confidence: 87,
     scannedAt: 'Today, 10:30 AM',
+    scannedAtDate: '2026-07-04',
     sellerLabel: 'Pure Silk',
     sustainability: {
       rating: 'green',
@@ -140,8 +142,8 @@ export const SCAN_RESULTS: ScanResult[] = [
       ],
       ecoAlternatives: [
         {
-          name: 'Jusi',
-          description: 'Local Philippine fiber. Biodegradable.',
+          name: 'Rayon',
+          description: 'Flowy semi-synthetic with a similar soft hand-feel.',
         },
         {
           name: 'Abaca',
@@ -170,6 +172,7 @@ export const SCAN_RESULTS: ScanResult[] = [
     ],
     confidence: 84,
     scannedAt: 'Yesterday, 3:45 PM',
+    scannedAtDate: '2026-07-03',
     sustainability: {
       rating: 'green',
       label: 'Good',
@@ -254,6 +257,7 @@ export const SCAN_RESULTS: ScanResult[] = [
     ],
     confidence: 45,
     scannedAt: 'Today, just now',
+    scannedAtDate: '2026-07-04',
     sustainability: {
       rating: 'yellow',
       label: 'Moderate',
@@ -314,6 +318,7 @@ export const SCAN_RESULTS: ScanResult[] = [
     ],
     confidence: 86,
     scannedAt: 'Today, 2:15 PM',
+    scannedAtDate: '2026-07-04',
     sustainability: {
       rating: 'green',
       label: 'Good',
@@ -398,6 +403,7 @@ export const SCAN_RESULTS: ScanResult[] = [
     ],
     confidence: 81,
     scannedAt: 'Yesterday, 11:00 AM',
+    scannedAtDate: '2026-07-03',
     sellerLabel: '100% Cotton',
     sustainability: {
       rating: 'green',
@@ -453,8 +459,8 @@ export const SCAN_RESULTS: ScanResult[] = [
       ],
       ecoAlternatives: [
         {
-          name: 'Jusi',
-          description: 'Piña-silk blend — similar formal drape at a lower price point.',
+          name: 'Rayon',
+          description: 'Smooth formal drape at a lower price point in pre-owned pieces.',
         },
         {
           name: 'Abaca',
@@ -476,22 +482,23 @@ export const SCAN_RESULTS: ScanResult[] = [
   },
   {
     id: '6',
-    dominantFabric: 'Jusi dominant',
+    dominantFabric: 'Rayon dominant',
     compositions: [
-      { material: 'Jusi', percentage: 68 },
-      { material: 'Piña', percentage: 22 },
-      { material: 'Silk', percentage: 10 },
+      { material: 'Rayon', percentage: 72 },
+      { material: 'Polyester', percentage: 18 },
+      { material: 'Cotton', percentage: 10 },
     ],
     confidence: 79,
     scannedAt: '2 days ago, 4:30 PM',
+    scannedAtDate: '2026-07-02',
     sustainability: {
-      rating: 'green',
-      label: 'Good',
-      score: 8,
+      rating: 'yellow',
+      label: 'Moderate',
+      score: 6,
       factors: [
-        { text: 'Jusi blend — piña and silk heritage textile', positive: true },
-        { text: 'Natural-dominant formal fiber mix', positive: true },
-        { text: 'Blend ratios are estimated visually', positive: false },
+        { text: 'Rayon offers soft drape for dresses and blouses', positive: true },
+        { text: 'Contains polyester synthetic blend', positive: false },
+        { text: 'Semi-synthetic fiber with moderate environmental impact', positive: false },
       ],
     },
     mislabeling: {
@@ -502,27 +509,27 @@ export const SCAN_RESULTS: ScanResult[] = [
     profile: {
       texture: 'Smooth',
       weave: 'Plain weave',
-      breathability: 'High',
+      breathability: 'Moderate',
       durability: 'Moderate',
       stretch: 'Low',
       careInstructions: [
-        { text: 'Dry clean preferred for formal jusi', recommended: true },
-        { text: 'Steam instead of high-heat iron', recommended: true },
-        { text: 'Machine wash', recommended: false },
+        { text: 'Hand wash or delicate cycle', recommended: true },
+        { text: 'Lay flat to dry', recommended: true },
+        { text: 'High-heat tumble dry', recommended: false },
       ],
-      useCases: ['Barong', 'Filipiniana dresses', 'Wedding guests', 'Formal office events'],
+      useCases: ['Dresses', 'Blouses', 'Flowy skirts', 'Office separates'],
     },
     recommendations: {
       garmentPurposes: [
         {
-          purpose: 'Formal events',
-          suitability: 'Excellent',
-          note: 'Jusi offers barong-ready drape without full piña cost.',
+          purpose: 'Office wear',
+          suitability: 'Good',
+          note: 'Soft drape works well for tropical office blouses and skirts.',
         },
         {
-          purpose: 'Office formal',
-          suitability: 'Good',
-          note: 'Lightweight and presentable for tropical workplaces.',
+          purpose: 'Casual outings',
+          suitability: 'Excellent',
+          note: 'Comfortable flowy hand-feel for everyday ukay finds.',
         },
         {
           purpose: 'Sportswear',
@@ -532,29 +539,29 @@ export const SCAN_RESULTS: ScanResult[] = [
         {
           purpose: 'Rainy season outer layer',
           suitability: 'Fair',
-          note: 'Can water-spot — carry cover in habagat months.',
+          note: 'Can weaken when wet — dry promptly after habagat showers.',
         },
       ],
       ecoAlternatives: [
         {
-          name: 'Pure Piña',
-          description: 'Finer heritage option for heirloom formal wear.',
-        },
-        {
-          name: 'Abaca-silk blends',
-          description: 'Philippine plant fiber with more body for structured barong.',
-        },
-        {
           name: 'Tencel / lyocell',
-          description: 'Smooth drape with lower care burden for everyday formal.',
+          description: 'Closed-loop cellulose with a similar flowy drape.',
+        },
+        {
+          name: 'Organic cotton',
+          description: 'Breathable natural alternative for everyday tops.',
+        },
+        {
+          name: 'Linen blend',
+          description: 'Airy structure with better wrinkle recovery in humidity.',
         },
       ],
       recycledAwareness:
-        'Jusi is common in Philippine formal wear — check ukay sections near June and December. Prefer pieces with intact embroidery and no yellowing.',
+        'Rayon weakens when wet — handle gently when washing ukay finds. Shrinkage is common.',
       reuse: {
-        resale: 'Market as jusi or barong fabric to formal-wear buyers online.',
-        donate: 'School or church groups sometimes accept formal barong for events.',
-        upcycle: 'Repurpose panels into table runners or ceremonial sashes if worn.',
+        resale: 'Flowy dresses and blouses sell well — note shrink history if known.',
+        donate: 'Community dress drives often accept clean rayon separates.',
+        upcycle: 'Repurpose panels into scarves or hair accessories if worn.',
       },
     },
   },
@@ -603,6 +610,7 @@ export type RecentScanPreview = {
   primaryFabric: string;
   composition: string;
   scannedAt: string;
+  scannedAtDate: string;
   sustainability: SustainabilityRating;
   sustainabilityLabel: string;
   mislabeling: boolean;
@@ -614,6 +622,7 @@ export const RECENT_SCANS_PREVIEW: RecentScanPreview[] = SCAN_RESULTS.map((scan)
   primaryFabric: scan.dominantFabric.replace(' dominant', ' Blend'),
   composition: scan.compositions.map((c) => `${c.material} ${c.percentage}%`).join(' · '),
   scannedAt: scan.scannedAt,
+  scannedAtDate: scan.scannedAtDate,
   sustainability: scan.sustainability.rating,
   sustainabilityLabel: scan.sustainability.label,
   mislabeling: scan.mislabeling.detected,

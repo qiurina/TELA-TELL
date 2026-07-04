@@ -507,3 +507,53 @@ export const Sparkles: FC<IconProps> = (props) => {
     </Svg>
   );
 };
+
+export const Calendar: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path
+        d="M8 2v4M16 2v4"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Rect
+        x="3"
+        y="4"
+        width="18"
+        height="18"
+        rx="2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="transparent"
+      />
+      <Path
+        d="M3 10h18"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+};
+
+export const Search: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Circle cx="11" cy="11" r="8" stroke={color} strokeWidth={strokeWidth} />
+      <Path
+        d="m21 21-4.3-4.3"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+};

@@ -75,9 +75,9 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
           'Same lustrous drape for barong and Filipiniana — Aklan heirloom fiber, common in formal ukay.',
       },
       {
-        name: 'Jusi',
+        name: 'Rayon',
         similarity:
-          'Similar smooth formal hand-feel — piña-silk blend at a lower price point in pre-owned barong.',
+          'Similar smooth formal hand-feel for flowy blouses and pre-owned formal wear.',
       },
       {
         name: 'Peace silk (ahimsa)',
@@ -252,14 +252,14 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
   'Piña': {
     ecoAlternatives: [
       {
-        name: 'Jusi',
+        name: 'Rayon',
         similarity:
-          'Same formal luster for barong — piña-silk blend with similar drape at lower cost.',
+          'Comparable sheen when authentic piña is out of budget — smooth formal alternative.',
       },
       {
         name: 'Peace silk',
         similarity:
-          'Comparable sheen when authentic piña is out of budget — smooth formal alternative.',
+          'Ethical silk option with comparable luster for formal wear.',
       },
       {
         name: 'Abaca',
@@ -273,32 +273,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
       resale: 'Highlight piña or barong fabric — collectors pay for verified heritage pieces.',
       donate: 'Cultural archives or costume shops may accept authenticated garments.',
       upcycle: 'Only if damaged — frame small samples as textile art.',
-    },
-  },
-  Jusi: {
-    ecoAlternatives: [
-      {
-        name: 'Pure piña',
-        similarity:
-          'Finer similar formal luster for special occasions — heirloom upgrade from jusi blends.',
-      },
-      {
-        name: 'Abaca-silk blend',
-        similarity:
-          'Same body and structure for humid formal events — more support than sheer jusi alone.',
-      },
-      {
-        name: 'Tencel formal blend',
-        similarity:
-          'Similar drape with easier care — office formal in tropical climates.',
-      },
-    ],
-    recycledAwareness:
-      'Jusi barong is common pre-owned near June and December — check embroidery and armpit stains in ukay.',
-    reuse: {
-      resale: 'Market to formal-wear buyers — note jusi vs organza honestly.',
-      donate: 'Church or school events sometimes accept formal barong.',
-      upcycle: 'Table runners or ceremonial sashes from worn panels.',
     },
   },
 };

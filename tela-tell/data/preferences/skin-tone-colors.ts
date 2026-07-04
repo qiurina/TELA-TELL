@@ -115,7 +115,6 @@ const FABRIC_COLOR_NOTES: Partial<Record<string, string>> = {
   Rayon: 'Flowy rayon drapes beautifully in saturated jewel or earth tones.',
   Abaca: 'Natural abaca and sinamay look elegant in cream, gold, and heritage earth tones.',
   'Piña': 'Piña barong classics include ecru, champagne, and soft gold — keep contrast near the face.',
-  Jusi: 'Jusi formal wear suits off-white, champagne, and deep jewel accents in embroidery.',
 };
 
 export function getSkinToneColorGuidance(

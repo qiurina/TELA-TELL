@@ -4,8 +4,9 @@ export const BrandColors = {
   primaryLight: '#6BAEC4',
   gradientStart: '#7EC5DB',
   gradientEnd: '#4A8FA8',
-  splashGradientTop: '#2A8C9D',
-  splashGradientBottom: '#AEE8F5',
+  splashGradientTop: '#F8FCFE',
+  splashGradientBottom: '#B8E4EE',
+  splashTitle: '#2A8C9D',
   lavender: '#EAF4F8',
   lavenderCard: '#DFEEF4',
   text: '#212121',
@@ -33,7 +34,6 @@ export const FabricBarStyles: Record<string, FabricBarStyle> = {
   Rayon: { gradient: ['#A78BFA', '#818CF8', '#6366F1'], track: '#EEF2FF' },
   Abaca: { gradient: ['#84CC16', '#65A30D', '#4D7C0F'], track: '#ECFCCB' },
   'Piña': { gradient: ['#FCD34D', '#FBBF24', '#F59E0B'], track: '#FEF9C3' },
-  Jusi: { gradient: ['#C4B5FD', '#F9A8D4', '#FDE68A'], track: '#FAF5FF' },
 };
 
 export const FabricBarFallback: FabricBarStyle[] = [

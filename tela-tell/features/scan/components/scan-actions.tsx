@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -299,14 +299,15 @@ export function ScanActions({
   const hasSellerLabel = trimmedLabel.length > 0;
   const isCaptureBusy = Boolean(isAnalyzing || isDeviceScanning);
 
+  useEffect(() => {
+    setDetailsExpanded(hasPreview ?? false);
+  }, [hasPreview]);
+
   useFocusEffect(
     useCallback(() => {
       setHasPreferences(hasActiveUserPreferences() || getScanMode() === 'dual');
       setIsDualScanMode(getScanMode() === 'dual');
-      if (!hasPreview) {
-        setDetailsExpanded(false);
-      }
-    }, [hasPreview]),
+    }, []),
   );
 
   const captureAlternatives = (

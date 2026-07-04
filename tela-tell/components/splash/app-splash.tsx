@@ -1,9 +1,12 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
+
+const SPLASH_ICON = require('@/assets/images/appiconv2.png');
 
 type AppSplashProps = {
   fontsLoaded?: boolean;
@@ -12,7 +15,7 @@ type AppSplashProps = {
 export function AppSplash({ fontsLoaded = true }: AppSplashProps) {
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <LinearGradient
         colors={[BrandColors.splashGradientTop, BrandColors.splashGradientBottom]}
         style={StyleSheet.absoluteFill}
@@ -20,6 +23,7 @@ export function AppSplash({ fontsLoaded = true }: AppSplashProps) {
         end={{ x: 0.5, y: 1 }}
       />
       <View style={styles.content}>
+        <Image source={SPLASH_ICON} style={styles.icon} contentFit="contain" />
         <Text style={[styles.title, fontsLoaded && styles.titleFont]}>Tela-Tell</Text>
         <Text style={[styles.tagline, fontsLoaded && styles.taglineFont]}>
           Scan it. Know it. Buy Right.
@@ -40,10 +44,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
+  icon: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '700',
-    color: BrandColors.white,
+    color: BrandColors.splashTitle,
     letterSpacing: 0.3,
     textAlign: 'center',
   },
@@ -52,10 +61,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   tagline: {
-    marginTop: 10,
+    marginTop: 8,
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.92)',
+    color: BrandColors.textMuted,
     textAlign: 'center',
     letterSpacing: 0.2,
   },

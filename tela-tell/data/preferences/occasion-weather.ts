@@ -232,7 +232,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     bestChoices: [
       { fabric: 'Silk', reason: 'Smooth drape and polished look for dressy occasions' },
       { fabric: 'Piña', reason: 'Traditional Filipino formal fiber for barong and Filipiniana' },
-      { fabric: 'Jusi', reason: 'Lighter formal option with a refined sheen' },
+      { fabric: 'Abaca', reason: 'Structured Philippine fiber for tropical formal wear' },
     ],
     avoid: [
       { fabric: 'Acrylic', reason: 'Can look inexpensive and pill under formal lighting' },
@@ -245,7 +245,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     label: 'Wedding',
     bestChoices: [
       { fabric: 'Piña', reason: 'Classic Filipino celebration fiber for barong and formal wear' },
-      { fabric: 'Jusi', reason: 'Elegant sheen for guests and semi-formal attire' },
+      { fabric: 'Abaca', reason: 'Heritage Philippine fiber for celebration barong details' },
       { fabric: 'Silk', reason: 'Luxurious drape for dresses and formal separates' },
     ],
     avoid: [
