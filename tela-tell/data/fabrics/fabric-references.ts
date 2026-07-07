@@ -1,7 +1,7 @@
 import type { ImageSourcePropType } from 'react-native';
 
 import type { FabricComposition } from '@/data/scans/mock-data';
-import { SUPPORTED_FABRICS, type SupportedFabric } from '@/data/fabrics/fabrics';
+import { resolveFabricAlias, SUPPORTED_FABRICS, type SupportedFabric } from '@/data/fabrics/fabrics';
 
 /** Reference swatches in assets/images/reference/ — lowercase fabric name, .jpg or .png */
 const FABRIC_REFERENCE_IMAGES: Record<SupportedFabric, ImageSourcePropType> = {
@@ -12,7 +12,10 @@ const FABRIC_REFERENCE_IMAGES: Record<SupportedFabric, ImageSourcePropType> = {
   Polyester: require('@/assets/images/reference/polyester.jpg'),
   Nylon: require('@/assets/images/reference/nylon.jpg'),
   Acrylic: require('@/assets/images/reference/acrylic.jpg'),
+  Spandex: require('@/assets/images/reference/spandex.jpg'),
   Rayon: require('@/assets/images/reference/rayon.jpg'),
+  Leather: require('@/assets/images/reference/leather.jpg'),
+  Suede: require('@/assets/images/reference/suede.jpg'),
   Abaca: require('@/assets/images/reference/abaca.jpg'),
   'Piña': require('@/assets/images/reference/pina.jpg'),
 };
@@ -75,12 +78,33 @@ export const FABRIC_REFERENCES: Record<SupportedFabric, FabricReference> = {
     textureNote: 'Budget sweaters that pill faster than natural wool',
     image: FABRIC_REFERENCE_IMAGES.Acrylic,
   },
+  Spandex: {
+    fabric: 'Spandex',
+    title: 'Spandex',
+    lookFor: 'High stretch with a smooth, tight knit or woven recovery',
+    textureNote: 'Also known as elastane or Lycra — common in jeans, leggings, and activewear blends',
+    image: FABRIC_REFERENCE_IMAGES.Spandex,
+  },
   Rayon: {
     fabric: 'Rayon',
     title: 'Rayon',
     lookFor: 'Soft flowy drape with a cool, smooth hand-feel',
     textureNote: 'Used in dresses and blouses, can look silk-like at lower cost',
     image: FABRIC_REFERENCE_IMAGES.Rayon,
+  },
+  Leather: {
+    fabric: 'Leather',
+    title: 'Leather',
+    lookFor: 'Smooth grain surface with a firm, non-woven animal-hide look',
+    textureNote: 'Common in jackets, bags, belts, and shoes in ukay imports',
+    image: FABRIC_REFERENCE_IMAGES.Leather,
+  },
+  Suede: {
+    fabric: 'Suede',
+    title: 'Suede',
+    lookFor: 'Soft napped surface with a matte, velvety texture',
+    textureNote: 'Napped leather — often confused with leather; check the fuzzy finish',
+    image: FABRIC_REFERENCE_IMAGES.Suede,
   },
   Abaca: {
     fabric: 'Abaca',
@@ -102,16 +126,20 @@ export function resolveSupportedFabric(
   dominantFabric: string,
   compositions?: FabricComposition[],
 ): SupportedFabric | null {
-  const normalized = dominantFabric.trim().toLowerCase();
-
-  for (const fabric of SUPPORTED_FABRICS) {
-    if (normalized.includes(fabric.toLowerCase())) {
-      return fabric;
-    }
+  const fromDominant = resolveFabricAlias(dominantFabric);
+  if (fromDominant) {
+    return fromDominant;
   }
 
   const sorted = [...(compositions ?? [])].sort((a, b) => b.percentage - a.percentage);
   const top = sorted[0]?.material;
+
+  if (top) {
+    const fromTop = resolveFabricAlias(top);
+    if (fromTop) {
+      return fromTop;
+    }
+  }
 
   if (top && SUPPORTED_FABRICS.includes(top as SupportedFabric)) {
     return top as SupportedFabric;

@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PersonalizedInsightsContent } from '@/features/recommendations/components/personalized-insights-content';
+import { ProfilePreferencesGate } from '@/features/profile/components/profile-preferences-gate';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -36,11 +37,13 @@ export default function PersonalizedInsightsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
-        <PersonalizedInsightsContent
-          dominantFabric={result.dominantFabric}
-          detectedCompositions={result.compositions ?? []}
-          onScanAnother={handleScanAnother}
-        />
+        <ProfilePreferencesGate>
+          <PersonalizedInsightsContent
+            dominantFabric={result.dominantFabric}
+            detectedCompositions={result.compositions ?? []}
+            onScanAnother={handleScanAnother}
+          />
+        </ProfilePreferencesGate>
       </ScrollView>
     </View>
   );

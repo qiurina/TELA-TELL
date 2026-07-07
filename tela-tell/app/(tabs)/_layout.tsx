@@ -15,7 +15,13 @@ export default function TabLayout() {
       <Tabs.Screen name="fabrics" options={{ title: 'Fibers' }} />
       <Tabs.Screen name="scan" options={{ title: 'Scan', href: null }} />
       <Tabs.Screen name="history" options={{ title: 'History' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          href: '/profile',
+        }}
+      />
     </Tabs>
   );
 }

@@ -78,30 +78,4 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     flexGrow: 1,
   },
-  introCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: BrandColors.lavenderCard,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-  },
-  introText: {
-    flex: 1,
-    gap: 4,
-  },
-  introTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.primaryDark,
-  },
-  introBody: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: BrandColors.textMuted,
-  },
 });

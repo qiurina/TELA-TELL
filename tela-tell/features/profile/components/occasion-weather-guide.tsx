@@ -15,6 +15,8 @@ type OccasionWeatherGuideProps = {
   onToggle: (context: DressingContext) => void;
   disabled?: boolean;
   compact?: boolean;
+  /** Show weather only, occasion only, or both sections. */
+  category?: 'weather' | 'occasion' | 'both';
 };
 
 function OptionPill({
@@ -85,31 +87,35 @@ export function OccasionWeatherGuide({
   selected = [],
   onToggle,
   disabled,
-  compact = false,
+  category = 'both',
 }: OccasionWeatherGuideProps) {
+  const showWeather = category === 'both' || category === 'weather';
+  const showOccasion = category === 'both' || category === 'occasion';
+
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>What are you dressing for?</Text>
-      {!compact ? (
-        <Text style={styles.subtitle}>
-          Pick any weather conditions or occasions — we will suggest the best fabrics for them.
-        </Text>
+      {category === 'both' ? (
+        <Text style={styles.title}>What are you dressing for?</Text>
       ) : null}
 
-      <OptionSection
-        title="Weather"
-        options={WEATHER_CONTEXT_OPTIONS}
-        selected={selected}
-        onToggle={onToggle}
-        disabled={disabled}
-      />
-      <OptionSection
-        title="Occasion"
-        options={OCCASION_CONTEXT_OPTIONS}
-        selected={selected}
-        onToggle={onToggle}
-        disabled={disabled}
-      />
+      {showWeather ? (
+        <OptionSection
+          title="Weather"
+          options={WEATHER_CONTEXT_OPTIONS}
+          selected={selected}
+          onToggle={onToggle}
+          disabled={disabled}
+        />
+      ) : null}
+      {showOccasion ? (
+        <OptionSection
+          title="Occasion"
+          options={OCCASION_CONTEXT_OPTIONS}
+          selected={selected}
+          onToggle={onToggle}
+          disabled={disabled}
+        />
+      ) : null}
     </View>
   );
 }

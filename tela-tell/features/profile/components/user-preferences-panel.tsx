@@ -1,8 +1,9 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { OccasionWeatherGuide } from '@/features/profile/components/occasion-weather-guide';
+import { ProfileSaveButton } from '@/features/profile/components/profile-save-button';
 import { Check, CircleCheck, Plus, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { SUPPORTED_FABRICS, type SupportedFabric } from '@/data/fabrics/fabrics';
@@ -10,12 +11,15 @@ import { Fonts } from '@/constants/fonts';
 import { getScanMode, setScanMode, type ScanMode } from '@/features/scan/lib/scan-session';
 import {
   getUserPreferences,
-  setUserPreference,
+  moveFabricToPreferred,
+  moveFabricToSensitive,
+  setUserPreferences,
+  toggleDressingContext,
   togglePreferredFabric,
   toggleSensitiveFabric,
-  toggleDressingContext,
   type SkinTone,
   type SkinUndertone,
+  type UserPreferences,
 } from '@/features/profile/lib/user-preferences';
 
 const SKIN_TONE_SWATCHES: Record<SkinTone, string> = {
@@ -67,18 +71,22 @@ const PREFERRED_COLORS = {
   text: '#15803d',
 };
 
-function SectionHeader({ title, hint }: { title: string; hint?: string }) {
+const BLOCKED_COLORS = {
+  border: BrandColors.borderLight,
+  background: '#F2F4F5',
+  text: '#9CA3AF',
+};
+
+function SectionHeader({ title }: { title: string }) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionLabel}>{title}</Text>
-      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
     </View>
   );
 }
 
 function HorizontalSwatchPicker<T extends string>({
   title,
-  hint,
   options,
   swatches,
   selected,
@@ -86,7 +94,6 @@ function HorizontalSwatchPicker<T extends string>({
   disabled,
 }: {
   title: string;
-  hint?: string;
   options: { value: T; label: string }[];
   swatches: Record<T, string>;
   selected: T | null;
@@ -95,7 +102,7 @@ function HorizontalSwatchPicker<T extends string>({
 }) {
   return (
     <View style={styles.section}>
-      <SectionHeader title={title} hint={hint} />
+      <SectionHeader title={title} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -143,18 +150,20 @@ function HorizontalSwatchPicker<T extends string>({
 function FabricTogglePill({
   label,
   active,
+  blocked,
   variant,
   onPress,
   disabled,
 }: {
   label: string;
   active: boolean;
+  blocked?: boolean;
   variant: 'allergy' | 'preferred';
   onPress: () => void;
   disabled?: boolean;
 }) {
   const palette = variant === 'allergy' ? ALLERGY_COLORS : PREFERRED_COLORS;
-  const iconColor = active ? palette.text : BrandColors.textMuted;
+  const iconColor = active ? palette.text : blocked ? BLOCKED_COLORS.text : BrandColors.textMuted;
   const iconSize = 12;
 
   return (
@@ -165,13 +174,14 @@ function FabricTogglePill({
           borderColor: palette.border,
           backgroundColor: palette.background,
         },
-        pressed && styles.pressed,
+        !active && blocked && styles.fabricPillBlocked,
+        pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
       ]}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityState={{ selected: active }}>
+      accessibilityState={{ selected: active, disabled: blocked && !active }}>
       {active ? (
         variant === 'allergy' ? (
           <View style={styles.pillContent}>
@@ -187,7 +197,12 @@ function FabricTogglePill({
       ) : (
         <View style={styles.pillContent}>
           <Plus size={iconSize} color={iconColor} strokeWidth={2.5} />
-          <Text style={styles.fabricPillTextMuted}>{label}</Text>
+          <Text
+            style={[
+              blocked ? styles.fabricPillTextBlocked : styles.fabricPillTextMuted,
+            ]}>
+            {label}
+          </Text>
         </View>
       )}
     </Pressable>
@@ -196,35 +211,41 @@ function FabricTogglePill({
 
 function FabricToggleSection({
   title,
-  hint,
   fabrics,
   selected,
+  blockedFabrics,
   variant,
   onToggle,
   disabled,
 }: {
   title: string;
-  hint?: string;
   fabrics: SupportedFabric[];
   selected: SupportedFabric[];
+  blockedFabrics: SupportedFabric[];
   variant: 'allergy' | 'preferred';
   onToggle: (fabric: SupportedFabric) => void;
   disabled?: boolean;
 }) {
   return (
     <View style={styles.section}>
-      <SectionHeader title={title} hint={hint} />
+      <SectionHeader title={title} />
       <View style={styles.fabricPillRow}>
-        {fabrics.map((fabric) => (
-          <FabricTogglePill
-            key={fabric}
-            label={fabric}
-            active={selected.includes(fabric)}
-            variant={variant}
-            onPress={() => onToggle(fabric)}
-            disabled={disabled}
-          />
-        ))}
+        {fabrics.map((fabric) => {
+          const active = selected.includes(fabric);
+          const blocked = !active && blockedFabrics.includes(fabric);
+
+          return (
+            <FabricTogglePill
+              key={fabric}
+              label={fabric}
+              active={active}
+              blocked={blocked}
+              variant={variant}
+              onPress={() => onToggle(fabric)}
+              disabled={disabled}
+            />
+          );
+        })}
       </View>
     </View>
   );
@@ -271,121 +292,309 @@ type UserPreferencesPanelProps = {
   disabled?: boolean;
   embedded?: boolean;
   onChange?: () => void;
+  onSaved?: () => void;
+  /** Which preference groups to render. Defaults to full panel (modal). */
+  scope?:
+    | 'full'
+    | 'scan'
+    | 'personalization'
+    | 'skin-tone'
+    | 'allergies'
+    | 'preferred'
+    | 'weather'
+    | 'occasion';
+  /** Manual save commits draft on Save tap. Immediate saves each change. */
+  saveMode?: 'immediate' | 'manual';
 };
+
+function confirmFabricMove(
+  fabric: SupportedFabric,
+  target: 'sensitive' | 'preferred',
+  onConfirm: () => void,
+) {
+  const otherList = target === 'sensitive' ? 'preferred fibers' : 'sensitivities';
+
+  Alert.alert(
+    `${fabric} is already selected`,
+    `${fabric} is in your ${otherList}. Move it to ${target === 'sensitive' ? 'sensitivities' : 'preferred fibers'} instead?`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Move',
+        onPress: onConfirm,
+      },
+    ],
+  );
+}
 
 export function UserPreferencesPanel({
   disabled,
   embedded = false,
   onChange,
+  onSaved,
+  scope = 'full',
+  saveMode = 'immediate',
 }: UserPreferencesPanelProps) {
-  const [prefs, setPrefs] = useState(getUserPreferences);
+  const usesManualSave = saveMode === 'manual';
+  const [prefs, setPrefs] = useState<UserPreferences>(getUserPreferences);
   const [mode, setMode] = useState(getScanMode);
+  const [saved, setSaved] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       setPrefs(getUserPreferences());
       setMode(getScanMode());
+      setSaved(false);
     }, []),
   );
 
-  const refresh = () => {
+  const markDirty = () => {
+    setSaved(false);
+    onChange?.();
+  };
+
+  const commitPrefs = (next: UserPreferences) => {
+    setPrefs(next);
+    if (usesManualSave) {
+      markDirty();
+      return;
+    }
+    setUserPreferences(next);
+    onChange?.();
+  };
+
+  const commitMode = (next: ScanMode) => {
+    setMode(next);
+    if (usesManualSave) {
+      markDirty();
+      return;
+    }
+    setScanMode(next);
+    onChange?.();
+  };
+
+  const updatePref = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+    commitPrefs({ ...prefs, [key]: value });
+  };
+
+  const handleSensitiveToggle = (fabric: SupportedFabric) => {
+    if (prefs.sensitiveFabrics.includes(fabric)) {
+      const next = {
+        ...prefs,
+        sensitiveFabrics: prefs.sensitiveFabrics.filter((item) => item !== fabric),
+      };
+      if (usesManualSave) {
+        commitPrefs(next);
+      } else {
+        toggleSensitiveFabric(fabric);
+        setPrefs(getUserPreferences());
+        onChange?.();
+      }
+      return;
+    }
+
+    if (prefs.preferredFabrics.includes(fabric)) {
+      confirmFabricMove(fabric, 'sensitive', () => {
+        if (usesManualSave) {
+          commitPrefs({
+            ...prefs,
+            preferredFabrics: prefs.preferredFabrics.filter((item) => item !== fabric),
+            sensitiveFabrics: [...prefs.sensitiveFabrics, fabric],
+          });
+        } else {
+          moveFabricToSensitive(fabric);
+          setPrefs(getUserPreferences());
+          onChange?.();
+        }
+      });
+      return;
+    }
+
+    const next = { ...prefs, sensitiveFabrics: [...prefs.sensitiveFabrics, fabric] };
+    if (usesManualSave) {
+      commitPrefs(next);
+    } else {
+      toggleSensitiveFabric(fabric);
+      setPrefs(getUserPreferences());
+      onChange?.();
+    }
+  };
+
+  const handlePreferredToggle = (fabric: SupportedFabric) => {
+    if (prefs.preferredFabrics.includes(fabric)) {
+      const next = {
+        ...prefs,
+        preferredFabrics: prefs.preferredFabrics.filter((item) => item !== fabric),
+      };
+      if (usesManualSave) {
+        commitPrefs(next);
+      } else {
+        togglePreferredFabric(fabric);
+        setPrefs(getUserPreferences());
+        onChange?.();
+      }
+      return;
+    }
+
+    if (prefs.sensitiveFabrics.includes(fabric)) {
+      confirmFabricMove(fabric, 'preferred', () => {
+        if (usesManualSave) {
+          commitPrefs({
+            ...prefs,
+            sensitiveFabrics: prefs.sensitiveFabrics.filter((item) => item !== fabric),
+            preferredFabrics: [...prefs.preferredFabrics, fabric],
+          });
+        } else {
+          moveFabricToPreferred(fabric);
+          setPrefs(getUserPreferences());
+          onChange?.();
+        }
+      });
+      return;
+    }
+
+    const next = { ...prefs, preferredFabrics: [...prefs.preferredFabrics, fabric] };
+    if (usesManualSave) {
+      commitPrefs(next);
+    } else {
+      togglePreferredFabric(fabric);
+      setPrefs(getUserPreferences());
+      onChange?.();
+    }
+  };
+
+  const handleDressingToggle = (context: (typeof prefs.dressingContexts)[number]) => {
+    const current = prefs.dressingContexts ?? [];
+    const nextContexts = current.includes(context)
+      ? current.filter((item) => item !== context)
+      : [...current, context];
+
+    if (usesManualSave) {
+      commitPrefs({ ...prefs, dressingContexts: nextContexts });
+      return;
+    }
+
+    toggleDressingContext(context);
     setPrefs(getUserPreferences());
     onChange?.();
   };
 
-  const updatePref = <K extends keyof typeof prefs>(key: K, value: (typeof prefs)[K]) => {
-    setUserPreference(key, value);
-    refresh();
-  };
-
-  const updateMode = (next: ScanMode) => {
-    setScanMode(next);
-    setMode(next);
+  const handleSave = () => {
+    if (scope === 'scan' || scope === 'full') {
+      setScanMode(mode);
+    }
+    if (
+      scope === 'personalization' ||
+      scope === 'full' ||
+      scope === 'skin-tone' ||
+      scope === 'allergies' ||
+      scope === 'preferred' ||
+      scope === 'weather' ||
+      scope === 'occasion'
+    ) {
+      setUserPreferences(prefs);
+    }
+    setSaved(true);
+    onSaved?.();
     onChange?.();
   };
 
   const fabricNames: SupportedFabric[] = [...SUPPORTED_FABRICS];
+  const showScan = scope === 'full' || scope === 'scan';
+  const showPersonalization = scope === 'full' || scope === 'personalization';
+  const showSkinTone = showPersonalization || scope === 'skin-tone';
+  const showAllergies = showPersonalization || scope === 'allergies';
+  const showPreferred = showPersonalization || scope === 'preferred';
+  const showWeather = showPersonalization || scope === 'weather';
+  const showOccasion = showPersonalization || scope === 'occasion';
+  const showDressingGuide = showWeather || showOccasion;
+  const dressingCategory =
+    showWeather && showOccasion ? 'both' : showWeather ? 'weather' : showOccasion ? 'occasion' : 'both';
+  const showSaveButton = usesManualSave;
 
   return (
     <View style={[styles.panel, embedded && styles.panelEmbedded]}>
-      {!embedded ? (
+      {showScan ? (
+        <View style={styles.section}>
+          <SectionHeader title="Scan mode" />
+          <ScanModeRow selected={mode} onSelect={commitMode} disabled={disabled} />
+          {mode === 'dual' ? (
+            <Text style={styles.dualHint}>
+              Place two fabric swatches on a flat surface, then draw a box around each one before
+              analyzing.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {showScan && (showSkinTone || showAllergies || showPreferred || showDressingGuide) ? (
+        <View style={styles.divider} />
+      ) : null}
+
+      {showSkinTone ? (
         <>
-          <Text style={styles.panelTitle}>Your profile</Text>
-          <Text style={styles.panelHint}>
-            Set once — personalizes color tips, fiber sensitivity alerts, and scan guidance.
-          </Text>
+          <HorizontalSwatchPicker
+            title="Skin tone"
+            options={SKIN_TONE_OPTIONS}
+            swatches={SKIN_TONE_SWATCHES}
+            selected={prefs.skinTone}
+            onSelect={(value) => updatePref('skinTone', value)}
+            disabled={disabled}
+          />
+
+          <HorizontalSwatchPicker
+            title="Skin undertone"
+            options={UNDERTONE_OPTIONS}
+            swatches={UNDERTONE_SWATCHES}
+            selected={prefs.skinUndertone}
+            onSelect={(value) => updatePref('skinUndertone', value)}
+            disabled={disabled}
+          />
         </>
       ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Scan settings</Text>
-        <SectionHeader title="Scan mode" />
-        <ScanModeRow selected={mode} onSelect={updateMode} disabled={disabled} />
-        {mode === 'dual' ? (
-          <Text style={styles.dualHint}>
-            Place two fabric swatches on a flat surface, then draw a box around each one before
-            analyzing.
-          </Text>
-        ) : null}
-      </View>
+      {showSkinTone && (showAllergies || showPreferred || showDressingGuide) ? (
+        <View style={styles.divider} />
+      ) : null}
 
-      <View style={styles.divider} />
+      {showAllergies ? (
+        <FabricToggleSection
+          title="Fiber sensitivities"
+          fabrics={fabricNames}
+          selected={prefs.sensitiveFabrics}
+          blockedFabrics={prefs.preferredFabrics}
+          variant="allergy"
+          onToggle={handleSensitiveToggle}
+          disabled={disabled}
+        />
+      ) : null}
 
-      <HorizontalSwatchPicker
-        title="Skin tone"
-        options={SKIN_TONE_OPTIONS}
-        swatches={SKIN_TONE_SWATCHES}
-        selected={prefs.skinTone}
-        onSelect={(value) => updatePref('skinTone', value)}
-        disabled={disabled}
-      />
+      {showAllergies && showPreferred ? <View style={styles.divider} /> : null}
 
-      <HorizontalSwatchPicker
-        title="Skin undertone"
-        hint="Important for color recommendations"
-        options={UNDERTONE_OPTIONS}
-        swatches={UNDERTONE_SWATCHES}
-        selected={prefs.skinUndertone}
-        onSelect={(value) => updatePref('skinUndertone', value)}
-        disabled={disabled}
-      />
+      {showPreferred ? (
+        <FabricToggleSection
+          title="Preferred fiber types"
+          fabrics={fabricNames}
+          selected={prefs.preferredFabrics}
+          blockedFabrics={prefs.sensitiveFabrics}
+          variant="preferred"
+          onToggle={handlePreferredToggle}
+          disabled={disabled}
+        />
+      ) : null}
 
-      <FabricToggleSection
-        title="Fiber sensitivities"
-        hint="Fiber types you react to or want to avoid"
-        fabrics={fabricNames}
-        selected={prefs.sensitiveFabrics}
-        variant="allergy"
-        onToggle={(fabric) => {
-          toggleSensitiveFabric(fabric);
-          refresh();
-        }}
-        disabled={disabled}
-      />
+      {showPreferred && showDressingGuide ? <View style={styles.divider} /> : null}
 
-      <FabricToggleSection
-        title="Preferred fiber types"
-        hint="Materials you like or usually shop for"
-        fabrics={fabricNames}
-        selected={prefs.preferredFabrics}
-        variant="preferred"
-        onToggle={(fabric) => {
-          togglePreferredFabric(fabric);
-          refresh();
-        }}
-        disabled={disabled}
-      />
+      {showDressingGuide ? (
+        <OccasionWeatherGuide
+          selected={prefs.dressingContexts ?? []}
+          onToggle={handleDressingToggle}
+          disabled={disabled}
+          category={dressingCategory}
+        />
+      ) : null}
 
-      <View style={styles.divider} />
-
-      <OccasionWeatherGuide
-        selected={prefs.dressingContexts ?? []}
-        onToggle={(context) => {
-          toggleDressingContext(context);
-          refresh();
-        }}
-        disabled={disabled}
-      />
+      {showSaveButton ? <ProfileSaveButton saved={saved} onPress={handleSave} /> : null}
     </View>
   );
 }
@@ -500,6 +709,11 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.border,
     backgroundColor: BrandColors.white,
   },
+  fabricPillBlocked: {
+    borderColor: BLOCKED_COLORS.border,
+    backgroundColor: BLOCKED_COLORS.background,
+    opacity: 0.72,
+  },
   pillContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -513,6 +727,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 12,
     color: BrandColors.textMuted,
+  },
+  fabricPillTextBlocked: {
+    fontFamily: Fonts.medium,
+    fontSize: 12,
+    color: BLOCKED_COLORS.text,
   },
   scanModeRow: {
     flexDirection: 'row',

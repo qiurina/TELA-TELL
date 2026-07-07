@@ -42,7 +42,9 @@ function normalizePreferences(raw: LegacyUserPreferences): UserPreferences {
     skinTone: raw.skinTone ?? null,
     skinUndertone: raw.skinUndertone ?? null,
     sensitiveFabrics: [...(raw.sensitiveFabrics ?? [])],
-    preferredFabrics: [...(raw.preferredFabrics ?? [])],
+    preferredFabrics: [...(raw.preferredFabrics ?? [])].filter(
+      (fabric) => !(raw.sensitiveFabrics ?? []).includes(fabric),
+    ),
     dressingContexts: [...dressingContexts],
   };
 }
@@ -51,11 +53,31 @@ export function getUserPreferences(): UserPreferences {
   return normalizePreferences(preferences);
 }
 
+export function setUserPreferences(next: UserPreferences): void {
+  preferences = normalizePreferences(next);
+}
+
 export function setUserPreference<K extends keyof UserPreferences>(
   key: K,
   value: UserPreferences[K],
 ): void {
   preferences = normalizePreferences({ ...preferences, [key]: value });
+}
+
+export function moveFabricToSensitive(fabric: SupportedFabric): void {
+  preferences = normalizePreferences({
+    ...preferences,
+    sensitiveFabrics: [...new Set([...preferences.sensitiveFabrics, fabric])],
+    preferredFabrics: preferences.preferredFabrics.filter((item) => item !== fabric),
+  });
+}
+
+export function moveFabricToPreferred(fabric: SupportedFabric): void {
+  preferences = normalizePreferences({
+    ...preferences,
+    preferredFabrics: [...new Set([...preferences.preferredFabrics, fabric])],
+    sensitiveFabrics: preferences.sensitiveFabrics.filter((item) => item !== fabric),
+  });
 }
 
 export function toggleSensitiveFabric(fabric: SupportedFabric): void {

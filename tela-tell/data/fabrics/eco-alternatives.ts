@@ -1,6 +1,5 @@
 import type { EcoAlternative, FabricComposition } from '@/data/scans/mock-data';
-import type { SupportedFabric } from '@/data/fabrics/fabrics';
-import { SUPPORTED_FABRICS } from '@/data/fabrics/fabrics';
+import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 
 export type EcoGuidance = {
   ecoAlternatives: EcoAlternative[];
@@ -19,24 +18,21 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Organic cotton',
-        similarity:
-          'Same softness and breathability for everyday wear — look for GOTS tags in curated ukay shops.',
+        similarity: 'Soft, breathable everyday wear. Look for GOTS tags in ukay.',
       },
       {
         name: 'Linen-cotton blend',
-        similarity:
-          'Similar comfort with a crisper hand-feel — holds shape better in Philippine humidity.',
+        similarity: 'Comfortable with a crisper hand. Holds shape in humidity.',
       },
       {
         name: 'Recycled cotton (rCotton)',
-        similarity:
-          'Same hand-feel for shirts and dresses — post-consumer waste, popular with upcyclers.',
+        similarity: 'Same hand-feel for shirts and dresses. Popular with upcyclers.',
       },
     ],
     recycledAwareness:
-      'In ukay-ukay bins, check for GOTS or recycled cotton tags. Blend pieces are common — verify fiber before reselling.',
+      'Check for GOTS or recycled cotton tags. Verify fiber on blends before reselling.',
     reuse: {
-      resale: 'List as cotton or cotton blend on Carousell or Facebook Marketplace if gently used.',
+      resale: 'List as cotton or blend on Carousell or Facebook Marketplace if gently used.',
       donate: 'Most barangay textile drives accept cotton garments.',
       upcycle: 'Cut into cleaning cloths, tote bags, or patchwork quilts.',
     },
@@ -45,25 +41,22 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Recycled wool',
-        similarity:
-          'Same warmth and loft for cool layers — RWS-certified labels appear in imported ukay finds.',
+        similarity: 'Warm layers with loft. RWS labels appear in imported ukay.',
       },
       {
         name: 'Lightweight cotton blend',
-        similarity:
-          'Similar light layering without heavy insulation — better suited to Baguio-style climates.',
+        similarity: 'Light layering without heavy insulation. Suited to cool climates.',
       },
       {
         name: 'Abaca',
-        similarity:
-          'Comparable strength for structured outer layers — Mindanao plant fiber, breathable in heat.',
+        similarity: 'Strong outer layers. Mindanao plant fiber, breathable in heat.',
       },
     ],
     recycledAwareness:
-      'Wool is rare in Philippine ukay — store with moth protection if keeping. Felted wool scraps are valued by crafters.',
+      'Wool is rare in Philippine ukay. Store with moth protection; felted scraps suit crafters.',
     reuse: {
-      resale: 'Niche winter-wear buyers online — note any pilling honestly in listings.',
-      donate: 'Check if local craft groups accept wool for felting projects.',
+      resale: 'Niche winter-wear buyers online. Note pilling honestly.',
+      donate: 'Check if local craft groups accept wool for felting.',
       upcycle: 'Felt into slippers, coasters, or insulation padding.',
     },
   },
@@ -71,22 +64,19 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Piña',
-        similarity:
-          'Same lustrous drape for barong and Filipiniana — Aklan heirloom fiber, common in formal ukay.',
+        similarity: 'Lustrous drape for barong and Filipiniana. Common in formal ukay.',
       },
       {
         name: 'Rayon',
-        similarity:
-          'Similar smooth formal hand-feel for flowy blouses and pre-owned formal wear.',
+        similarity: 'Smooth formal hand-feel for flowy blouses and pre-owned formal wear.',
       },
       {
         name: 'Peace silk (ahimsa)',
-        similarity:
-          'Comparable sheen and drape — ethical alternative when piña is unavailable.',
+        similarity: 'Comparable sheen and drape. Ethical when piña is unavailable.',
       },
     ],
     recycledAwareness:
-      'Heritage silk and piña pieces in ukay are often underpriced — inspect for snags and yellowing before resale.',
+      'Heritage silk and piña in ukay are often underpriced. Inspect for snags and yellowing.',
     reuse: {
       resale: 'Market to formal-wear and cultural costume buyers with clear fiber notes.',
       donate: 'School theater or cultural groups may accept verified silk garments.',
@@ -97,50 +87,44 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'European flax linen',
-        similarity:
-          'Same crisp breathability and summer weight — low-water natural fiber for tropical heat.',
+        similarity: 'Crisp, breathable summer fabric for tropical heat.',
       },
       {
         name: 'Abaca',
-        similarity:
-          'Similar airy structure and strength — Philippine plant fiber for resort wear and bags.',
+        similarity: 'Airy and strong. Good for resort wear and bags.',
       },
       {
         name: 'Cotton-linen blend',
-        similarity:
-          'Same relaxed hand-feel with less wrinkling — easier care in humid ukay storage.',
+        similarity: 'Relaxed feel with less wrinkling in humid storage.',
       },
     ],
     recycledAwareness:
-      'Linen wrinkles easily in humidity — mention care honestly when listing on ukay platforms.',
+      'Linen wrinkles in humidity. Note care when listing on ukay.',
     reuse: {
-      resale: 'Summer linen sells well in vintage markets — steam before photographing.',
-      donate: 'Warm-weather clothing drives welcome linen blends.',
-      upcycle: 'Napkins, table runners, or relaxed beach cover-ups.',
+      resale: 'Summer linen sells well in vintage markets. Steam before photos.',
+      donate: 'Warm-weather drives welcome linen blends.',
+      upcycle: 'Napkins, table runners, or beach cover-ups.',
     },
   },
   Polyester: {
     ecoAlternatives: [
       {
         name: 'Recycled polyester (rPET)',
-        similarity:
-          'Same feel and durability for activewear — made from plastic bottles, common in PH athletic secondhand.',
+        similarity: 'Durable activewear from plastic bottles. Common in PH secondhand.',
       },
       {
         name: 'Recycled nylon',
-        similarity:
-          'Similar stretch and moisture-wicking — better for sportswear than switching to cotton.',
+        similarity: 'Stretch and moisture-wicking. Better for sportswear than cotton.',
       },
       {
         name: 'Tencel / lyocell blend',
-        similarity:
-          'Comparable drape with softer hand-feel — closed-loop processing, good for flowy pieces.',
+        similarity: 'Soft drape with closed-loop processing. Good for flowy pieces.',
       },
     ],
     recycledAwareness:
-      'Synthetic ukay finds shed microplastics in wash — use a Guppyfriend bag and air-dry when possible.',
+      'Synthetics shed microplastics in wash. Use a Guppyfriend bag and air-dry.',
     reuse: {
-      resale: 'Note synthetic odor and wear on listings — athletic wear has a steady secondhand market.',
+      resale: 'Note odor and wear on listings. Athletic wear has steady demand.',
       donate: 'Confirm programs accept synthetics; not all drives do.',
       upcycle: 'Stuffing for pillows, pet beds, or craft insulation.',
     },
@@ -149,25 +133,22 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Recycled nylon (Econyl)',
-        similarity:
-          'Same stretch, strength, and quick-dry performance — regenerated from fishing nets and waste.',
+        similarity: 'Stretch, strength, and quick-dry. Made from nets and waste.',
       },
       {
         name: 'Recycled PET blend',
-        similarity:
-          'Similar durability and abrasion resistance — good for bags, jackets, and outer shells.',
+        similarity: 'Durable and abrasion-resistant. Good for bags and jackets.',
       },
       {
         name: 'Organic cotton (low-intensity)',
-        similarity:
-          'Natural alternative when stretch is less critical — breathable for casual tropical wear.',
+        similarity: 'Natural option when stretch matters less. Breathable in tropical heat.',
       },
     ],
     recycledAwareness:
-      'Nylon activewear in ukay — check elasticity and seams before buying to resell.',
+      'Check elasticity and seams on nylon activewear before buying to resell.',
     reuse: {
       resale: 'List sportswear and bags separately with clear photos of wear.',
-      donate: 'Limited acceptance — prefer upcycle if heavily worn.',
+      donate: 'Limited acceptance. Prefer upcycle if heavily worn.',
       upcycle: 'Straps, cords, and patch reinforcements for bags.',
     },
   },
@@ -175,70 +156,130 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Recycled acrylic knit',
-        similarity:
-          'Same loft and lightweight warmth — some brands offer recycled synthetic knits; check labels.',
+        similarity: 'Lightweight warmth. Some brands offer recycled knits; check labels.',
       },
       {
         name: 'Wool blend',
-        similarity:
-          'Similar insulation with natural fiber content — better for short cool seasons than pure acrylic.',
+        similarity: 'Natural insulation for short cool seasons vs. pure acrylic.',
       },
       {
         name: 'Cotton knit',
-        similarity:
-          'Breathable alternative for everyday knits — less heat-trapping in Philippine weather.',
+        similarity: 'Breathable everyday knits. Less heat-trapping in PH weather.',
       },
     ],
     recycledAwareness:
-      'Acrylic knits pill quickly in ukay — price accordingly and photograph texture clearly.',
+      'Acrylic knits pill quickly in ukay. Price accordingly and photograph texture.',
     reuse: {
-      resale: 'Budget knitwear market — disclose pilling and stretch loss.',
+      resale: 'Budget knitwear market. Disclose pilling and stretch loss.',
       donate: 'Craft groups may take acrylic yarn from unraveled garments.',
       upcycle: 'Amigurumi stuffing, draft stoppers, or pet blankets.',
+    },
+  },
+  Spandex: {
+    ecoAlternatives: [
+      {
+        name: 'Recycled elastane blends',
+        similarity: 'Stretch and recovery. Some activewear lines use recycled spandex.',
+      },
+      {
+        name: 'Cotton-spandex blend (GOTS)',
+        similarity: 'Natural-dominant stretch for jeans and tees. Check fiber ratio on tags.',
+      },
+      {
+        name: 'Loose linen or cotton',
+        similarity: 'Non-stretch option when fit recovery matters less in tropical heat.',
+      },
+    ],
+    recycledAwareness:
+      'Spandex is almost always blended. Check labels; stretch-heavy synthetics shed more.',
+    reuse: {
+      resale: 'List activewear and stretch denim with clear fiber notes.',
+      donate: 'Confirm programs accept synthetic blends.',
+      upcycle: 'Hair ties, elastic bands, or craft stretch panels.',
     },
   },
   Rayon: {
     ecoAlternatives: [
       {
         name: 'Tencel / lyocell',
-        similarity:
-          'Same flowy drape and lightweight feel — closed-loop cellulose with gentler processing.',
+        similarity: 'Flowy, lightweight drape. Gentler closed-loop cellulose processing.',
       },
       {
         name: 'Cotton voile',
-        similarity:
-          'Similar soft blouse hand-feel — breathable natural for dresses and tops.',
+        similarity: 'Soft blouse hand-feel. Breathable for dresses and tops.',
       },
       {
         name: 'Piña or abaca',
-        similarity:
-          'Philippine plant fibers with comparable breathability — formal alternatives in local weaving.',
+        similarity: 'Philippine plant fibers with comparable breathability for formal wear.',
       },
     ],
     recycledAwareness:
-      'Rayon weakens when wet — handle gently when washing ukay finds. Shrinkage is common.',
+      'Rayon weakens when wet. Wash gently; shrinkage is common on ukay finds.',
     reuse: {
-      resale: 'Flowy dresses and blouses sell well — note shrink history if known.',
+      resale: 'Flowy dresses and blouses sell well. Note shrink history if known.',
       donate: 'General textile drives usually accept rayon blends.',
       upcycle: 'Lining fabric, scarves, or craft backing.',
+    },
+  },
+  Leather: {
+    ecoAlternatives: [
+      {
+        name: 'Recycled leather (verified)',
+        similarity: 'Durable bags and belts. Look for certified recycled hide labels.',
+      },
+      {
+        name: 'Piñatex or plant-based leather',
+        similarity: 'Vegan structure for bags and shoes.',
+      },
+      {
+        name: 'Heavy cotton canvas',
+        similarity: 'Natural alternative for totes and outerwear.',
+      },
+    ],
+    recycledAwareness:
+      'Leather ages with humidity. Condition before resale and note scuffs honestly.',
+    reuse: {
+      resale: 'Vintage leather market. Photograph grain, seams, and odor.',
+      donate: 'Craft groups may accept clean leather scraps.',
+      upcycle: 'Patches, bookmarks, or small accessory panels.',
+    },
+  },
+  Suede: {
+    ecoAlternatives: [
+      {
+        name: 'Recycled suede (verified)',
+        similarity: 'Napped finish. Check certified recycled sources in premium secondhand.',
+      },
+      {
+        name: 'Microfiber suede',
+        similarity: 'Synthetic napped option without animal hide. Common in budget footwear.',
+      },
+      {
+        name: 'Brushed cotton twill',
+        similarity: 'Soft matte texture for casual layers without animal material.',
+      },
+    ],
+    recycledAwareness:
+      'Suede stains easily in humid storage. Brush nap and disclose water marks.',
+    reuse: {
+      resale: 'Note nap direction and wear. Suede buyers inspect texture closely.',
+      donate: 'Limited acceptance. Prefer upcycle if heavily stained.',
+      upcycle: 'Small pouches, patches, or craft appliqué.',
     },
   },
   Abaca: {
     ecoAlternatives: [
       {
         name: 'Piña',
-        similarity:
-          'Finer similar drape for formal Philippine textiles — prized in heritage and barong pieces.',
+        similarity: 'Finer drape for formal Philippine textiles and barong pieces.',
       },
       {
         name: 'Linen',
-        similarity:
-          'Same breathable structure for warm-climate apparel — European flax with comparable airiness.',
+        similarity: 'Breathable warm-climate apparel. European flax with similar airiness.',
       },
       {
         name: 'Sisal / maguey blends',
-        similarity:
-          'Comparable strength for ropes, bags, and home textiles — other Philippine plant fibers.',
+        similarity: 'Strong ropes, bags, and home textiles from other PH plant fibers.',
       },
     ],
     recycledAwareness:
@@ -253,26 +294,23 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Rayon',
-        similarity:
-          'Comparable sheen when authentic piña is out of budget — smooth formal alternative.',
+        similarity: 'Comparable sheen when authentic piña is out of budget.',
       },
       {
         name: 'Peace silk',
-        similarity:
-          'Ethical silk option with comparable luster for formal wear.',
+        similarity: 'Ethical silk with comparable luster for formal wear.',
       },
       {
         name: 'Abaca',
-        similarity:
-          'Stronger similar plant fiber for structured barong details — holds shape in humid events.',
+        similarity: 'Stronger plant fiber for structured barong details in humid events.',
       },
     ],
     recycledAwareness:
-      'Authentic Aklan piña is labor-intensive — verify luster and weave in ukay before reselling as heritage fabric.',
+      'Authentic Aklan piña is labor-intensive. Verify luster and weave before reselling.',
     reuse: {
-      resale: 'Highlight piña or barong fabric — collectors pay for verified heritage pieces.',
+      resale: 'Highlight piña or barong fabric. Collectors pay for verified heritage pieces.',
       donate: 'Cultural archives or costume shops may accept authenticated garments.',
-      upcycle: 'Only if damaged — frame small samples as textile art.',
+      upcycle: 'If damaged, frame small samples as textile art.',
     },
   },
 };
@@ -281,24 +319,21 @@ const MIXED_FIBER_GUIDANCE: EcoGuidance = {
   ecoAlternatives: [
     {
       name: 'Natural-dominant blend',
-      similarity:
-        'Similar everyday comfort when fiber label is unclear — choose cotton, linen, or PH fiber tags in ukay.',
+      similarity: 'Everyday comfort when labels are unclear. Choose cotton, linen, or PH fiber tags.',
     },
     {
       name: 'Recycled blended yarn',
-      similarity:
-        'Comparable mixed performance with lower virgin synthetic use — ask sellers about fiber content.',
+      similarity: 'Mixed performance with less virgin synthetic. Ask sellers about fiber content.',
     },
     {
       name: 'Single-fiber rescan',
-      similarity:
-        'Clearer dominant match for better alternative picks — rescan one fabric area with the IoT device.',
+      similarity: 'Clearer match for alternatives. Rescan one fabric area with the IoT device.',
     },
   ],
   recycledAwareness:
-    'Mixed ukay finds are common — rescan under even light or check the garment tag before buying to resell.',
+    'Mixed ukay finds are common. Rescan under even light or check the garment tag first.',
   reuse: {
-    resale: 'Verify fiber type before listing — buyers ask for composition on blended pieces.',
+    resale: 'Verify fiber type before listing. Buyers ask for composition on blends.',
     donate: 'Donate only after a clearer scan or label check.',
     upcycle: 'Test a small swatch before cutting into a project.',
   },
@@ -308,19 +343,16 @@ function resolvePrimaryFiber(
   dominantFabric: string,
   compositions?: FabricComposition[],
 ): SupportedFabric | null {
-  const normalized = dominantFabric.trim().toLowerCase();
-
-  for (const fabric of SUPPORTED_FABRICS) {
-    if (normalized.includes(fabric.toLowerCase())) {
-      return fabric;
-    }
+  const fromDominant = resolveFabricAlias(dominantFabric);
+  if (fromDominant) {
+    return fromDominant;
   }
 
   const sorted = [...(compositions ?? [])].sort((a, b) => b.percentage - a.percentage);
   const top = sorted[0]?.material;
 
-  if (top && SUPPORTED_FABRICS.includes(top as SupportedFabric)) {
-    return top as SupportedFabric;
+  if (top) {
+    return resolveFabricAlias(top);
   }
 
   return null;

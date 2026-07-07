@@ -1,8 +1,10 @@
--- TELA-TELL SQLite schema (on-device, single-user)
+-- TELA-TELL SQLite schema (on-device, offline-first prototype)
+-- Runtime migration uses the matching string in db/schema.ts
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS tblDeviceProfile (
   profile_ID    INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       TEXT,
   skinTone      TEXT,
   skinUndertone TEXT,
   updatedAt     TEXT NOT NULL
@@ -34,9 +36,11 @@ CREATE TABLE IF NOT EXISTS tblDressingContext (
 
 CREATE TABLE IF NOT EXISTS tblScan (
   scan_ID               TEXT PRIMARY KEY NOT NULL,
+  user_id               TEXT,
   dominantFabric        TEXT NOT NULL,
   confidence            INTEGER NOT NULL,
   scannedAt             TEXT NOT NULL,
+  scannedAtDate         TEXT NOT NULL,
   sellerLabel           TEXT,
   garmentCondition      TEXT NOT NULL DEFAULT 'New',
   imageUri              TEXT,
@@ -47,6 +51,7 @@ CREATE TABLE IF NOT EXISTS tblScan (
   mislabelTitle         TEXT,
   mislabelMessage       TEXT,
   resultJson            TEXT,
+  syncStatus            TEXT NOT NULL DEFAULT 'local',
   CHECK (garmentCondition IN ('New', 'Good', 'Worn', 'Damaged'))
 );
 
@@ -60,6 +65,8 @@ CREATE TABLE IF NOT EXISTS tblScanComposition (
 );
 
 CREATE INDEX IF NOT EXISTS idx_scan_scannedAt ON tblScan(scannedAt DESC);
+CREATE INDEX IF NOT EXISTS idx_scan_scannedAtDate ON tblScan(scannedAtDate DESC);
+CREATE INDEX IF NOT EXISTS idx_scan_user ON tblScan(user_id);
 CREATE INDEX IF NOT EXISTS idx_composition_scan ON tblScanComposition(scan_ID);
 
 INSERT OR IGNORE INTO tblDeviceProfile (profile_ID, updatedAt)

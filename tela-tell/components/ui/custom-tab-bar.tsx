@@ -100,7 +100,11 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           <TabIconButton
             route="profile"
             currentRoute={currentRoute}
-            onPress={() => navigation.navigate('profile')}
+            onPress={() =>
+              navigation.navigate('profile', {
+                screen: 'index',
+              })
+            }
             label="Profile">
             <User
               size={24}

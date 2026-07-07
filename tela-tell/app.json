@@ -4,7 +4,7 @@
     "slug": "tela-tell",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/appiconv2.png",
+    "icon": "./assets/images/LOGO.png",
     "scheme": "telatell",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,27 +13,28 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E0F4F8",
-        "foregroundImage": "./assets/images/appiconv2.png"
+        "backgroundColor": "#3A7792",
+        "foregroundImage": "./assets/images/LOGO (1).png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/appiconv2.png"
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/LOGO.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#E0F4F8",
-          "image": "./assets/images/appiconv2.png",
+          "backgroundColor": "#3A7792",
+          "image": "./assets/images/LOGO (1).png",
           "imageWidth": 200,
           "dark": {
-            "backgroundColor": "#E0F4F8"
+            "backgroundColor": "#3A7792"
           }
         }
       ],
@@ -52,7 +53,8 @@
         }
       ],
       "expo-asset",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

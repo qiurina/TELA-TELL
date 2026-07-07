@@ -1,12 +1,10 @@
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
+import { SplashLogo } from '@/constants/assets';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-
-const SPLASH_ICON = require('@/assets/images/appiconv2.png');
 
 type AppSplashProps = {
   fontsLoaded?: boolean;
@@ -15,19 +13,18 @@ type AppSplashProps = {
 export function AppSplash({ fontsLoaded = true }: AppSplashProps) {
   return (
     <View style={styles.root}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <LinearGradient
-        colors={[BrandColors.splashGradientTop, BrandColors.splashGradientBottom]}
+        colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
         style={StyleSheet.absoluteFill}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       />
       <View style={styles.content}>
-        <Image source={SPLASH_ICON} style={styles.icon} contentFit="contain" />
-        <Text style={[styles.title, fontsLoaded && styles.titleFont]}>Tela-Tell</Text>
-        <Text style={[styles.tagline, fontsLoaded && styles.taglineFont]}>
-          Scan it. Know it. Buy Right.
-        </Text>
+        <View style={styles.brandRow}>
+          <Image source={SplashLogo} style={styles.icon} resizeMode="contain" accessibilityLabel="" />
+          <Text style={[styles.title, fontsLoaded && styles.titleFont]}>TELA-TELL</Text>
+        </View>
       </View>
     </View>
   );
@@ -37,6 +34,7 @@ const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
+    backgroundColor: BrandColors.primaryDark,
   },
   content: {
     flex: 1,
@@ -44,32 +42,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
   icon: {
-    width: 120,
-    height: 120,
-    marginBottom: 20,
+    width: 52,
+    height: 52,
   },
   title: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '700',
-    color: BrandColors.splashTitle,
-    letterSpacing: 0.3,
-    textAlign: 'center',
+    color: BrandColors.white,
+    letterSpacing: 1.2,
   },
   titleFont: {
     fontFamily: Fonts.bold,
     fontWeight: '700',
-  },
-  tagline: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: '500',
-    color: BrandColors.textMuted,
-    textAlign: 'center',
-    letterSpacing: 0.2,
-  },
-  taglineFont: {
-    fontFamily: Fonts.medium,
-    fontWeight: '500',
   },
 });

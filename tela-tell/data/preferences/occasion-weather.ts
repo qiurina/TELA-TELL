@@ -51,6 +51,8 @@ export const WEATHER_CONTEXT_OPTIONS: DressingContextOption[] = [
   { id: 'cool', label: 'Cool', category: 'weather' },
 ];
 
+export type WeatherContext = (typeof WEATHER_CONTEXT_OPTIONS)[number]['id'];
+
 export const OCCASION_CONTEXT_OPTIONS: DressingContextOption[] = [
   { id: 'casual', label: 'Casual', category: 'occasion' },
   { id: 'office_work', label: 'Office / Work', category: 'occasion' },

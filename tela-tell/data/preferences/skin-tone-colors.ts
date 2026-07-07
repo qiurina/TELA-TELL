@@ -113,6 +113,9 @@ const FABRIC_COLOR_NOTES: Partial<Record<string, string>> = {
   Nylon: 'Athletic nylon favors bold contrast — pair saturated tops with neutral bottoms.',
   Acrylic: 'Knit acrylic shows color clearly — medium-depth tones wear better than very pale shades.',
   Rayon: 'Flowy rayon drapes beautifully in saturated jewel or earth tones.',
+  Spandex: 'Stretch synthetics hold bold prints — pair saturated activewear with neutral layers.',
+  Leather: 'Rich earth tones and deep burgundy suit leather — avoid pale washes that show scuffs.',
+  Suede: 'Matte suede reads best in camel, tan, and muted jewel tones — keep away from high-contrast neons.',
   Abaca: 'Natural abaca and sinamay look elegant in cream, gold, and heritage earth tones.',
   'Piña': 'Piña barong classics include ecru, champagne, and soft gold — keep contrast near the face.',
 };

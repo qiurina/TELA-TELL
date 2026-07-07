@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -8,8 +8,9 @@ import {
   GarmentConditionSheet,
   getGarmentConditionLabel,
 } from '@/features/scan/components/garment-condition-picker';
+import { getScanModeLabel, ScanModeSheet } from '@/features/scan/components/scan-mode-sheet';
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
-import { Camera, ChevronLeft, ChevronRight, ImagePlus, Info, ScanLine, Settings, Tag, X } from '@/components/ui/lucide-icons';
+import { Camera, ChevronLeft, ChevronRight, ImagePlus, Info, Lock, ScanLine, Settings, Tag, X } from '@/components/ui/lucide-icons';
 import { BACKUP_SCAN_DISCLAIMER } from '@/data/scans/analysis';
 import {
   DEFAULT_GARMENT_CONDITION,
@@ -18,11 +19,12 @@ import {
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
-import { getScanMode } from '@/features/scan/lib/scan-session';
+import { useAuth } from '@/features/auth/context/auth-provider';
 import {
   getUserPreferencesSummary,
   hasActiveUserPreferences,
 } from '@/features/profile/lib/user-preferences';
+import { getScanMode, setScanMode, type ScanMode } from '@/features/scan/lib/scan-session';
 
 const primaryGradient = [BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark] as const;
 
@@ -119,6 +121,7 @@ function DetailActionRow({
   isSet,
   onPress,
   disabled,
+  locked,
   accessibilityLabel,
   isLast = false,
 }: {
@@ -128,6 +131,7 @@ function DetailActionRow({
   isSet: boolean;
   onPress: () => void;
   disabled?: boolean;
+  locked?: boolean;
   accessibilityLabel: string;
   isLast?: boolean;
 }) {
@@ -136,21 +140,34 @@ function DetailActionRow({
       style={({ pressed }) => [
         styles.detailRow,
         isLast && styles.detailRowLast,
-        pressed && styles.pressed,
+        locked && styles.detailRowLocked,
+        pressed && !locked && styles.pressed,
         disabled && styles.disabled,
       ]}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}>
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: Boolean(disabled) }}>
       <View style={styles.detailRowIcon}>{icon}</View>
-      <Text style={styles.detailRowLabel}>{label}</Text>
+      <Text style={[styles.detailRowLabel, locked && styles.detailRowLabelLocked]}>{label}</Text>
       <Text
-        style={[styles.detailRowValue, isSet ? styles.detailRowValueSet : styles.detailRowValueEmpty]}
+        style={[
+          styles.detailRowValue,
+          locked
+            ? styles.detailRowValueLocked
+            : isSet
+              ? styles.detailRowValueSet
+              : styles.detailRowValueEmpty,
+        ]}
         numberOfLines={1}>
         {value}
       </Text>
-      <ChevronRight size={16} color={BrandColors.textMuted} strokeWidth={2.25} />
+      {locked ? (
+        <Lock size={14} color="#C27803" strokeWidth={2.25} />
+      ) : (
+        <ChevronRight size={16} color={BrandColors.textMuted} strokeWidth={2.25} />
+      )}
     </Pressable>
   );
 }
@@ -165,7 +182,10 @@ function AddDetailsAccordion({
   onGarmentConditionChange,
   onAddLabel,
   onOpenPreferences,
-  isDualScanMode,
+  scanMode,
+  onScanModeChange,
+  preferencesLocked,
+  onLockedPreferencesPress,
   disabled,
 }: {
   expanded: boolean;
@@ -177,10 +197,14 @@ function AddDetailsAccordion({
   onGarmentConditionChange: (condition: GarmentCondition) => void;
   onAddLabel: () => void;
   onOpenPreferences?: () => void;
-  isDualScanMode: boolean;
+  scanMode: ScanMode;
+  onScanModeChange: (mode: ScanMode) => void;
+  preferencesLocked: boolean;
+  onLockedPreferencesPress: () => void;
   disabled?: boolean;
 }) {
   const [showConditionSheet, setShowConditionSheet] = useState(false);
+  const [showScanModeSheet, setShowScanModeSheet] = useState(false);
   const hasCustomCondition = garmentCondition !== DEFAULT_GARMENT_CONDITION;
   const summaryParts: string[] = [];
 
@@ -190,15 +214,18 @@ function AddDetailsAccordion({
   if (hasSellerLabel) {
     summaryParts.push(sellerLabel);
   }
+  summaryParts.push(getScanModeLabel(scanMode));
   if (hasPreferences) {
     summaryParts.push('Preferences set');
   }
 
   const summary = summaryParts.length > 0 ? summaryParts.join(' · ') : null;
   const preferencesSummary = getUserPreferencesSummary();
-  const preferencesStatus = !hasPreferences
-    ? 'Not set'
-    : preferencesSummary ?? (isDualScanMode ? 'Two swatches' : 'Set');
+  const preferencesStatus = preferencesLocked
+    ? 'Sign in required'
+    : !hasPreferences
+      ? 'Not set'
+      : preferencesSummary ?? 'Set';
 
   return (
     <View style={styles.accordionBlock}>
@@ -215,7 +242,9 @@ function AddDetailsAccordion({
         <View style={styles.accordionTriggerText}>
           <Text style={styles.accordionTriggerTitle}>Add details</Text>
           <Text style={styles.accordionTriggerHint}>
-            {expanded ? 'Condition, seller label, preferences' : summary ?? 'Condition, seller label, preferences'}
+            {expanded
+              ? 'Condition, seller label, scan mode, preferences'
+              : summary ?? 'Condition, seller label, scan mode, preferences'}
           </Text>
         </View>
       </Pressable>
@@ -240,24 +269,42 @@ function AddDetailsAccordion({
               isSet={hasSellerLabel}
               onPress={onAddLabel}
               disabled={disabled}
-              isLast={!onOpenPreferences}
               accessibilityLabel={hasSellerLabel ? `Seller label, ${sellerLabel}. Update` : 'Seller label, not set. Add'}
             />
 
-            {onOpenPreferences ? (
-              <DetailActionRow
-                icon={<Settings size={16} color={BrandColors.primary} strokeWidth={2.25} />}
-                label="Preferences"
-                value={preferencesStatus}
-                isSet={hasPreferences}
-                onPress={onOpenPreferences}
-                disabled={disabled}
-                isLast
-                accessibilityLabel={
-                  hasPreferences ? `Preferences, ${preferencesStatus}. Edit` : 'Preferences, not set. Set'
-                }
-              />
-            ) : null}
+            <DetailActionRow
+              icon={<ScanLine size={16} color={BrandColors.primary} strokeWidth={2.25} />}
+              label="Scan mode"
+              value={getScanModeLabel(scanMode)}
+              isSet
+              onPress={() => setShowScanModeSheet(true)}
+              disabled={disabled}
+              accessibilityLabel={`Scan mode, ${getScanModeLabel(scanMode)}. Change`}
+            />
+
+            <DetailActionRow
+              icon={
+                preferencesLocked ? (
+                  <Lock size={16} color="#C27803" strokeWidth={2.25} />
+                ) : (
+                  <Settings size={16} color={BrandColors.primary} strokeWidth={2.25} />
+                )
+              }
+              label="Preferences"
+              value={preferencesStatus}
+              isSet={hasPreferences && !preferencesLocked}
+              locked={preferencesLocked}
+              onPress={preferencesLocked ? onLockedPreferencesPress : onOpenPreferences ?? (() => {})}
+              disabled={disabled}
+              isLast
+              accessibilityLabel={
+                preferencesLocked
+                  ? 'Preferences locked. Sign in required'
+                  : hasPreferences
+                    ? `Preferences, ${preferencesStatus}. Edit`
+                    : 'Preferences, not set. Set'
+              }
+            />
           </View>
 
           <GarmentConditionSheet
@@ -265,6 +312,13 @@ function AddDetailsAccordion({
             value={garmentCondition}
             onChange={onGarmentConditionChange}
             onClose={() => setShowConditionSheet(false)}
+          />
+
+          <ScanModeSheet
+            visible={showScanModeSheet}
+            value={scanMode}
+            onChange={onScanModeChange}
+            onClose={() => setShowScanModeSheet(false)}
           />
         </View>
       ) : null}
@@ -289,15 +343,17 @@ export function ScanActions({
   isAnalyzing,
   isDeviceScanning,
 }: ScanActionsProps) {
+  const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [showBackupInfo, setShowBackupInfo] = useState(false);
-  const [hasPreferences, setHasPreferences] = useState(
-    () => hasActiveUserPreferences() || getScanMode() === 'dual',
-  );
-  const [isDualScanMode, setIsDualScanMode] = useState(() => getScanMode() === 'dual');
+  const [showPreferencesLocked, setShowPreferencesLocked] = useState(false);
+  const [hasPreferences, setHasPreferences] = useState(() => hasActiveUserPreferences());
+  const [scanMode, setScanModeState] = useState<ScanMode>(() => getScanMode());
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const trimmedLabel = savedSellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
   const isCaptureBusy = Boolean(isAnalyzing || isDeviceScanning);
+  const isDualScanMode = scanMode === 'dual';
 
   useEffect(() => {
     setDetailsExpanded(hasPreview ?? false);
@@ -305,10 +361,15 @@ export function ScanActions({
 
   useFocusEffect(
     useCallback(() => {
-      setHasPreferences(hasActiveUserPreferences() || getScanMode() === 'dual');
-      setIsDualScanMode(getScanMode() === 'dual');
+      setHasPreferences(hasActiveUserPreferences());
+      setScanModeState(getScanMode());
     }, []),
   );
+
+  const handleScanModeChange = (mode: ScanMode) => {
+    setScanMode(mode);
+    setScanModeState(mode);
+  };
 
   const captureAlternatives = (
     <>
@@ -339,6 +400,20 @@ export function ScanActions({
   if (hasPreview) {
     return (
       <View style={styles.container}>
+        <ScanConfirmSheet
+          visible={showPreferencesLocked}
+          variant="info"
+          title="Preferences locked"
+          message="Sign in to save skin tone, allergies, and fabric preferences."
+          confirmLabel="Log in"
+          cancelLabel="Not now"
+          onConfirm={() => {
+            setShowPreferencesLocked(false);
+            router.push('/login' as Href);
+          }}
+          onCancel={() => setShowPreferencesLocked(false)}
+        />
+
         <View style={styles.reviewBanner}>
           <Text style={styles.reviewStep}>Step 2 — Review & analyze</Text>
         </View>
@@ -387,7 +462,10 @@ export function ScanActions({
           onGarmentConditionChange={onGarmentConditionChange}
           onAddLabel={onAddLabel}
           onOpenPreferences={onOpenPreferences}
-          isDualScanMode={isDualScanMode}
+          scanMode={scanMode}
+          onScanModeChange={handleScanModeChange}
+          preferencesLocked={!isSignedIn}
+          onLockedPreferencesPress={() => setShowPreferencesLocked(true)}
           disabled={isAnalyzing}
         />
       </View>
@@ -592,6 +670,16 @@ const styles = StyleSheet.create({
   },
   detailRowValueSet: {
     color: BrandColors.primary,
+    fontFamily: Fonts.medium,
+  },
+  detailRowLocked: {
+    backgroundColor: '#FFFBF5',
+  },
+  detailRowLabelLocked: {
+    color: BrandColors.textMuted,
+  },
+  detailRowValueLocked: {
+    color: '#9A6700',
     fontFamily: Fonts.medium,
   },
   outlineButton: {

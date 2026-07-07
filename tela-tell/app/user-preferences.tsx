@@ -60,7 +60,7 @@ export default function UserPreferencesScreen() {
         <View style={styles.handle} />
 
         <View style={styles.headerRow}>
-          <Text style={styles.title}>My Preferences</Text>
+          <Text style={styles.title}>Personalization</Text>
           <Pressable
             onPress={handleDismiss}
             hitSlop={8}
@@ -76,12 +76,7 @@ export default function UserPreferencesScreen() {
           contentContainerStyle={styles.sheetContent}
           keyboardShouldPersistTaps="handled"
           bounces={false}>
-          <Text style={styles.intro}>
-            Set your profile once — Tela-Tell personalizes allergy alerts, color suggestions, and
-            personalized scan guidance on every scan.
-          </Text>
-
-          <UserPreferencesPanel key={formKey} embedded />
+          <UserPreferencesPanel key={formKey} embedded scope="personalization" />
 
           <Pressable
             style={({ pressed }) => [
@@ -151,12 +146,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 18,
     flexGrow: 1,
-  },
-  intro: {
-    fontFamily: Fonts.regular,
-    fontSize: 14,
-    lineHeight: 21,
-    color: BrandColors.textMuted,
   },
   doneButton: {
     backgroundColor: BrandColors.primary,

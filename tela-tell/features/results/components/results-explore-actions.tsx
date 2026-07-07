@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ChevronRight, Leaf, Layers, Sparkles, type IconProps } from '@/components/ui/lucide-icons';
+import { ChevronRight, Leaf, Layers, Lock, Sparkles, type IconProps } from '@/components/ui/lucide-icons';
 import { ScanAnotherButton } from '@/features/results/components/scan-another-button';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -12,27 +12,42 @@ type ExploreCardProps = {
   label: string;
   subtitle: string;
   onPress: () => void;
+  locked?: boolean;
 };
 
-function ExploreCard({ icon: Icon, label, subtitle, onPress }: ExploreCardProps) {
+function ExploreCard({ icon: Icon, label, subtitle, onPress, locked = false }: ExploreCardProps) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, faintCardShadow(), pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.card,
+        faintCardShadow(),
+        locked && styles.cardLocked,
+        pressed && !locked && styles.pressed,
+      ]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={label}>
-      <View style={styles.iconWrap}>
-        <Icon size={16} color={BrandColors.primary} strokeWidth={2.25} />
+      accessibilityLabel={locked ? `${label}. Sign in required` : label}
+      accessibilityState={{ disabled: locked }}>
+      <View style={[styles.iconWrap, locked && styles.iconWrapLocked]}>
+        {locked ? (
+          <Lock size={16} color="#C27803" strokeWidth={2.25} />
+        ) : (
+          <Icon size={16} color={BrandColors.primary} strokeWidth={2.25} />
+        )}
       </View>
       <View style={styles.cardText}>
-        <Text style={styles.cardLabel} numberOfLines={2}>
+        <Text style={[styles.cardLabel, locked && styles.cardLabelLocked]} numberOfLines={2}>
           {label}
         </Text>
-        <Text style={styles.cardSubtitle} numberOfLines={2}>
+        <Text style={[styles.cardSubtitle, locked && styles.cardSubtitleLocked]} numberOfLines={2}>
           {subtitle}
         </Text>
       </View>
-      <ChevronRight size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
+      {locked ? (
+        <Lock size={14} color="#C27803" strokeWidth={2.25} />
+      ) : (
+        <ChevronRight size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
+      )}
     </Pressable>
   );
 }
@@ -41,6 +56,8 @@ type ResultsExploreActionsProps = {
   onProfile: () => void;
   onEcoTips: () => void;
   onPersonalizedInsights: () => void;
+  onLockedPersonalizedInsights?: () => void;
+  personalizedInsightsLocked?: boolean;
   onScanAgain: () => void;
 };
 
@@ -48,6 +65,8 @@ export function ResultsExploreActions({
   onProfile,
   onEcoTips,
   onPersonalizedInsights,
+  onLockedPersonalizedInsights,
+  personalizedInsightsLocked = false,
   onScanAgain,
 }: ResultsExploreActionsProps) {
   return (
@@ -60,8 +79,13 @@ export function ResultsExploreActions({
         <ExploreCard
           icon={Sparkles}
           label="Personalized Insights"
-          subtitle="Colors, fit & allergies"
-          onPress={onPersonalizedInsights}
+          subtitle={personalizedInsightsLocked ? 'Sign in required' : 'Colors, fit & allergies'}
+          locked={personalizedInsightsLocked}
+          onPress={
+            personalizedInsightsLocked
+              ? (onLockedPersonalizedInsights ?? (() => {}))
+              : onPersonalizedInsights
+          }
         />
       </View>
 
@@ -95,6 +119,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BrandColors.border,
   },
+  cardLocked: {
+    backgroundColor: '#FFFBF5',
+    borderColor: '#FCD9A8',
+  },
   iconWrap: {
     width: 28,
     height: 28,
@@ -103,6 +131,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: BrandColors.lavenderCard,
     flexShrink: 0,
+  },
+  iconWrapLocked: {
+    backgroundColor: BrandColors.white,
   },
   cardText: {
     flex: 1,
@@ -114,11 +145,18 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: BrandColors.primaryDark,
   },
+  cardLabelLocked: {
+    color: BrandColors.textMuted,
+  },
   cardSubtitle: {
     fontFamily: Fonts.regular,
     fontSize: 10,
     lineHeight: 14,
     color: BrandColors.textMuted,
+  },
+  cardSubtitleLocked: {
+    color: '#9A6700',
+    fontFamily: Fonts.medium,
   },
   pressed: {
     opacity: 0.88,

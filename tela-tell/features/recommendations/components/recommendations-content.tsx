@@ -8,7 +8,6 @@ import {
   Leaf,
   Meh,
   Recycle,
-  ScanLine,
   Scissors,
   Smile,
   Tag,
@@ -30,31 +29,6 @@ function SectionLabel({ title }: { title: string }) {
   return <Text style={styles.sectionLabel}>{title}</Text>;
 }
 
-function DetectedTag({ compositions }: { compositions?: FabricComposition[] }) {
-  const items = compositions ?? [];
-
-  if (items.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={[styles.detectedTag, faintCardShadow()]}>
-      <ScanLine size={18} color={BrandColors.primary} strokeWidth={2.5} />
-      <Text style={styles.detectedText}>
-        Fiber mix:{' '}
-        {items.map((item, index) => (
-          <Text key={`${item.material}-${item.percentage}`}>
-            {index > 0 ? ', ' : ''}
-            <Text style={styles.detectedValue}>
-              {item.material} ({item.percentage}%)
-            </Text>
-          </Text>
-        ))}
-      </Text>
-    </View>
-  );
-}
-
 function EcoAlternativesSection({
   detectedFiber,
   alternatives,
@@ -65,9 +39,6 @@ function EcoAlternativesSection({
   return (
     <View style={styles.section}>
       <SectionLabel title={`ECO-FRIENDLY ALTERNATIVES SIMILAR TO ${detectedFiber.toUpperCase()}`} />
-      <Text style={styles.sectionSubtitle}>
-        Same feel, use case, and properties — with sustainable and Philippine options
-      </Text>
       <View style={styles.list}>
         {alternatives.map((item) => (
           <View key={item.name} style={styles.ecoCard}>
@@ -260,7 +231,6 @@ export function RecommendationsContent({
 
   return (
     <View style={styles.container}>
-      <DetectedTag compositions={compositions} />
       <EcoAlternativesSection
         detectedFiber={detectedFiber}
         alternatives={ecoGuidance.ecoAlternatives}
@@ -286,36 +256,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: BrandColors.textMuted,
   },
-  sectionSubtitle: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: BrandColors.textMuted,
-    marginTop: -6,
-  },
   list: {
     gap: 10,
-  },
-  detectedTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: BrandColors.lavenderCard,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: BrandColors.primary,
-  },
-  detectedText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
-    fontSize: 14,
-    color: BrandColors.text,
-  },
-  detectedValue: {
-    fontFamily: Fonts.semiBold,
-    color: BrandColors.primary,
   },
   ecoCard: {
     flexDirection: 'row',

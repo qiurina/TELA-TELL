@@ -1,5 +1,5 @@
 import { resolveSupportedFabric } from '@/data/fabrics/fabric-references';
-import type { SupportedFabric } from '@/data/fabrics/fabrics';
+import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 import type { FabricComposition } from '@/data/scans/mock-data';
 
 export type HypoallergenicAlternative = {
@@ -52,12 +52,22 @@ const FABRIC_ALTERNATIVES: Partial<Record<SupportedFabric, HypoallergenicAlterna
     { name: 'Linen', note: 'Airy weave with low synthetic content' },
     { name: 'Abaca', note: 'Philippine plant fiber for breathable alternatives' },
   ],
+  Spandex: [
+    { name: 'Cotton', note: 'Natural fiber without tight synthetic stretch' },
+    { name: 'Linen', note: 'Breathable alternative when stretch is not required' },
+    { name: 'Loose rayon', note: 'Flowy drape without elastic compression on skin' },
+  ],
+  Leather: [
+    { name: 'Cotton canvas', note: 'Plant-based alternative for bags and outer layers' },
+    { name: 'Linen', note: 'Breathable natural option for warm climates' },
+    { name: 'Piña or abaca', note: 'Philippine plant fibers for structured formal pieces' },
+  ],
+  Suede: [
+    { name: 'Cotton canvas', note: 'Plant-based alternative without animal hide' },
+    { name: 'Linen', note: 'Breathable natural option for warm climates' },
+    { name: 'Microfiber (verified)', note: 'Synthetic suede-like finish without animal material' },
+  ],
 };
-
-function dominantIncludes(dominantFabric: string, needles: string[]): boolean {
-  const normalized = dominantFabric.trim().toLowerCase();
-  return needles.some((needle) => normalized.includes(needle));
-}
 
 function topMaterial(compositions: FabricComposition[]): string {
   const sorted = [...compositions].sort((a, b) => b.percentage - a.percentage);
@@ -75,8 +85,7 @@ function formatDetectedFabric(dominantFabric: string, compositions: FabricCompos
 }
 
 function fabricMatchesScan(fabric: SupportedFabric, dominantFabric: string, top: string): boolean {
-  const needle = fabric.toLowerCase();
-  return dominantIncludes(dominantFabric, [needle]) || top.includes(needle);
+  return resolveFabricAlias(dominantFabric) === fabric || resolveFabricAlias(top) === fabric;
 }
 
 function getAlternatives(fabric: SupportedFabric): HypoallergenicAlternative[] {

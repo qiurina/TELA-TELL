@@ -1,12 +1,14 @@
 import { Image } from 'expo-image';
+import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Eye, Search } from '@/components/ui/lucide-icons';
+import { ChevronRight, Eye, Search } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import { FABRIC_REFERENCES } from '@/data/fabrics/fabric-references';
+import { getFiberSlug } from '@/data/fabrics/fiber-profiles';
 import {
   FABRIC_CATEGORY_COLORS,
   FABRIC_REGISTRY,
@@ -18,7 +20,8 @@ const CATEGORY_ORDER: FabricCategory[] = [
   'Natural',
   'Synthetic',
   'Semi-synthetic',
-  'Philippine native fiber',
+  'Animal material',
+  'Philippine native',
 ];
 
 type CategoryFilter = 'All' | FabricCategory;
@@ -28,7 +31,8 @@ const FILTER_OPTIONS: { value: CategoryFilter; label: string }[] = [
   { value: 'Natural', label: 'Natural' },
   { value: 'Synthetic', label: 'Synthetic' },
   { value: 'Semi-synthetic', label: 'Semi-synthetic' },
-  { value: 'Philippine native fiber', label: 'Philippine' },
+  { value: 'Animal material', label: 'Animal' },
+  { value: 'Philippine native', label: 'Philippine' },
 ];
 
 function matchesFabricSearch(fabric: SupportedFabric, query: string) {
@@ -126,12 +130,21 @@ function CategoryFilterBar({
 }
 
 function FabricCard({ fabric }: { fabric: SupportedFabric }) {
+  const router = useRouter();
   const reference = FABRIC_REFERENCES[fabric];
   const category = FABRIC_REGISTRY.find((item) => item.name === fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
 
+  const handlePress = () => {
+    router.push(`/(tabs)/fabrics/${getFiberSlug(fabric)}` as Href);
+  };
+
   return (
-    <View style={[styles.card, faintCardShadow()]}>
+    <Pressable
+      style={({ pressed }) => [styles.card, faintCardShadow(), pressed && styles.pressed]}
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${fabric} profile`}>
       <View style={styles.cardHeader}>
         <Text style={styles.fabricName}>{fabric}</Text>
         {categoryStyle ? (
@@ -164,8 +177,10 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
           <Text style={styles.detailText}>{reference.lookFor}</Text>
           <Text style={styles.textureText}>{reference.textureNote}</Text>
         </View>
+
+        <ChevronRight size={16} color={BrandColors.textMuted} strokeWidth={2.25} />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -304,7 +319,7 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
   },
   referenceImage: {
@@ -366,5 +381,8 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
     textAlign: 'center',
     paddingVertical: 24,
+  },
+  pressed: {
+    opacity: 0.88,
   },
 });

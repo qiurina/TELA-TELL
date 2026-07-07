@@ -4,6 +4,7 @@ export {
   FABRIC_CATEGORY_COLORS,
   FABRIC_REGISTRY,
   SUPPORTED_FABRICS,
+  resolveFabricAlias,
   getFabricCategory,
   isSupportedFabric,
   type FabricCategory,
@@ -46,16 +47,6 @@ export const LOW_CONFIDENCE_WARNING = {
 
 export const MODERATE_CONFIDENCE_NOTE =
   'Results may vary with lighting and angle. An IoT device scan can improve certainty.';
-
-export const SYSTEM_LIMITATIONS = [
-  'Results are estimates from visual analysis, not laboratory tests.',
-  'Composition percentages are model-estimated and may differ from label claims.',
-  'Similar textures (e.g. cotton vs rayon) can reduce accuracy.',
-  'IoT scanner imaging gives more consistent results than phone photos.',
-  'Mislabel alerts are suggestions only — not legal proof of fraud.',
-  'Sustainability scores use a documented fiber-impact rubric, not full LCA data.',
-  'Eleven fiber classes are supported in this prototype; more may be added later.',
-] as const;
 
 export const BACKUP_SCAN_DISCLAIMER =
   'Scan results from phone photos or gallery uploads may be less accurate. For the best results, please use the IoT scanner device.';
@@ -122,8 +113,8 @@ export function getBlendNotice(
     confidence !== undefined && getConfidenceLevel(confidence) === 'low';
 
   return {
-    title: 'Multiple fiber types detected.',
-    body: `This fabric may contain a blend of ${fiberPhrase}. Results reflect visual texture analysis only.`,
-    caution: isLowConfidence ? 'Blend estimate is uncertain — rescan recommended.' : undefined,
+    title: 'Multiple fibers detected',
+    body: `Possible ${fiberPhrase} blend. Visual estimate only.`,
+    caution: isLowConfidence ? 'Low confidence. Rescan recommended.' : undefined,
   };
 }

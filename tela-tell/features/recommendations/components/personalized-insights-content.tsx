@@ -116,7 +116,7 @@ export function PersonalizedInsightsContent({
   const router = useRouter();
   const compositions = detectedCompositions ?? [];
   const preferences = getUserPreferences();
-  const openProfile = () => router.push('/profile' as Href);
+  const openProfile = () => router.push('/(tabs)/profile' as Href);
 
   const skinToneGuidance = getSkinToneColorGuidance(
     preferences.skinTone,

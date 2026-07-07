@@ -11,6 +11,8 @@ import { ResultsScreenHeader } from '@/features/results/components/results-scree
 import { ScanConfidenceBanner } from '@/features/results/components/scan-confidence-banner';
 import { SellerComparisonCard } from '@/features/results/components/seller-comparison-card';
 import { StatusBadges } from '@/features/results/components/status-badges';
+import { useAuth } from '@/features/auth/context/auth-provider';
+import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getDualSwatchRegions } from '@/features/scan/lib/dual-swatch-results';
@@ -24,20 +26,20 @@ import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 export default function ResultsScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
   const router = useRouter();
+  const { isSignedIn } = useAuth();
+  const [showInsightsLocked, setShowInsightsLocked] = useState(false);
   const resolvedScanId = resolveScanId(scanId);
   const isDualDemo = resolvedScanId === 'dual';
   const result = getScanResult(resolvedScanId);
   const dualRegions = isDualDemo ? getDualSwatchRegions() : [];
   const capturedPhotoUri = getLastCaptureUri();
-  const [sellerLabel, setSellerLabel] = useState<string | null>(() => getLastSellerLabel());
+  const [sessionSellerLabel, setSessionSellerLabel] = useState<string | null>(() => getLastSellerLabel());
 
   useFocusEffect(
     useCallback(() => {
-      setSellerLabel(getLastSellerLabel());
+      setSessionSellerLabel(getLastSellerLabel());
     }, []),
   );
-
-  const hasSellerLabel = Boolean(sellerLabel?.trim());
 
   if (!result) {
     return (
@@ -49,6 +51,9 @@ export default function ResultsScreen() {
       </View>
     );
   }
+
+  const sellerLabel = sessionSellerLabel?.trim() || result.sellerLabel?.trim() || null;
+  const hasSellerLabel = Boolean(sellerLabel);
 
   const handleViewProfile = () => {
     router.push(`/results/profile/${resolvedScanId}` as Href);
@@ -78,6 +83,20 @@ export default function ResultsScreen() {
 
   return (
     <View style={styles.root}>
+      <ScanConfirmSheet
+        visible={showInsightsLocked}
+        variant="info"
+        title="Personalized insights locked"
+        message="Sign in to see color, fit, and allergy tips tailored to your preferences."
+        confirmLabel="Log in"
+        cancelLabel="Not now"
+        onConfirm={() => {
+          setShowInsightsLocked(false);
+          router.push('/login' as Href);
+        }}
+        onCancel={() => setShowInsightsLocked(false)}
+      />
+
       <ResultsScreenHeader title="Scan Results" onBack={() => router.back()} />
 
       <ScrollView
@@ -144,6 +163,8 @@ export default function ResultsScreen() {
           onProfile={handleViewProfile}
           onEcoTips={handleEcoTips}
           onPersonalizedInsights={handlePersonalizedInsights}
+          personalizedInsightsLocked={!isSignedIn}
+          onLockedPersonalizedInsights={() => setShowInsightsLocked(true)}
           onScanAgain={handleScanAnother}
         />
       </ScrollView>

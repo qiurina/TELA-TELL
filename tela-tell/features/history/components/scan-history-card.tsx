@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -35,9 +36,13 @@ export function ScanHistoryCard({ scan, onPress }: ScanHistoryCardProps) {
     <Pressable
       style={({ pressed }) => [styles.card, faintCardShadow(), pressed && styles.cardPressed]}
       onPress={onPress}>
+      <Image source={scan.image} style={styles.thumbnail} contentFit="cover" accessibilityLabel="Scanned fabric" />
+
       <View style={styles.content}>
         <Text style={styles.fabric}>{scan.primaryFabric}</Text>
-        <Text style={styles.composition}>{scan.composition}</Text>
+        <Text style={styles.composition} numberOfLines={2}>
+          {scan.composition}
+        </Text>
         <Text style={styles.meta}>{scan.scannedAt}</Text>
         <View style={styles.statusRow}>
           <View
@@ -69,6 +74,7 @@ export function ScanHistoryCard({ scan, onPress }: ScanHistoryCardProps) {
           </View>
         </View>
       </View>
+
       <LinearGradient
         colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
         start={{ x: 0, y: 0 }}
@@ -86,18 +92,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: BrandColors.white,
     borderRadius: 20,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: BrandColors.borderLight,
-    minHeight: 88,
+    gap: 12,
+    minHeight: 96,
   },
   cardPressed: {
     opacity: 0.92,
   },
+  thumbnail: {
+    width: 72,
+    height: 72,
+    borderRadius: 14,
+    backgroundColor: BrandColors.inputBackground,
+    flexShrink: 0,
+  },
   content: {
     flex: 1,
     gap: 4,
-    paddingRight: 12,
+    minWidth: 0,
   },
   fabric: {
     fontFamily: Fonts.semiBold,
@@ -107,6 +121,7 @@ const styles = StyleSheet.create({
   composition: {
     fontFamily: Fonts.regular,
     fontSize: 13,
+    lineHeight: 18,
     color: BrandColors.textMuted,
   },
   meta: {
@@ -164,5 +179,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
 });

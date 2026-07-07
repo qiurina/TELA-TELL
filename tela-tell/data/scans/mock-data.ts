@@ -1,3 +1,5 @@
+import type { ImageSourcePropType } from 'react-native';
+
 export type SustainabilityRating = 'green' | 'yellow' | 'red';
 
 export type SustainabilityFactor = {
@@ -173,14 +175,15 @@ export const SCAN_RESULTS: ScanResult[] = [
     confidence: 84,
     scannedAt: 'Yesterday, 3:45 PM',
     scannedAtDate: '2026-07-03',
+    sellerLabel: 'Linen / Cotton blend',
     sustainability: {
       rating: 'green',
       label: 'Good',
       score: 8,
       factors: [
-        { text: 'High linen content — breathable natural fiber', positive: true },
+        { text: 'High linen content, breathable natural fiber', positive: true },
         { text: 'Low synthetic content in blend', positive: true },
-        { text: 'Wrinkles easily — moderate care impact', positive: false },
+        { text: 'Wrinkles easily, moderate care impact', positive: false },
       ],
     },
     mislabeling: {
@@ -258,6 +261,7 @@ export const SCAN_RESULTS: ScanResult[] = [
     confidence: 45,
     scannedAt: 'Today, just now',
     scannedAtDate: '2026-07-04',
+    sellerLabel: 'Cotton / Polyester blend',
     sustainability: {
       rating: 'yellow',
       label: 'Moderate',
@@ -319,12 +323,13 @@ export const SCAN_RESULTS: ScanResult[] = [
     confidence: 86,
     scannedAt: 'Today, 2:15 PM',
     scannedAtDate: '2026-07-04',
+    sellerLabel: 'Abaca blend',
     sustainability: {
       rating: 'green',
       label: 'Good',
       score: 8,
       factors: [
-        { text: 'Philippine abaca — strong natural plant fiber', positive: true },
+        { text: 'Philippine abaca, strong natural plant fiber', positive: true },
         { text: 'Low synthetic content in blend', positive: true },
         { text: 'Hand-wash care may limit everyday reuse', positive: false },
       ],
@@ -410,9 +415,9 @@ export const SCAN_RESULTS: ScanResult[] = [
       label: 'Good',
       score: 9,
       factors: [
-        { text: 'Piña — traditional Philippine pineapple leaf fiber', positive: true },
+        { text: 'Piña, traditional Philippine pineapple leaf fiber', positive: true },
         { text: 'Labor-intensive heritage textile', positive: true },
-        { text: 'Delicate — needs gentle care', positive: false },
+        { text: 'Delicate, needs gentle care', positive: false },
       ],
     },
     mislabeling: {
@@ -491,6 +496,7 @@ export const SCAN_RESULTS: ScanResult[] = [
     confidence: 79,
     scannedAt: '2 days ago, 4:30 PM',
     scannedAtDate: '2026-07-02',
+    sellerLabel: 'Rayon blend',
     sustainability: {
       rating: 'yellow',
       label: 'Moderate',
@@ -605,6 +611,8 @@ export function formatDetectedCompositions(compositions: FabricComposition[]): s
   return compositions.map((item) => `${item.material} (${item.percentage}%)`).join(', ');
 }
 
+const SCAN_THUMBNAIL = require('@/assets/images/testfabric.jpg') as ImageSourcePropType;
+
 export type RecentScanPreview = {
   id: string;
   primaryFabric: string;
@@ -615,6 +623,7 @@ export type RecentScanPreview = {
   sustainabilityLabel: string;
   mislabeling: boolean;
   sellerLabel?: string;
+  image: ImageSourcePropType;
 };
 
 export const RECENT_SCANS_PREVIEW: RecentScanPreview[] = SCAN_RESULTS.map((scan) => ({
@@ -627,6 +636,7 @@ export const RECENT_SCANS_PREVIEW: RecentScanPreview[] = SCAN_RESULTS.map((scan)
   sustainabilityLabel: scan.sustainability.label,
   mislabeling: scan.mislabeling.detected,
   sellerLabel: scan.sellerLabel,
+  image: SCAN_THUMBNAIL,
 }));
 
 export const SUSTAINABILITY_DOT: Record<SustainabilityRating, string> = {
