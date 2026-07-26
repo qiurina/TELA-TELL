@@ -76,7 +76,7 @@ export default function UserPreferencesScreen() {
           contentContainerStyle={styles.sheetContent}
           keyboardShouldPersistTaps="handled"
           bounces={false}>
-          <UserPreferencesPanel key={formKey} embedded scope="personalization" />
+          <UserPreferencesPanel key={formKey} embedded scope="personalization" hideAutoSaveHint />
 
           <Pressable
             style={({ pressed }) => [

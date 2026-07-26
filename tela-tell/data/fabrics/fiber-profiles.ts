@@ -46,7 +46,6 @@ const FIBER_SLUGS: Record<SupportedFabric, string> = {
   Leather: 'leather',
   Suede: 'suede',
   Abaca: 'abaca',
-  'Piña': 'pina',
 };
 
 const SLUG_TO_FABRIC = Object.fromEntries(
@@ -142,7 +141,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
       { text: 'Avoid high heat ironing', recommended: false },
     ],
     philippineMarkets:
-      'Found in formal ukay pieces, barong shops, and costume sellers. Heritage silk and piña blends are often underpriced. Inspect for snags before buying to resell.',
+      'Found in formal ukay pieces, barong shops, and costume sellers. Heritage silk blends are often underpriced. Inspect for snags before buying to resell.',
   },
   Linen: {
     fabric: 'Linen',
@@ -404,35 +403,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     ],
     philippineMarkets:
       'Strong local supply from Mindanao weavers. Sinamay and barong panels show up in formal ukay and weaving cooperatives. Support local weavers when buying new.',
-  },
-  'Piña': {
-    fabric: 'Piña',
-    scientificName: 'Ananas comosus leaf fiber',
-    fiberType: 'Philippine native plant fiber',
-    description: 'A fine fiber from pineapple leaves. Prized for formal wear.',
-    production: 'Hand scraped and woven in Aklan from pineapple leaf fibers.',
-    sustainabilityScore: 9.3,
-    sustainabilityLabel: 'Sustainable',
-    sustainabilityRating: 'green',
-    breakdown: { biodegradability: 9.5, waterEfficiency: 9, recyclability: 7.5, lowCarbon: 9.5 },
-    breathability: 'High',
-    durability: 'Medium',
-    stretch: 'Low',
-    moisture: 'Light absorb',
-    texture: 'Sheer',
-    weaveType: 'Heritage plain',
-    weight: 'Very light',
-    origin: 'Philippine plant',
-    bestWeather: ['sunny', 'partly_cloudy', 'cool'],
-    useCases: ['Barong Tagalog', 'Filipiniana', 'Heritage textiles', 'Formal wear'],
-    careInstructions: [
-      { text: 'Dry clean or hand wash very gently', recommended: true },
-      { text: 'Store wrapped in acid-free tissue', recommended: true },
-      { text: 'Keep away from snags', recommended: true },
-      { text: 'Avoid rough surfaces and heavy washing', recommended: false },
-    ],
-    philippineMarkets:
-      'Heritage pieces in Aklan and formal ukay shops. Authentic piña is labor intensive and often underpriced. Verify luster and weave before reselling as barong fabric.',
   },
 };
 

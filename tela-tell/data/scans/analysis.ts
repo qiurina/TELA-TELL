@@ -46,10 +46,7 @@ export const LOW_CONFIDENCE_WARNING = {
 } as const;
 
 export const MODERATE_CONFIDENCE_NOTE =
-  'Results may vary with lighting and angle. An IoT device scan can improve certainty.';
-
-export const BACKUP_SCAN_DISCLAIMER =
-  'Scan results from phone photos or gallery uploads may be less accurate. For the best results, please use the IoT scanner device.';
+  'Results may vary with lighting and angle. A clip-on macro lens can improve close-up detail.';
 
 export const COMPOSITION_DISCLAIMER =
   "These fiber percentages represent the model's visual confidence scores, not laboratory-verified composition.";

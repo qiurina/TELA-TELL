@@ -63,8 +63,8 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
   Silk: {
     ecoAlternatives: [
       {
-        name: 'Piña',
-        similarity: 'Lustrous drape for barong and Filipiniana. Common in formal ukay.',
+        name: 'Abaca',
+        similarity: 'Lustrous plant fiber for barong and Filipiniana. Common in formal ukay.',
       },
       {
         name: 'Rayon',
@@ -72,11 +72,11 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
       },
       {
         name: 'Peace silk (ahimsa)',
-        similarity: 'Comparable sheen and drape. Ethical when piña is unavailable.',
+        similarity: 'Comparable sheen and drape. Ethical alternative for formal wear.',
       },
     ],
     recycledAwareness:
-      'Heritage silk and piña in ukay are often underpriced. Inspect for snags and yellowing.',
+      'Heritage silk in ukay is often underpriced. Inspect for snags and yellowing.',
     reuse: {
       resale: 'Market to formal-wear and cultural costume buyers with clear fiber notes.',
       donate: 'School theater or cultural groups may accept verified silk garments.',
@@ -209,8 +209,8 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Soft blouse hand-feel. Breathable for dresses and tops.',
       },
       {
-        name: 'Piña or abaca',
-        similarity: 'Philippine plant fibers with comparable breathability for formal wear.',
+        name: 'Abaca',
+        similarity: 'Philippine plant fiber with comparable breathability for formal wear.',
       },
     ],
     recycledAwareness:
@@ -228,7 +228,7 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Durable bags and belts. Look for certified recycled hide labels.',
       },
       {
-        name: 'Piñatex or plant-based leather',
+        name: 'Plant-based leather (verified)',
         similarity: 'Vegan structure for bags and shoes.',
       },
       {
@@ -270,8 +270,8 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
   Abaca: {
     ecoAlternatives: [
       {
-        name: 'Piña',
-        similarity: 'Finer drape for formal Philippine textiles and barong pieces.',
+        name: 'Cotton-linen blend',
+        similarity: 'Softer everyday drape for warm-climate pieces.',
       },
       {
         name: 'Linen',
@@ -290,29 +290,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
       upcycle: 'Placemats, coasters, lampshades, or bag panels.',
     },
   },
-  'Piña': {
-    ecoAlternatives: [
-      {
-        name: 'Rayon',
-        similarity: 'Comparable sheen when authentic piña is out of budget.',
-      },
-      {
-        name: 'Peace silk',
-        similarity: 'Ethical silk with comparable luster for formal wear.',
-      },
-      {
-        name: 'Abaca',
-        similarity: 'Stronger plant fiber for structured barong details in humid events.',
-      },
-    ],
-    recycledAwareness:
-      'Authentic Aklan piña is labor-intensive. Verify luster and weave before reselling.',
-    reuse: {
-      resale: 'Highlight piña or barong fabric. Collectors pay for verified heritage pieces.',
-      donate: 'Cultural archives or costume shops may accept authenticated garments.',
-      upcycle: 'If damaged, frame small samples as textile art.',
-    },
-  },
 };
 
 const MIXED_FIBER_GUIDANCE: EcoGuidance = {
@@ -325,10 +302,10 @@ const MIXED_FIBER_GUIDANCE: EcoGuidance = {
       name: 'Recycled blended yarn',
       similarity: 'Mixed performance with less virgin synthetic. Ask sellers about fiber content.',
     },
-    {
-      name: 'Single-fiber rescan',
-      similarity: 'Clearer match for alternatives. Rescan one fabric area with the IoT device.',
-    },
+      {
+        name: 'Single-fiber rescan',
+        similarity: 'Clearer match for alternatives. Rescan one fabric area in even lighting.',
+      },
   ],
   recycledAwareness:
     'Mixed ukay finds are common. Rescan under even light or check the garment tag first.',

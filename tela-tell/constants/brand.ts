@@ -39,7 +39,6 @@ export const FabricBarStyles: Record<string, FabricBarStyle> = {
   Leather: { gradient: ['#A16207', '#854D0E', '#713F12'], track: '#FEF3C7' },
   Suede: { gradient: ['#D97706', '#B45309', '#92400E'], track: '#FFFBEB' },
   Abaca: { gradient: ['#84CC16', '#65A30D', '#4D7C0F'], track: '#ECFCCB' },
-  'Piña': { gradient: ['#FCD34D', '#FBBF24', '#F59E0B'], track: '#FEF9C3' },
 };
 
 export const FabricBarFallback: FabricBarStyle[] = [

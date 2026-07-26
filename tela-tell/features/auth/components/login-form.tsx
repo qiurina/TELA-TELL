@@ -5,7 +5,6 @@ import { Alert, StyleSheet, View } from 'react-native';
 import {
   AuthPrimaryButton,
   AuthSwitchPrompt,
-  AuthTertiaryButton,
 } from '@/features/auth/components/auth-buttons';
 import {
   AuthEmailField,
@@ -21,12 +20,11 @@ import { isValidEmail } from '@/features/auth/lib/validation';
 
 type LoginFormProps = {
   onSwitchToRegister: () => void;
-  showSkip?: boolean;
 };
 
-export function LoginForm({ onSwitchToRegister, showSkip = true }: LoginFormProps) {
+export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   const router = useRouter();
-  const { signIn, continueWithoutAccount } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -54,11 +52,6 @@ export function LoginForm({ onSwitchToRegister, showSkip = true }: LoginFormProp
     }
   };
 
-  const handleSkip = async () => {
-    await continueWithoutAccount();
-    router.replace('/(tabs)' as Href);
-  };
-
   return (
     <>
       <AuthFormFields>
@@ -74,9 +67,6 @@ export function LoginForm({ onSwitchToRegister, showSkip = true }: LoginFormProp
           onPress={() => void handleSignIn()}
           disabled={isSubmitting}
         />
-        {showSkip ? (
-          <AuthTertiaryButton label="Continue without account" onPress={() => void handleSkip()} />
-        ) : null}
       </AuthFormActions>
 
       <View style={styles.switchWrap}>

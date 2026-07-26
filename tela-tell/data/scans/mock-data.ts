@@ -304,7 +304,7 @@ export const SCAN_RESULTS: ScanResult[] = [
           description: 'Choose verified natural-dominant blends when composition is uncertain.',
         },
       ],
-      recycledAwareness: 'Rescan with the IoT device for a clearer fiber estimate before buying alternatives.',
+      recycledAwareness: 'Rescan in even lighting for a clearer fiber estimate before buying alternatives.',
       reuse: {
         resale: 'Verify fabric type before listing.',
         donate: 'Only donate after a clearer scan or label check.',
@@ -377,10 +377,6 @@ export const SCAN_RESULTS: ScanResult[] = [
       ],
       ecoAlternatives: [
         {
-          name: 'Piña',
-          description: 'Another Philippine plant fiber with a finer, lustrous drape.',
-        },
-        {
           name: 'Linen',
           description: 'Similar breathable natural feel for warm-climate wear.',
         },
@@ -395,93 +391,6 @@ export const SCAN_RESULTS: ScanResult[] = [
         resale: 'List as Philippine abaca or sinamay on local craft and vintage markets.',
         donate: 'Craft groups often accept natural plant fibers for weaving.',
         upcycle: 'Use for placemats, coasters, or bag panels.',
-      },
-    },
-  },
-  {
-    id: '5',
-    dominantFabric: 'Piña dominant',
-    compositions: [
-      { material: 'Piña', percentage: 74 },
-      { material: 'Silk', percentage: 18 },
-      { material: 'Cotton', percentage: 8 },
-    ],
-    confidence: 81,
-    scannedAt: 'Yesterday, 11:00 AM',
-    scannedAtDate: '2026-07-03',
-    sellerLabel: '100% Cotton',
-    sustainability: {
-      rating: 'green',
-      label: 'Good',
-      score: 9,
-      factors: [
-        { text: 'Piña, traditional Philippine pineapple leaf fiber', positive: true },
-        { text: 'Labor-intensive heritage textile', positive: true },
-        { text: 'Delicate, needs gentle care', positive: false },
-      ],
-    },
-    mislabeling: {
-      detected: true,
-      title: 'Possible Mislabeling Detected',
-      message:
-        "Seller stated '100% Cotton' but fabric appears piña dominant. Heritage piña is often underpriced in ukay finds.",
-    },
-    profile: {
-      texture: 'Fine',
-      weave: 'Plain weave',
-      breathability: 'Very high',
-      durability: 'Moderate',
-      stretch: 'Low',
-      careInstructions: [
-        { text: 'Dry clean or hand wash cold', recommended: true },
-        { text: 'Store flat or rolled', recommended: true },
-        { text: 'Bleach or wring hard', recommended: false },
-      ],
-      useCases: ['Barong Tagalog', 'Filipiniana', 'Formal blouses', 'Heritage gifts'],
-    },
-    recommendations: {
-      garmentPurposes: [
-        {
-          purpose: 'Formal Filipino wear',
-          suitability: 'Excellent',
-          note: 'Piña is prized for barong and formal occasions in hot climates.',
-        },
-        {
-          purpose: 'Casual daily wear',
-          suitability: 'Fair',
-          note: 'Delicate — better reserved for special events.',
-        },
-        {
-          purpose: 'Resale / collector',
-          suitability: 'Good',
-          note: 'Authentic piña pieces can attract heritage and formal-wear buyers.',
-        },
-        {
-          purpose: 'Heavy outdoor use',
-          suitability: 'Poor',
-          note: 'Fine fiber snags and stains easily.',
-        },
-      ],
-      ecoAlternatives: [
-        {
-          name: 'Rayon',
-          description: 'Smooth formal drape at a lower price point in pre-owned pieces.',
-        },
-        {
-          name: 'Abaca',
-          description: 'Stronger Philippine plant fiber for structured pieces.',
-        },
-        {
-          name: 'Peace silk',
-          description: 'Lustrous alternative when piña is unavailable.',
-        },
-      ],
-      recycledAwareness:
-        'Buy from Aklan or Calabarzon weavers when possible. In ukay, inspect for stains and verify piña-like sheen before reselling.',
-      reuse: {
-        resale: 'Highlight piña or barong fabric in listings — collectors pay for authentic heritage pieces.',
-        donate: 'Cultural or costume archives may accept verified piña garments.',
-        upcycle: 'Only if damaged — small pieces can become bookmarks or framed textile art.',
       },
     },
   },

@@ -17,7 +17,6 @@ const FABRIC_REFERENCE_IMAGES: Record<SupportedFabric, ImageSourcePropType> = {
   Leather: require('@/assets/images/reference/leather.jpg'),
   Suede: require('@/assets/images/reference/suede.jpg'),
   Abaca: require('@/assets/images/reference/abaca.jpg'),
-  'Piña': require('@/assets/images/reference/pina.jpg'),
 };
 
 export type FabricReference = {
@@ -112,13 +111,6 @@ export const FABRIC_REFERENCES: Record<SupportedFabric, FabricReference> = {
     lookFor: 'Strong plant-fiber weave with natural tan or cream tones',
     textureNote: 'Mindanao sinamay and structured barong panels, stiff but breathable',
     image: FABRIC_REFERENCE_IMAGES.Abaca,
-  },
-  'Piña': {
-    fabric: 'Piña',
-    title: 'Piña',
-    lookFor: 'Fine translucent weave with a heritage barong luster',
-    textureNote: 'Aklan pineapple-leaf fiber prized for formal Filipiniana',
-    image: FABRIC_REFERENCE_IMAGES['Piña'],
   },
 };
 

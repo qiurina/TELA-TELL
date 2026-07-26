@@ -18,11 +18,13 @@ const SCAN_MODE_OPTIONS: {
     label: 'One swatch',
     subtitle: 'Scan one fabric at a time',
   },
-  {
-    value: 'dual',
-    label: 'Two swatches',
-    subtitle: 'Compare two fabrics side by side',
-  },
+  // Dual-swatch mode is hidden from the UI for now (kept for future work).
+  // Re-enable this option and `SHOW_SCAN_MODE_SELECTOR` in scan-actions.tsx to restore it.
+  // {
+  //   value: 'dual',
+  //   label: 'Two swatches',
+  //   subtitle: 'Compare two fabrics side by side',
+  // },
 ];
 
 export function getScanModeLabel(mode: ScanMode): string {

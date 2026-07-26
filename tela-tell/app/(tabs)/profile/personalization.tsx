@@ -32,12 +32,7 @@ export default function PersonalizationScreen() {
         </Pressable>
       }>
       <ProfilePreferencesGate>
-        <UserPreferencesPanel
-          key={formKey}
-          embedded
-          scope="personalization"
-          saveMode="manual"
-        />
+        <UserPreferencesPanel key={formKey} embedded scope="personalization" />
       </ProfilePreferencesGate>
     </ProfileScreenShell>
   );

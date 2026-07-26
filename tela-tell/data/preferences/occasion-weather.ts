@@ -127,7 +127,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     avoid: [
       { fabric: 'Pure linen', reason: 'Absorbs water and dries slowly' },
       { fabric: 'Silk', reason: 'Water spots and stains easily' },
-      { fabric: 'Piña', reason: 'Delicate fibers are hard to dry and store when wet' },
+      { fabric: 'Wool', reason: 'Takes a long time to dry after getting soaked' },
     ],
   },
   thunderstorms: {
@@ -141,7 +141,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     avoid: [
       { fabric: 'Cotton', reason: 'Soaks up water and stays damp for hours' },
       { fabric: 'Silk', reason: 'Damaged easily by heavy rain and humidity' },
-      { fabric: 'Piña', reason: 'Too delicate for stormy commutes' },
+      { fabric: 'Linen', reason: 'Absorbs water and stays heavy when wet' },
     ],
   },
   windy: {
@@ -196,7 +196,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     ],
     avoid: [
       { fabric: 'Wool', reason: 'Often too warm for everyday tropical wear' },
-      { fabric: 'Piña', reason: 'Delicate and better saved for formal pieces' },
+      { fabric: 'Silk', reason: 'Delicate and better saved for dressier pieces' },
       { fabric: 'Thick acrylic', reason: 'Can feel scratchy for all-day casual use' },
     ],
   },
@@ -225,7 +225,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     avoid: [
       { fabric: 'Silk', reason: 'Too delicate for active school days' },
       { fabric: 'Wool', reason: 'Often too warm for Philippine school climates' },
-      { fabric: 'Piña', reason: 'Better reserved for formal school events only' },
+      { fabric: 'Leather', reason: 'Too heavy and formal for everyday school wear' },
     ],
   },
   formal: {
@@ -233,8 +233,8 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     label: 'Formal Event',
     bestChoices: [
       { fabric: 'Silk', reason: 'Smooth drape and polished look for dressy occasions' },
-      { fabric: 'Piña', reason: 'Traditional Filipino formal fiber for barong and Filipiniana' },
       { fabric: 'Abaca', reason: 'Structured Philippine fiber for tropical formal wear' },
+      { fabric: 'Linen', reason: 'Breathable polish for tropical formal events' },
     ],
     avoid: [
       { fabric: 'Acrylic', reason: 'Can look inexpensive and pill under formal lighting' },
@@ -246,9 +246,9 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     id: 'wedding',
     label: 'Wedding',
     bestChoices: [
-      { fabric: 'Piña', reason: 'Classic Filipino celebration fiber for barong and formal wear' },
       { fabric: 'Abaca', reason: 'Heritage Philippine fiber for celebration barong details' },
       { fabric: 'Silk', reason: 'Luxurious drape for dresses and formal separates' },
+      { fabric: 'Linen', reason: 'Breathable formal option for tropical wedding venues' },
     ],
     avoid: [
       { fabric: 'Nylon', reason: 'Too athletic for celebration dress codes' },
@@ -322,7 +322,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     ],
     avoid: [
       { fabric: 'Silk', reason: 'Too delicate for dirt, sun, and abrasion' },
-      { fabric: 'Piña', reason: 'Reserved for formal wear, not outdoor use' },
+      { fabric: 'Leather', reason: 'Too stiff and heavy for active outdoor use' },
       { fabric: 'Heavy wool', reason: 'Too warm for most Philippine outdoor activity' },
     ],
   },
@@ -336,7 +336,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     ],
     avoid: [
       { fabric: 'Structured wool', reason: 'Too stiff and warm for lounging' },
-      { fabric: 'Piña', reason: 'Too formal and delicate for daily home use' },
+      { fabric: 'Leather', reason: 'Too stiff and formal for daily home use' },
       { fabric: 'Scratchy acrylic', reason: 'Uncomfortable against skin for long wear' },
     ],
   },

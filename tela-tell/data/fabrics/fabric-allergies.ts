@@ -18,7 +18,7 @@ export type AllergyAlert = {
 const DEFAULT_ALTERNATIVES: HypoallergenicAlternative[] = [
   { name: 'Cotton', note: 'Naturally hypoallergenic and breathable for everyday wear' },
   { name: 'Linen', note: 'Airy weave with low irritation in hot, humid weather' },
-  { name: 'Abaca or piña', note: 'Philippine plant fibers for breathable alternatives' },
+  { name: 'Abaca', note: 'Philippine plant fiber for breathable alternatives' },
 ];
 
 const FABRIC_ALTERNATIVES: Partial<Record<SupportedFabric, HypoallergenicAlternative[]>> = {
@@ -60,7 +60,7 @@ const FABRIC_ALTERNATIVES: Partial<Record<SupportedFabric, HypoallergenicAlterna
   Leather: [
     { name: 'Cotton canvas', note: 'Plant-based alternative for bags and outer layers' },
     { name: 'Linen', note: 'Breathable natural option for warm climates' },
-    { name: 'Piña or abaca', note: 'Philippine plant fibers for structured formal pieces' },
+    { name: 'Abaca', note: 'Philippine plant fiber for structured formal pieces' },
   ],
   Suede: [
     { name: 'Cotton canvas', note: 'Plant-based alternative without animal hide' },

@@ -117,7 +117,6 @@ const FABRIC_COLOR_NOTES: Partial<Record<string, string>> = {
   Leather: 'Rich earth tones and deep burgundy suit leather — avoid pale washes that show scuffs.',
   Suede: 'Matte suede reads best in camel, tan, and muted jewel tones — keep away from high-contrast neons.',
   Abaca: 'Natural abaca and sinamay look elegant in cream, gold, and heritage earth tones.',
-  'Piña': 'Piña barong classics include ecru, champagne, and soft gold — keep contrast near the face.',
 };
 
 export function getSkinToneColorGuidance(

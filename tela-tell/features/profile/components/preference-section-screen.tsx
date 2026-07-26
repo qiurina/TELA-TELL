@@ -11,7 +11,7 @@ export function PreferenceSectionScreen({ title, scope }: PreferenceSectionScree
   return (
     <ProfileScreenShell title={title} showBack>
       <ProfilePreferencesGate>
-        <UserPreferencesPanel embedded scope={scope} saveMode="manual" />
+        <UserPreferencesPanel embedded scope={scope} />
       </ProfilePreferencesGate>
     </ProfileScreenShell>
   );

@@ -1,18 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { ViewfinderSource } from '@/features/scan/components/camera-guide';
 import { CircleCheck, Info, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 
-const IOT_QUALITY_CHECKLIST = [
-  'Lay fabric flat',
-  'Use IoT scanner',
-  'Fill the frame',
-  'Even lighting',
-];
-
-const PHONE_QUALITY_CHECKLIST = [
+const QUALITY_CHECKLIST = [
   'Lay fabric flat',
   'Fill the frame',
   'Even lighting',
@@ -21,14 +13,12 @@ const PHONE_QUALITY_CHECKLIST = [
 
 type ScanGuideFloatProps = {
   visible: boolean;
-  source?: ViewfinderSource;
   onDismiss: () => void;
   onShow: () => void;
 };
 
-export function ScanGuideFloat({ visible, source = 'iot', onDismiss, onShow }: ScanGuideFloatProps) {
-  const isIot = source === 'iot';
-  const checklist = isIot ? IOT_QUALITY_CHECKLIST : PHONE_QUALITY_CHECKLIST;
+export function ScanGuideFloat({ visible, onDismiss, onShow }: ScanGuideFloatProps) {
+  const checklist = QUALITY_CHECKLIST;
 
   return (
     <>

@@ -15,11 +15,11 @@ export default function AboutScreen() {
         <Text style={styles.body}>
           Scan a fabric swatch with your camera or upload a photo, compare results against reference
           fibers, and get sustainability and mislabeling insights tailored to Philippine fibers like
-          abaca and piña.
+          abaca.
         </Text>
         <Text style={styles.note}>
-          This capstone prototype uses mock scan data. Sign in to save preferences and build a
-          persistent scan history when cloud sync is enabled.
+          This capstone prototype uses mock scan data for classification. Preferences and scan history
+          are designed for on-device SQLite storage — no cloud account required.
         </Text>
       </View>
     </ProfileScreenShell>

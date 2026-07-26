@@ -4,7 +4,7 @@ import { UserPreferencesPanel } from '@/features/profile/components/user-prefere
 export default function ScanSettingsScreen() {
   return (
     <ProfileScreenShell title="Scan settings" showBack>
-      <UserPreferencesPanel embedded scope="scan" saveMode="manual" />
+      <UserPreferencesPanel embedded scope="scan" />
     </ProfileScreenShell>
   );
 }

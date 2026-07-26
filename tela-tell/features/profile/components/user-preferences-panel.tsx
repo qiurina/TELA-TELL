@@ -3,7 +3,6 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { OccasionWeatherGuide } from '@/features/profile/components/occasion-weather-guide';
-import { ProfileSaveButton } from '@/features/profile/components/profile-save-button';
 import { Check, CircleCheck, Plus, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { SUPPORTED_FABRICS, type SupportedFabric } from '@/data/fabrics/fabrics';
@@ -292,7 +291,6 @@ type UserPreferencesPanelProps = {
   disabled?: boolean;
   embedded?: boolean;
   onChange?: () => void;
-  onSaved?: () => void;
   /** Which preference groups to render. Defaults to full panel (modal). */
   scope?:
     | 'full'
@@ -303,8 +301,8 @@ type UserPreferencesPanelProps = {
     | 'preferred'
     | 'weather'
     | 'occasion';
-  /** Manual save commits draft on Save tap. Immediate saves each change. */
-  saveMode?: 'immediate' | 'manual';
+  /** Hide the "changes saved automatically" hint (e.g. when a modal shows its own footer). */
+  hideAutoSaveHint?: boolean;
 };
 
 function confirmFabricMove(
@@ -331,44 +329,27 @@ export function UserPreferencesPanel({
   disabled,
   embedded = false,
   onChange,
-  onSaved,
   scope = 'full',
-  saveMode = 'immediate',
+  hideAutoSaveHint = false,
 }: UserPreferencesPanelProps) {
-  const usesManualSave = saveMode === 'manual';
   const [prefs, setPrefs] = useState<UserPreferences>(getUserPreferences);
   const [mode, setMode] = useState(getScanMode);
-  const [saved, setSaved] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       setPrefs(getUserPreferences());
       setMode(getScanMode());
-      setSaved(false);
     }, []),
   );
 
-  const markDirty = () => {
-    setSaved(false);
-    onChange?.();
-  };
-
   const commitPrefs = (next: UserPreferences) => {
     setPrefs(next);
-    if (usesManualSave) {
-      markDirty();
-      return;
-    }
     setUserPreferences(next);
     onChange?.();
   };
 
   const commitMode = (next: ScanMode) => {
     setMode(next);
-    if (usesManualSave) {
-      markDirty();
-      return;
-    }
     setScanMode(next);
     onChange?.();
   };
@@ -377,126 +358,46 @@ export function UserPreferencesPanel({
     commitPrefs({ ...prefs, [key]: value });
   };
 
+  const applyPrefsUpdate = (mutate: () => void) => {
+    mutate();
+    setPrefs(getUserPreferences());
+    onChange?.();
+  };
+
   const handleSensitiveToggle = (fabric: SupportedFabric) => {
     if (prefs.sensitiveFabrics.includes(fabric)) {
-      const next = {
-        ...prefs,
-        sensitiveFabrics: prefs.sensitiveFabrics.filter((item) => item !== fabric),
-      };
-      if (usesManualSave) {
-        commitPrefs(next);
-      } else {
-        toggleSensitiveFabric(fabric);
-        setPrefs(getUserPreferences());
-        onChange?.();
-      }
+      applyPrefsUpdate(() => toggleSensitiveFabric(fabric));
       return;
     }
 
     if (prefs.preferredFabrics.includes(fabric)) {
       confirmFabricMove(fabric, 'sensitive', () => {
-        if (usesManualSave) {
-          commitPrefs({
-            ...prefs,
-            preferredFabrics: prefs.preferredFabrics.filter((item) => item !== fabric),
-            sensitiveFabrics: [...prefs.sensitiveFabrics, fabric],
-          });
-        } else {
-          moveFabricToSensitive(fabric);
-          setPrefs(getUserPreferences());
-          onChange?.();
-        }
+        applyPrefsUpdate(() => moveFabricToSensitive(fabric));
       });
       return;
     }
 
-    const next = { ...prefs, sensitiveFabrics: [...prefs.sensitiveFabrics, fabric] };
-    if (usesManualSave) {
-      commitPrefs(next);
-    } else {
-      toggleSensitiveFabric(fabric);
-      setPrefs(getUserPreferences());
-      onChange?.();
-    }
+    applyPrefsUpdate(() => toggleSensitiveFabric(fabric));
   };
 
   const handlePreferredToggle = (fabric: SupportedFabric) => {
     if (prefs.preferredFabrics.includes(fabric)) {
-      const next = {
-        ...prefs,
-        preferredFabrics: prefs.preferredFabrics.filter((item) => item !== fabric),
-      };
-      if (usesManualSave) {
-        commitPrefs(next);
-      } else {
-        togglePreferredFabric(fabric);
-        setPrefs(getUserPreferences());
-        onChange?.();
-      }
+      applyPrefsUpdate(() => togglePreferredFabric(fabric));
       return;
     }
 
     if (prefs.sensitiveFabrics.includes(fabric)) {
       confirmFabricMove(fabric, 'preferred', () => {
-        if (usesManualSave) {
-          commitPrefs({
-            ...prefs,
-            sensitiveFabrics: prefs.sensitiveFabrics.filter((item) => item !== fabric),
-            preferredFabrics: [...prefs.preferredFabrics, fabric],
-          });
-        } else {
-          moveFabricToPreferred(fabric);
-          setPrefs(getUserPreferences());
-          onChange?.();
-        }
+        applyPrefsUpdate(() => moveFabricToPreferred(fabric));
       });
       return;
     }
 
-    const next = { ...prefs, preferredFabrics: [...prefs.preferredFabrics, fabric] };
-    if (usesManualSave) {
-      commitPrefs(next);
-    } else {
-      togglePreferredFabric(fabric);
-      setPrefs(getUserPreferences());
-      onChange?.();
-    }
+    applyPrefsUpdate(() => togglePreferredFabric(fabric));
   };
 
   const handleDressingToggle = (context: (typeof prefs.dressingContexts)[number]) => {
-    const current = prefs.dressingContexts ?? [];
-    const nextContexts = current.includes(context)
-      ? current.filter((item) => item !== context)
-      : [...current, context];
-
-    if (usesManualSave) {
-      commitPrefs({ ...prefs, dressingContexts: nextContexts });
-      return;
-    }
-
-    toggleDressingContext(context);
-    setPrefs(getUserPreferences());
-    onChange?.();
-  };
-
-  const handleSave = () => {
-    if (scope === 'scan' || scope === 'full') {
-      setScanMode(mode);
-    }
-    if (
-      scope === 'personalization' ||
-      scope === 'full' ||
-      scope === 'skin-tone' ||
-      scope === 'allergies' ||
-      scope === 'preferred' ||
-      scope === 'weather' ||
-      scope === 'occasion'
-    ) {
-      setUserPreferences(prefs);
-    }
-    setSaved(true);
-    onSaved?.();
-    onChange?.();
+    applyPrefsUpdate(() => toggleDressingContext(context));
   };
 
   const fabricNames: SupportedFabric[] = [...SUPPORTED_FABRICS];
@@ -510,7 +411,6 @@ export function UserPreferencesPanel({
   const showDressingGuide = showWeather || showOccasion;
   const dressingCategory =
     showWeather && showOccasion ? 'both' : showWeather ? 'weather' : showOccasion ? 'occasion' : 'both';
-  const showSaveButton = usesManualSave;
 
   return (
     <View style={[styles.panel, embedded && styles.panelEmbedded]}>
@@ -594,7 +494,9 @@ export function UserPreferencesPanel({
         />
       ) : null}
 
-      {showSaveButton ? <ProfileSaveButton saved={saved} onPress={handleSave} /> : null}
+      {hideAutoSaveHint || disabled ? null : (
+        <Text style={styles.autoSaveHint}>Changes saved automatically</Text>
+      )}
     </View>
   );
 }
@@ -777,5 +679,12 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.6,
+  },
+  autoSaveHint: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: BrandColors.textMuted,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });

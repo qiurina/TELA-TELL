@@ -1,25 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CameraGuide, type ViewfinderSource } from '@/features/scan/components/camera-guide';
-import { DeviceStatusCard } from '@/features/scan/components/device-status-card';
+import { CameraGuide } from '@/features/scan/components/camera-guide';
 import { ScanActions } from '@/features/scan/components/scan-actions';
 import { DEFAULT_GARMENT_CONDITION, type GarmentCondition } from '@/data/scans/garment-condition';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
 import { clearLastCaptureUri, setLastCaptureUri } from '@/features/scan/lib/last-capture';
-import { getDeviceMockCaptureUri } from '@/features/scan/lib/device-mock-capture';
 import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 import { clearRegionSelection } from '@/features/scan/lib/region-selection';
 import { clearLastGarmentCondition, getLastGarmentCondition, setLastGarmentCondition } from '@/features/scan/lib/garment-condition';
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
 import { getScanMode } from '@/features/scan/lib/scan-session';
-
-const DEVICE_SCAN_DURATION_MS = 2500;
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -28,9 +24,6 @@ export default function ScanScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
   const [savedSellerLabel, setSavedSellerLabel] = useState<string | null>(null);
-  const [viewfinderSource, setViewfinderSource] = useState<ViewfinderSource>('iot');
-  const [isDeviceScanning, setIsDeviceScanning] = useState(false);
-  const [isBackupCapture, setIsBackupCapture] = useState(false);
   const [garmentCondition, setGarmentCondition] = useState<GarmentCondition>(
     () => getLastGarmentCondition(),
   );
@@ -40,9 +33,6 @@ export default function ScanScreen() {
     useCallback(() => {
       if (consumeFreshScan()) {
         setPreviewUri(null);
-        setViewfinderSource('iot');
-        setIsDeviceScanning(false);
-        setIsBackupCapture(false);
         clearRegionSelection();
         clearLastGarmentCondition();
         setGarmentCondition(DEFAULT_GARMENT_CONDITION);
@@ -59,7 +49,8 @@ export default function ScanScreen() {
       clearLastCaptureUri();
     }
 
-    const resultId = getScanMode() === 'dual' ? 'dual' : isBackupCapture ? '3' : '1';
+    // Dual-swatch remains supported in code but is hidden from the UI for now.
+    const resultId = getScanMode() === 'dual' ? 'dual' : '1';
 
     setIsAnalyzing(true);
     setTimeout(() => {
@@ -68,33 +59,24 @@ export default function ScanScreen() {
     }, 1500);
   };
 
-  const handlePhoneScan = async () => {
-    if (isAnalyzing || isDeviceScanning) {
+  const handleTakePhoto = async () => {
+    if (isAnalyzing) {
       return;
     }
 
-    if (Platform.OS === 'web') {
-      const photoUri = await captureFromCamera();
-      if (photoUri) {
-        setIsBackupCapture(true);
-        setPreviewUri(photoUri);
-      }
-      return;
+    const photoUri = await captureFromCamera();
+    if (photoUri) {
+      setPreviewUri(photoUri);
     }
-
-    setIsBackupCapture(true);
-    setViewfinderSource('phone');
   };
 
   const handleUpload = async () => {
-    if (isAnalyzing || isDeviceScanning) {
+    if (isAnalyzing) {
       return;
     }
 
     const photoUri = await captureFromGallery();
-
     if (photoUri) {
-      setIsBackupCapture(true);
       setPreviewUri(photoUri);
     }
   };
@@ -124,34 +106,12 @@ export default function ScanScreen() {
     runAnalysis(previewUri);
   };
 
-  const startDeviceScan = () => {
-    setIsDeviceScanning(true);
-    setTimeout(() => {
-      void getDeviceMockCaptureUri().then((uri) => {
-        setIsDeviceScanning(false);
-        setIsBackupCapture(false);
-        setPreviewUri(uri);
-      });
-    }, DEVICE_SCAN_DURATION_MS);
-  };
-
-  const handleDeviceScan = () => {
-    if (isAnalyzing || isDeviceScanning) {
-      return;
-    }
-
-    startDeviceScan();
-  };
-
   const handleTryAnother = () => {
     if (isAnalyzing) {
       return;
     }
 
     setPreviewUri(null);
-    setViewfinderSource('iot');
-    setIsDeviceScanning(false);
-    setIsBackupCapture(false);
     clearRegionSelection();
     clearLastGarmentCondition();
     setGarmentCondition(DEFAULT_GARMENT_CONDITION);
@@ -195,18 +155,9 @@ export default function ScanScreen() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.sheetContent}>
-            <DeviceStatusCard status="online" />
-
             <CameraGuide
               previewUri={previewUri}
-              source={viewfinderSource}
-              isDeviceScanning={isDeviceScanning}
-              onCapture={(uri) => {
-                if (viewfinderSource === 'phone') {
-                  setIsBackupCapture(true);
-                }
-                setPreviewUri(uri);
-              }}
+              isAnalyzing={isAnalyzing}
               guideVisible={guideVisible}
               onDismissGuide={() => setGuideVisible(false)}
               onShowGuide={() => setGuideVisible(true)}
@@ -214,10 +165,8 @@ export default function ScanScreen() {
 
             <ScanActions
               hasPreview={Boolean(previewUri)}
-              showPhoneCapture
               savedSellerLabel={savedSellerLabel}
-              onDeviceScan={handleDeviceScan}
-              onPhoneScan={handlePhoneScan}
+              onTakePhoto={handleTakePhoto}
               onUpload={handleUpload}
               onAnalyze={handleAnalyze}
               onTryAnother={handleTryAnother}
@@ -227,7 +176,6 @@ export default function ScanScreen() {
               onRemoveLabel={handleRemoveLabel}
               onOpenPreferences={handleOpenPreferences}
               isAnalyzing={isAnalyzing}
-              isDeviceScanning={isDeviceScanning}
             />
           </ScrollView>
         </View>

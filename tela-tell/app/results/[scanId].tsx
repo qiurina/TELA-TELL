@@ -5,18 +5,19 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CompositionCard } from '@/features/results/components/composition-card';
 import { DualFabricResults } from '@/features/results/components/dual-fabric-results';
 import { FabricPhotoPreview } from '@/features/results/components/fabric-photo-preview';
-import { FabricReferenceComparison } from '@/features/results/components/fabric-reference-comparison';
 import { ResultsExploreActions } from '@/features/results/components/results-explore-actions';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { ScanConfidenceBanner } from '@/features/results/components/scan-confidence-banner';
 import { SellerComparisonCard } from '@/features/results/components/seller-comparison-card';
 import { StatusBadges } from '@/features/results/components/status-badges';
+import { SyntheticHealthRiskCard } from '@/features/results/components/synthetic-health-risk-card';
 import { useAuth } from '@/features/auth/context/auth-provider';
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getDualSwatchRegions } from '@/features/scan/lib/dual-swatch-results';
 import { getScanResult, resolveScanId } from '@/data/scans/mock-data';
+import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 import { getFabricReference } from '@/data/fabrics/fabric-references';
 import { getLastCaptureUri } from '@/features/scan/lib/last-capture';
 import { getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
@@ -81,6 +82,10 @@ export default function ResultsScreen() {
     ? getFabricReference(result.dominantFabric, result.compositions)
     : null;
 
+  const healthRisk = !isDualDemo
+    ? getSyntheticHealthRisk(result.dominantFabric, result.compositions ?? [])
+    : null;
+
   return (
     <View style={styles.root}>
       <ScanConfirmSheet
@@ -122,16 +127,9 @@ export default function ResultsScreen() {
                   .filter((region): region is NonNullable<typeof region> => Boolean(region))
               : undefined
           }
+          referenceImage={primaryReference?.image}
+          referenceTitle={primaryReference?.title}
         />
-
-        {primaryReference ? (
-          <FabricReferenceComparison
-            scanImageUri={capturedPhotoUri}
-            reference={primaryReference}
-            detectedLabel={result.dominantFabric}
-            confidence={result.confidence}
-          />
-        ) : null}
 
         {isDualDemo ? (
           <DualFabricResults regions={dualRegions} />
@@ -148,6 +146,8 @@ export default function ResultsScreen() {
         )}
 
         <StatusBadges sustainability={result.sustainability} />
+
+        {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
 
         {!isDualDemo ? (
           <SellerComparisonCard

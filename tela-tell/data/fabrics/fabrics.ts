@@ -1,4 +1,4 @@
-/** Thirteen supported fiber / material types — aligned with capstone study taxonomy. */
+/** Twelve supported fiber / material types — aligned with capstone study taxonomy. */
 
 export type FabricCategory =
   | 'Natural'
@@ -26,7 +26,6 @@ export const FABRIC_REGISTRY: FabricDefinition[] = [
   { id: 10, name: 'Leather', category: 'Animal material' },
   { id: 11, name: 'Suede', category: 'Animal material' },
   { id: 12, name: 'Abaca', category: 'Philippine native' },
-  { id: 13, name: 'Piña', category: 'Philippine native' },
 ];
 
 export const SUPPORTED_FABRICS = [
@@ -42,7 +41,6 @@ export const SUPPORTED_FABRICS = [
   'Leather',
   'Suede',
   'Abaca',
-  'Piña',
 ] as const;
 
 export type SupportedFabric = (typeof SUPPORTED_FABRICS)[number];
@@ -54,8 +52,6 @@ export const FABRIC_ALIASES: Record<string, SupportedFabric> = {
   lycra: 'Spandex',
   suede: 'Suede',
   leather: 'Leather',
-  pina: 'Piña',
-  'piña': 'Piña',
 };
 
 const FABRIC_CATEGORY_MAP = Object.fromEntries(

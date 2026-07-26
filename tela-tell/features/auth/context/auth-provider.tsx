@@ -14,7 +14,6 @@ type AuthContextValue = {
   hasCompletedOnboarding: boolean;
   session: AuthSession | null;
   isSignedIn: boolean;
-  continueWithoutAccount: () => Promise<void>;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -49,11 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const continueWithoutAccount = useCallback(async () => {
-    await setOnboardingComplete();
-    setHasCompletedOnboarding(true);
-  }, []);
-
   const signIn = useCallback(async (email: string) => {
     const trimmedEmail = email.trim();
     const nextSession = { email: trimmedEmail };
@@ -73,11 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasCompletedOnboarding,
       session,
       isSignedIn: Boolean(session?.email),
-      continueWithoutAccount,
       signIn,
       signOut,
     }),
-    [continueWithoutAccount, hasCompletedOnboarding, isLoading, session, signIn, signOut],
+    [hasCompletedOnboarding, isLoading, session, signIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

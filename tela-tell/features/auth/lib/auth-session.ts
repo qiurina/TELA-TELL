@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/** Prototype: always open Welcome on launch for demos. Set false when shipping auth. */
-export const PROTOTYPE_ALWAYS_SHOW_WELCOME = false;
+export const PROTOTYPE_ALWAYS_SHOW_WELCOME = true;
 
 const ONBOARDING_KEY = '@tela-tell/onboarding-complete';
 const SESSION_KEY = '@tela-tell/auth-session';

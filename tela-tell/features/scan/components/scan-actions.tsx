@@ -10,8 +10,7 @@ import {
 } from '@/features/scan/components/garment-condition-picker';
 import { getScanModeLabel, ScanModeSheet } from '@/features/scan/components/scan-mode-sheet';
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
-import { Camera, ChevronLeft, ChevronRight, ImagePlus, Info, Lock, ScanLine, Settings, Tag, X } from '@/components/ui/lucide-icons';
-import { BACKUP_SCAN_DISCLAIMER } from '@/data/scans/analysis';
+import { Camera, ChevronLeft, ChevronRight, ImagePlus, Lock, ScanLine, Settings, Tag, X } from '@/components/ui/lucide-icons';
 import {
   DEFAULT_GARMENT_CONDITION,
   type GarmentCondition,
@@ -28,12 +27,13 @@ import { getScanMode, setScanMode, type ScanMode } from '@/features/scan/lib/sca
 
 const primaryGradient = [BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark] as const;
 
+/** Dual-swatch scan mode is kept in code but hidden from the UI for now. */
+const SHOW_SCAN_MODE_SELECTOR = false;
+
 type ScanActionsProps = {
   hasPreview?: boolean;
-  showPhoneCapture?: boolean;
   savedSellerLabel?: string | null;
-  onDeviceScan: () => void;
-  onPhoneScan: () => void;
+  onTakePhoto: () => void;
   onUpload: () => void;
   onAnalyze: () => void;
   onTryAnother: () => void;
@@ -43,7 +43,6 @@ type ScanActionsProps = {
   onRemoveLabel?: () => void;
   onOpenPreferences?: () => void;
   isAnalyzing?: boolean;
-  isDeviceScanning?: boolean;
 };
 
 function SellerLabelPill({
@@ -70,47 +69,6 @@ function SellerLabelPill({
         </Pressable>
       </View>
     </View>
-  );
-}
-
-function BackupScanInfoButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable
-      style={styles.infoButton}
-      onPress={onPress}
-      hitSlop={8}
-      accessibilityRole="button"
-      accessibilityLabel="About backup scan accuracy">
-      <Info size={15} color={BrandColors.textMuted} strokeWidth={2.25} />
-    </Pressable>
-  );
-}
-
-function CompactCaptureButton({
-  icon,
-  label,
-  onPress,
-  disabled,
-}: {
-  icon: ReactNode;
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.compactButton,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
-      ]}
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}>
-      {icon}
-      <Text style={styles.compactButtonText}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -214,7 +172,9 @@ function AddDetailsAccordion({
   if (hasSellerLabel) {
     summaryParts.push(sellerLabel);
   }
-  summaryParts.push(getScanModeLabel(scanMode));
+  if (SHOW_SCAN_MODE_SELECTOR) {
+    summaryParts.push(getScanModeLabel(scanMode));
+  }
   if (hasPreferences) {
     summaryParts.push('Preferences set');
   }
@@ -243,8 +203,8 @@ function AddDetailsAccordion({
           <Text style={styles.accordionTriggerTitle}>Add details</Text>
           <Text style={styles.accordionTriggerHint}>
             {expanded
-              ? 'Condition, seller label, scan mode, preferences'
-              : summary ?? 'Condition, seller label, scan mode, preferences'}
+              ? 'Condition, seller label, preferences'
+              : summary ?? 'Condition, seller label, preferences'}
           </Text>
         </View>
       </Pressable>
@@ -272,15 +232,17 @@ function AddDetailsAccordion({
               accessibilityLabel={hasSellerLabel ? `Seller label, ${sellerLabel}. Update` : 'Seller label, not set. Add'}
             />
 
-            <DetailActionRow
-              icon={<ScanLine size={16} color={BrandColors.primary} strokeWidth={2.25} />}
-              label="Scan mode"
-              value={getScanModeLabel(scanMode)}
-              isSet
-              onPress={() => setShowScanModeSheet(true)}
-              disabled={disabled}
-              accessibilityLabel={`Scan mode, ${getScanModeLabel(scanMode)}. Change`}
-            />
+            {SHOW_SCAN_MODE_SELECTOR ? (
+              <DetailActionRow
+                icon={<ScanLine size={16} color={BrandColors.primary} strokeWidth={2.25} />}
+                label="Scan mode"
+                value={getScanModeLabel(scanMode)}
+                isSet
+                onPress={() => setShowScanModeSheet(true)}
+                disabled={disabled}
+                accessibilityLabel={`Scan mode, ${getScanModeLabel(scanMode)}. Change`}
+              />
+            ) : null}
 
             <DetailActionRow
               icon={
@@ -314,12 +276,14 @@ function AddDetailsAccordion({
             onClose={() => setShowConditionSheet(false)}
           />
 
-          <ScanModeSheet
-            visible={showScanModeSheet}
-            value={scanMode}
-            onChange={onScanModeChange}
-            onClose={() => setShowScanModeSheet(false)}
-          />
+          {SHOW_SCAN_MODE_SELECTOR ? (
+            <ScanModeSheet
+              visible={showScanModeSheet}
+              value={scanMode}
+              onChange={onScanModeChange}
+              onClose={() => setShowScanModeSheet(false)}
+            />
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -328,10 +292,8 @@ function AddDetailsAccordion({
 
 export function ScanActions({
   hasPreview,
-  showPhoneCapture = false,
   savedSellerLabel,
-  onDeviceScan,
-  onPhoneScan,
+  onTakePhoto,
   onUpload,
   onAnalyze,
   onTryAnother,
@@ -341,19 +303,15 @@ export function ScanActions({
   onRemoveLabel,
   onOpenPreferences,
   isAnalyzing,
-  isDeviceScanning,
 }: ScanActionsProps) {
   const router = useRouter();
   const { isSignedIn } = useAuth();
-  const [showBackupInfo, setShowBackupInfo] = useState(false);
   const [showPreferencesLocked, setShowPreferencesLocked] = useState(false);
   const [hasPreferences, setHasPreferences] = useState(() => hasActiveUserPreferences());
   const [scanMode, setScanModeState] = useState<ScanMode>(() => getScanMode());
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const trimmedLabel = savedSellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
-  const isCaptureBusy = Boolean(isAnalyzing || isDeviceScanning);
-  const isDualScanMode = scanMode === 'dual';
 
   useEffect(() => {
     setDetailsExpanded(hasPreview ?? false);
@@ -370,32 +328,6 @@ export function ScanActions({
     setScanMode(mode);
     setScanModeState(mode);
   };
-
-  const captureAlternatives = (
-    <>
-      <View style={styles.optionalLabelRow}>
-        <Text style={styles.optionalLabel}>OR SCAN ANOTHER WAY</Text>
-        <BackupScanInfoButton onPress={() => setShowBackupInfo(true)} />
-      </View>
-
-      <View style={styles.compactRow}>
-        {showPhoneCapture ? (
-          <CompactCaptureButton
-            icon={<Camera size={18} color={BrandColors.primary} strokeWidth={2} />}
-            label="Phone"
-            onPress={onPhoneScan}
-            disabled={isCaptureBusy}
-          />
-        ) : null}
-        <CompactCaptureButton
-          icon={<ImagePlus size={18} color={BrandColors.primary} strokeWidth={2} />}
-          label="Gallery"
-          onPress={onUpload}
-          disabled={isCaptureBusy}
-        />
-      </View>
-    </>
-  );
 
   if (hasPreview) {
     return (
@@ -433,11 +365,7 @@ export function ScanActions({
               <ScanLine size={18} color={BrandColors.white} strokeWidth={2.5} />
             )}
             <Text style={styles.primaryText}>
-              {isAnalyzing
-                ? 'Analyzing...'
-                : isDualScanMode
-                  ? 'Mark Regions & Analyze'
-                  : 'Analyze Fabric'}
+              {isAnalyzing ? 'Analyzing...' : 'Analyze Fabric'}
             </Text>
           </LinearGradient>
         </Pressable>
@@ -474,16 +402,6 @@ export function ScanActions({
 
   return (
     <View style={styles.container}>
-      <ScanConfirmSheet
-        visible={showBackupInfo}
-        variant="info"
-        title="Backup scan options"
-        message={BACKUP_SCAN_DISCLAIMER}
-        confirmLabel="Got it"
-        onConfirm={() => setShowBackupInfo(false)}
-        onCancel={() => setShowBackupInfo(false)}
-      />
-
       <View style={styles.reviewBanner}>
         <Text style={styles.reviewStep}>Step 1 — Capture fabric</Text>
       </View>
@@ -493,26 +411,28 @@ export function ScanActions({
       ) : null}
 
       <Pressable
-        style={({ pressed }) => [pressed && styles.pressed, isCaptureBusy && styles.disabled]}
-        onPress={onDeviceScan}
-        disabled={isCaptureBusy}>
+        style={({ pressed }) => [pressed && styles.pressed, isAnalyzing && styles.disabled]}
+        onPress={onTakePhoto}
+        disabled={isAnalyzing}>
         <LinearGradient
           colors={[...primaryGradient]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={[styles.primaryButton, primaryButtonShadow()]}>
-          {isDeviceScanning ? (
-            <ActivityIndicator color={BrandColors.white} />
-          ) : (
-            <ScanLine size={18} color={BrandColors.white} strokeWidth={2.5} />
-          )}
-          <Text style={styles.primaryText}>
-            {isDeviceScanning ? 'Capturing...' : 'Capture with Device'}
-          </Text>
+          <Camera size={18} color={BrandColors.white} strokeWidth={2.5} />
+          <Text style={styles.primaryText}>Take Photo</Text>
         </LinearGradient>
       </Pressable>
 
-      {captureAlternatives}
+      <Pressable
+        style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
+        onPress={onUpload}
+        disabled={isAnalyzing}
+        accessibilityRole="button"
+        accessibilityLabel="Upload from gallery">
+        <ImagePlus size={18} color={BrandColors.primary} strokeWidth={2.5} />
+        <Text style={styles.outlineText}>Upload from Gallery</Text>
+      </Pressable>
     </View>
   );
 }
@@ -539,52 +459,6 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 14,
     borderRadius: 999,
-  },
-  optionalLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 2,
-  },
-  optionalLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: BrandColors.textMuted,
-    textAlign: 'center',
-  },
-  infoButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BrandColors.lavenderCard,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-  },
-  compactRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  compactButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: BrandColors.white,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: BrandColors.primary,
-  },
-  compactButtonText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.primary,
   },
   accordionBlock: {
     width: '100%',

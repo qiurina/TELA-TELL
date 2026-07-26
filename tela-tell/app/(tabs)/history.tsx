@@ -4,8 +4,10 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FabricDistributionCard } from '@/features/history/components/fabric-distribution-card';
 import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
 import { ScanHistoryFilters } from '@/features/history/components/scan-history-filters';
+import { getFabricDistribution } from '@/features/history/lib/fabric-distribution';
 import { filterScansByDate, type ScanDateFilter } from '@/features/history/lib/scan-date-filters';
 import { Leaf, ScanLine, TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
@@ -23,6 +25,8 @@ export default function HistoryScreen() {
     () => filterScansByDate(RECENT_SCANS_PREVIEW, dateFilter, customDate),
     [dateFilter, customDate],
   );
+
+  const fabricDistribution = useMemo(() => getFabricDistribution(SCAN_RESULTS), []);
 
   const totalScans = SCAN_RESULTS.length;
   const mislabelingCount = SCAN_RESULTS.filter((scan) => scan.mislabeling.detected).length;
@@ -67,6 +71,9 @@ export default function HistoryScreen() {
                 <Text style={styles.statLabel}>SUSTAINABLE</Text>
               </View>
             </View>
+
+            <FabricDistributionCard distribution={fabricDistribution} />
+
             <Text style={styles.sectionLabel}>ALL SCANS</Text>
 
             <ScanHistoryFilters
