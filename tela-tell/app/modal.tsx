@@ -17,7 +17,7 @@ import { X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { SUPPORTED_FABRICS } from '@/data/fabrics/fabrics';
 import { Fonts } from '@/constants/fonts';
-import { faintCardShadow, primaryButtonShadow } from '@/constants/shadows';
+import { faintCardShadow } from '@/constants/shadows';
 import { clearLastSellerLabel, getLastSellerLabel, setLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
 const QUICK_LABELS = [...SUPPORTED_FABRICS];
@@ -28,8 +28,6 @@ export default function SellerLabelModal() {
   const { height: windowHeight } = useWindowDimensions();
   const [sellerLabel, setSellerLabel] = useState(() => getLastSellerLabel() ?? '');
   const sheetHeight = Math.min(windowHeight * 0.62, 520);
-  const trimmedLabel = sellerLabel.trim();
-  const hasLabel = trimmedLabel.length > 0;
   const keyboardVerticalOffset = Platform.select({
     ios: 0,
     android: insets.bottom,
@@ -51,13 +49,14 @@ export default function SellerLabelModal() {
     router.back();
   };
 
-  const handleSave = () => {
-    if (!hasLabel) {
-      return;
+  const commitLabel = (next: string) => {
+    setSellerLabel(next);
+    const trimmed = next.trim();
+    if (trimmed.length > 0) {
+      setLastSellerLabel(trimmed);
+    } else {
+      clearLastSellerLabel();
     }
-
-    setLastSellerLabel(trimmedLabel);
-    router.back();
   };
 
   return (
@@ -107,7 +106,7 @@ export default function SellerLabelModal() {
                   placeholder="e.g. 100% Cotton"
                   placeholderTextColor={BrandColors.textMuted}
                   value={sellerLabel}
-                  onChangeText={setSellerLabel}
+                  onChangeText={commitLabel}
                 />
               </View>
             </View>
@@ -128,12 +127,7 @@ export default function SellerLabelModal() {
                         pressed && styles.chipPressed,
                       ]}
                       onPress={() => {
-                        if (selected) {
-                          setSellerLabel('');
-                          clearLastSellerLabel();
-                        } else {
-                          setSellerLabel(example);
-                        }
+                        commitLabel(selected ? '' : example);
                       }}
                       accessibilityRole="button"
                       accessibilityState={{ selected }}
@@ -151,18 +145,6 @@ export default function SellerLabelModal() {
                 })}
               </View>
             </View>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.saveButton,
-                primaryButtonShadow(),
-                pressed && styles.saveButtonPressed,
-                !hasLabel && styles.saveButtonDisabled,
-              ]}
-              onPress={handleSave}
-              disabled={!hasLabel}>
-              <Text style={styles.saveButtonText}>Save Label</Text>
-            </Pressable>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -281,22 +263,5 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     color: BrandColors.primary,
-  },
-  saveButton: {
-    backgroundColor: BrandColors.primary,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  saveButtonPressed: {
-    opacity: 0.9,
-  },
-  saveButtonDisabled: {
-    opacity: 0.45,
-  },
-  saveButtonText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.white,
   },
 });

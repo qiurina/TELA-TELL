@@ -8,8 +8,6 @@ export default function ProfileLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="index" options={{ animation: 'none' }} />
-      <Stack.Screen name="scan-settings" />
-      <Stack.Screen name="personalization" />
       <Stack.Screen name="skin-tone" />
       <Stack.Screen name="fabric-allergies" />
       <Stack.Screen name="preferred-fabrics" />
