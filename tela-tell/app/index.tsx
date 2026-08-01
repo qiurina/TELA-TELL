@@ -1,12 +1,11 @@
 import { Redirect, type Href } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { PROTOTYPE_ALWAYS_SHOW_WELCOME } from '@/features/auth/lib/auth-session';
 import { useAuth } from '@/features/auth/context/auth-provider';
 import { BrandColors } from '@/constants/brand';
 
 export default function IndexScreen() {
-  const { isLoading, hasCompletedOnboarding } = useAuth();
+  const { isLoading, isSignedIn } = useAuth();
 
   if (isLoading) {
     return (
@@ -16,7 +15,7 @@ export default function IndexScreen() {
     );
   }
 
-  if (PROTOTYPE_ALWAYS_SHOW_WELCOME || !hasCompletedOnboarding) {
+  if (!isSignedIn) {
     return <Redirect href={'/welcome' as Href} />;
   }
 

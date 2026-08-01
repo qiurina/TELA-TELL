@@ -1,17 +1,25 @@
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 
 import { RecommendationsContent } from '@/features/recommendations/components/recommendations-content';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getScanResult, resolveScanId } from '@/data/scans/mock-data';
-import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
+import { useScanResult } from '@/features/results/hooks/use-scan-result';
 
 export default function RecommendationsScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
+  const { result, isLoading } = useScanResult(scanId);
   const router = useRouter();
-  const result = getScanResult(resolveScanId(scanId));
+
+  if (isLoading) {
+    return (
+      <View style={styles.fallback}>
+        <ActivityIndicator size="large" color={BrandColors.primary} />
+      </View>
+    );
+  }
 
   if (!result) {
     return (
@@ -24,14 +32,9 @@ export default function RecommendationsScreen() {
     );
   }
 
-  const handleScanAnother = () => {
-    requestFreshScan();
-    router.push('/(tabs)/scan' as Href);
-  };
-
   return (
     <View style={styles.root}>
-      <ResultsScreenHeader title="Eco Tips" onBack={() => router.back()} />
+      <ResultsScreenHeader title="Eco and Health Tips" onBack={() => router.back()} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -39,8 +42,8 @@ export default function RecommendationsScreen() {
         <RecommendationsContent
           dominantFabric={result.dominantFabric}
           detectedCompositions={result.compositions ?? []}
-          recommendations={result.recommendations}
-          onScanAnother={handleScanAnother}
+          sustainabilityScore={result.sustainability.score}
+          sustainabilityRating={result.sustainability.rating}
         />
       </ScrollView>
     </View>

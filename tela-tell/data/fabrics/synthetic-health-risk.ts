@@ -14,14 +14,26 @@ export type HealthRiskLevel = 'low' | 'moderate' | 'high';
 export type SyntheticHealthRisk = {
   level: HealthRiskLevel;
   label: string;
+  /** One-line advisory summary for compact alerts. */
+  summary: string;
   /** Synthetic fibers found in the estimated composition, highest share first. */
   fibers: SupportedFabric[];
-  factors: string[];
+  /** Practical actions for Eco Tips. */
+  tips: string[];
   disclaimer: string;
 };
 
 export const HEALTH_RISK_DISCLAIMER =
-  'Advisory only. Risk level is based on fiber type and published research on synthetic microplastics — the scan does not detect microplastic particles, chemical additives, dyes, or finishes, and is not medical advice.';
+  'Advisory only. Risk level is based on fiber type and published research on synthetic microplastics. The scan does not detect microplastic particles, chemical additives, dyes, or finishes, and is not medical advice.';
+
+const LEVEL_SUMMARIES: Record<HealthRiskLevel, string> = {
+  high:
+    'This mix can shed microplastic fibers in wear and wash. Chemical additives may transfer with long skin contact.',
+  moderate:
+    'This mix may shed microplastic fibers when worn or washed. Finishes can transfer with long skin contact.',
+  low:
+    'Synthetic share looks lower here. Wash habits and how long it sits on skin still matter.',
+};
 
 /** Per-fiber advisory risk level. Fibers not listed carry no synthetic risk label. */
 const FIBER_RISK_LEVELS: Partial<Record<SupportedFabric, HealthRiskLevel>> = {
@@ -31,16 +43,12 @@ const FIBER_RISK_LEVELS: Partial<Record<SupportedFabric, HealthRiskLevel>> = {
   Spandex: 'moderate',
 };
 
-const FIBER_RISK_NOTES: Partial<Record<SupportedFabric, string>> = {
-  Polyester:
-    'Polyester is a petroleum-based fiber that sheds microplastics, especially in frequent-wash everyday wear.',
-  Acrylic:
-    'Acrylic knits shed microplastic fibers readily and sit directly on the skin in sweaters and layers.',
-  Nylon:
-    'Nylon is synthetic but often used in outer layers and bags with less all-day skin contact.',
-  Spandex:
-    'Spandex is usually a small blend component; overall exposure depends on the blend ratio.',
-};
+const PRACTICAL_TIPS: string[] = [
+  'Wash in cold water on a gentle cycle when you can.',
+  'Run fuller loads so fabrics rub less and shed less.',
+  'Skip high heat in the dryer when possible.',
+  'For next buys, prefer natural-dominant or recycled tags when the fit still works for you.',
+];
 
 const LEVEL_LABELS: Record<HealthRiskLevel, string> = {
   low: 'Low',
@@ -56,6 +64,25 @@ const LEVEL_RANK: Record<HealthRiskLevel, number> = {
 
 function isSyntheticFiber(fabric: SupportedFabric): boolean {
   return getFabricCategory(fabric) === 'Synthetic';
+}
+
+/**
+ * Advisory risk level for a single fiber (used for the Fiber Guide list).
+ * Non-synthetic fibers are treated as low / no synthetic risk.
+ */
+export function getFiberHealthRiskLevel(fabric: SupportedFabric): HealthRiskLevel {
+  if (!isSyntheticFiber(fabric)) {
+    return 'low';
+  }
+  return FIBER_RISK_LEVELS[fabric] ?? 'low';
+}
+
+/** Short chip label: "No risk" for non-synthetics, Low/Moderate/High for synthetics. */
+export function getFiberHealthRiskLabel(fabric: SupportedFabric): string {
+  if (!isSyntheticFiber(fabric)) {
+    return 'No risk';
+  }
+  return LEVEL_LABELS[getFiberHealthRiskLevel(fabric)];
 }
 
 /**
@@ -96,15 +123,12 @@ export function getSyntheticHealthRisk(
     }
   }
 
-  const factors = syntheticFibers
-    .map((fiber) => FIBER_RISK_NOTES[fiber])
-    .filter((note): note is string => Boolean(note));
-
   return {
     level,
     label: LEVEL_LABELS[level],
+    summary: LEVEL_SUMMARIES[level],
     fibers: syntheticFibers,
-    factors,
+    tips: PRACTICAL_TIPS,
     disclaimer: HEALTH_RISK_DISCLAIMER,
   };
 }

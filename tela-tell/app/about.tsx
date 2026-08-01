@@ -9,8 +9,8 @@ export default function AboutScreen() {
     <ProfileScreenShell title="About TELA-TELL" showBack>
       <View style={styles.card}>
         <Text style={styles.lead}>
-          TELA-TELL helps you verify fabric composition before you buy — especially useful for ukay-ukay
-          and secondhand finds.
+          TELA-TELL helps you verify fabric composition before you buy. It is especially useful for
+          ukay-ukay and secondhand finds.
         </Text>
         <Text style={styles.body}>
           Scan a fabric swatch with your camera or upload a photo, compare results against reference
@@ -19,7 +19,7 @@ export default function AboutScreen() {
         </Text>
         <Text style={styles.note}>
           This capstone prototype uses mock scan data for classification. Preferences and scan history
-          are designed for on-device SQLite storage — no cloud account required.
+          are designed for on-device SQLite storage. No cloud account is required.
         </Text>
       </View>
     </ProfileScreenShell>

@@ -1,20 +1,20 @@
 import { Redirect, useFocusEffect, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/features/auth/context/auth-provider';
 import { ProfileScreenShell } from '@/features/profile/components/profile-screen-shell';
 import { ProfileSignedInView } from '@/features/profile/components/profile-signed-in-view';
+import { hydrateUserPreferences } from '@/features/profile/lib/user-preferences';
 import { BrandColors } from '@/constants/brand';
 
 export default function ProfileHubScreen() {
-  const { isLoading, isSignedIn } = useAuth();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { isLoading, isSignedIn, session } = useAuth();
 
   useFocusEffect(
     useCallback(() => {
-      setRefreshKey((current) => current + 1);
-    }, []),
+      void hydrateUserPreferences(session?.userId ?? null);
+    }, [session?.userId]),
   );
 
   if (isLoading) {
@@ -31,7 +31,7 @@ export default function ProfileHubScreen() {
 
   return (
     <ProfileScreenShell title="Profile">
-      <ProfileSignedInView key={refreshKey} />
+      <ProfileSignedInView />
     </ProfileScreenShell>
   );
 }

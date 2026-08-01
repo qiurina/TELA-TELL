@@ -62,6 +62,8 @@ export type ScanResult = {
   scannedAt: string;
   scannedAtDate: string;
   sellerLabel?: string;
+  /** Local capture URI when saved from Scan (same image as review preview). */
+  imageUri?: string | null;
   sustainability: {
     rating: SustainabilityRating;
     label: string;
@@ -295,7 +297,7 @@ export const SCAN_RESULTS: ScanResult[] = [
         {
           purpose: 'Everyday wear',
           suitability: 'Fair',
-          note: 'Low scan confidence — verify fabric before committing to a garment plan.',
+          note: 'Low scan confidence. Verify the fabric before committing to a garment plan.',
         },
       ],
       ecoAlternatives: [
@@ -362,7 +364,7 @@ export const SCAN_RESULTS: ScanResult[] = [
         {
           purpose: 'Everyday shirts',
           suitability: 'Fair',
-          note: 'Stiffer hand-feel than cotton — better for structured pieces.',
+          note: 'Stiffer hand-feel than cotton. Better for structured pieces.',
         },
         {
           purpose: 'Bags & accessories',
@@ -454,7 +456,7 @@ export const SCAN_RESULTS: ScanResult[] = [
         {
           purpose: 'Rainy season outer layer',
           suitability: 'Fair',
-          note: 'Can weaken when wet — dry promptly after habagat showers.',
+          note: 'Can weaken when wet. Dry promptly after habagat showers.',
         },
       ],
       ecoAlternatives: [
@@ -472,9 +474,9 @@ export const SCAN_RESULTS: ScanResult[] = [
         },
       ],
       recycledAwareness:
-        'Rayon weakens when wet — handle gently when washing ukay finds. Shrinkage is common.',
+        'Rayon weakens when wet. Handle gently when washing ukay finds. Shrinkage is common.',
       reuse: {
-        resale: 'Flowy dresses and blouses sell well — note shrink history if known.',
+        resale: 'Flowy dresses and blouses sell well. Note shrink history if known.',
         donate: 'Community dress drives often accept clean rayon separates.',
         upcycle: 'Repurpose panels into scarves or hair accessories if worn.',
       },
@@ -533,6 +535,11 @@ export type RecentScanPreview = {
   mislabeling: boolean;
   sellerLabel?: string;
   image: ImageSourcePropType;
+  isFavorite?: boolean;
+  /** ISO timestamp when soft-deleted; only set for trash items. */
+  deletedAt?: string | null;
+  /** Whole days remaining before auto-purge (deleted gallery). */
+  daysRemaining?: number;
 };
 
 export const RECENT_SCANS_PREVIEW: RecentScanPreview[] = SCAN_RESULTS.map((scan) => ({
@@ -564,13 +571,6 @@ export const SUSTAINABILITY_BG: Record<SustainabilityRating, string> = {
   green: '#f0fdf4',
   yellow: '#fffbeb',
   red: '#fef2f2',
-};
-
-export const SUITABILITY_COLOR: Record<SuitabilityLevel, string> = {
-  Excellent: '#16a34a',
-  Good: '#22c55e',
-  Fair: '#ca8a04',
-  Poor: '#dc2626',
 };
 
 export const FABRIC_PROPERTY_COLOR = {

@@ -67,21 +67,34 @@ export function isSupportedFabric(material: string): material is SupportedFabric
 }
 
 export function resolveFabricAlias(text: string): SupportedFabric | null {
-  const normalized = text.trim().toLowerCase();
+  const all = resolveAllFabricAliases(text);
+  return all[0] ?? null;
+}
 
-  for (const [alias, fabric] of Object.entries(FABRIC_ALIASES)) {
-    if (normalized.includes(alias)) {
-      return fabric;
-    }
+/** Every supported fiber named in a seller tag or scan string (order preserved). */
+export function resolveAllFabricAliases(text: string): SupportedFabric[] {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) {
+    return [];
   }
+
+  const found: SupportedFabric[] = [];
 
   for (const fabric of SUPPORTED_FABRICS) {
-    if (normalized.includes(fabric.toLowerCase())) {
-      return fabric;
+    const needle = fabric.toLowerCase();
+    // Word-ish match so "cotton" does not need to be alone, but avoid tiny false hits.
+    if (normalized.includes(needle) && !found.includes(fabric)) {
+      found.push(fabric);
     }
   }
 
-  return null;
+  for (const [alias, fabric] of Object.entries(FABRIC_ALIASES)) {
+    if (normalized.includes(alias) && !found.includes(fabric)) {
+      found.push(fabric);
+    }
+  }
+
+  return found;
 }
 
 export const FABRIC_CATEGORY_COLORS: Record<

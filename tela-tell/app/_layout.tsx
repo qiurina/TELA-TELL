@@ -6,31 +6,48 @@ import {
   Poppins_700Bold,
   useFonts,
 } from '@expo-google-fonts/poppins';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider, type Theme } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Animated, StyleSheet } from 'react-native';
+import { Animated, Appearance, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AppSplash } from '@/components/splash/app-splash';
+import { BrandColors } from '@/constants/brand';
 import { migrateDatabase } from '@/db/migrate';
 import { AuthProvider } from '@/features/auth/context/auth-provider';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { hydrateLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
 SplashScreen.preventAutoHideAsync();
 
+// App UI is light-only; without this, OS dark mode paints native stack cards black during transitions.
+// Web/react-native-web does not always implement setColorScheme — guard before calling.
+if (typeof Appearance.setColorScheme === 'function') {
+  Appearance.setColorScheme('light');
+}
+
 const SPLASH_MIN_MS = 2500;
 const FADE_MS = 400;
+
+/** Force light cards — OS dark mode otherwise paints React Navigation cards black mid-transition. */
+const AppNavigationTheme: Theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: BrandColors.white,
+    card: BrandColors.white,
+    border: BrandColors.borderLight,
+  },
+};
 
 export const unstable_settings = {
   anchor: 'index',
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [showSplashOverlay, setShowSplashOverlay] = useState(true);
   const [splashMinTimeElapsed, setSplashMinTimeElapsed] = useState(false);
   const splashOpacity = useState(() => new Animated.Value(1))[0];
@@ -76,14 +93,19 @@ export default function RootLayout() {
     void migrateDatabase().catch((error: unknown) => {
       console.warn('[TELA-TELL] SQLite migration failed:', error);
     });
+    void hydrateLastSellerLabel();
   }, []);
 
   return (
     <GestureHandlerRootView style={styles.root}>
       {fontsLoaded ? (
         <AuthProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack>
+          <ThemeProvider value={AppNavigationTheme}>
+            <Stack
+              screenOptions={{
+                contentStyle: { backgroundColor: BrandColors.white },
+                headerStyle: { backgroundColor: BrandColors.white },
+              }}>
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen
                 name="welcome"
@@ -95,7 +117,86 @@ export default function RootLayout() {
                 name="(tabs)"
                 options={{ headerShown: false, animation: 'fade', animationDuration: 280 }}
               />
-              <Stack.Screen name="results" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="skin-tone"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="fabric-allergies"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="preferred-fabrics"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="weather"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="occasion"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="about"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="fiber/[fabricId]"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="favorite-scans"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="deleted-scans"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="results"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
               <Stack.Screen name="region-select" options={{ headerShown: false }} />
               <Stack.Screen
                 name="modal"
@@ -116,7 +217,7 @@ export default function RootLayout() {
                 }}
               />
             </Stack>
-            <StatusBar style="auto" />
+            <StatusBar style="dark" />
           </ThemeProvider>
         </AuthProvider>
       ) : null}
@@ -135,6 +236,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: BrandColors.white,
   },
   splashOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,11 +9,31 @@ import { ScanLine } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { heroCardShadow, primaryButtonShadow } from '@/constants/shadows';
-import { RECENT_SCANS_PREVIEW } from '@/data/scans/mock-data';
+import { type RecentScanPreview } from '@/data/scans/mock-data';
+import { getAllScans } from '@/db/scans';
+import { useAuth } from '@/features/auth/context/auth-provider';
+import { useCallback, useState } from 'react';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const { session } = useAuth();
+  const [recentScans, setRecentScans] = useState<RecentScanPreview[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void (async () => {
+        const list = await getAllScans({ userId: session?.userId ?? null });
+        if (!active) return;
+        setRecentScans(list.slice(0, 5));
+      })();
+      return () => {
+        active = false;
+      };
+    }, [session?.userId]),
+  );
 
   return (
     <View style={styles.root}>
@@ -72,13 +92,17 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.recentList}>
-              {RECENT_SCANS_PREVIEW.slice(0, 4).map((scan) => (
-                <ScanHistoryCard
-                  key={scan.id}
-                  scan={scan}
-                  onPress={() => router.push(`/results/${scan.id}` as Href)}
-                />
-              ))}
+              {recentScans.length > 0 ? (
+                recentScans.map((scan) => (
+                  <ScanHistoryCard
+                    key={scan.id}
+                    scan={scan}
+                    onPress={() => router.push(`/results/${scan.id}` as Href)}
+                  />
+                ))
+              ) : (
+                <Text style={styles.emptyText}>No recent scans yet.</Text>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -205,6 +229,11 @@ const styles = StyleSheet.create({
     color: BrandColors.primary,
   },
   recentList: {
-    gap: 12,
+    gap: 10,
+  },
+  emptyText: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: BrandColors.textMuted,
   },
 });

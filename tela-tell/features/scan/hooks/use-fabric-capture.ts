@@ -1,11 +1,15 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Platform } from 'react-native';
 
+import {
+  GUIDE_ASPECT,
+  cropUriToCenteredGuideAspect,
+} from '@/features/scan/lib/crop-to-guide';
+
 const PICKER_OPTIONS: ImagePicker.ImagePickerOptions = {
   mediaTypes: ['images'],
-  allowsEditing: true,
-  aspect: [4, 3],
-  quality: 0.85,
+  allowsEditing: false,
+  quality: 0.9,
 };
 
 function showPermissionAlert(kind: 'camera' | 'gallery') {
@@ -29,8 +33,16 @@ async function pickImage(
   return result.assets[0].uri;
 }
 
+async function cropToAspect(uri: string, aspect: number): Promise<string> {
+  return cropUriToCenteredGuideAspect(uri, aspect > 0 ? aspect : GUIDE_ASPECT);
+}
+
 export function useFabricCapture() {
-  const captureFromCamera = async (): Promise<string | null> => {
+  /**
+   * Opens the system camera (fallback for web / when live preview is unavailable).
+   * Crops to the scan guide aspect so review matches framing.
+   */
+  const captureFromCamera = async (aspect: number = GUIDE_ASPECT): Promise<string | null> => {
     if (Platform.OS === 'web') {
       const libraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -39,7 +51,11 @@ export function useFabricCapture() {
         return null;
       }
 
-      return pickImage(() => ImagePicker.launchImageLibraryAsync(PICKER_OPTIONS));
+      const uri = await pickImage(() => ImagePicker.launchImageLibraryAsync(PICKER_OPTIONS));
+      if (!uri) {
+        return null;
+      }
+      return cropToAspect(uri, aspect);
     }
 
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -49,10 +65,15 @@ export function useFabricCapture() {
       return null;
     }
 
-    return pickImage(() => ImagePicker.launchCameraAsync(PICKER_OPTIONS));
+    const uri = await pickImage(() => ImagePicker.launchCameraAsync(PICKER_OPTIONS));
+    if (!uri) {
+      return null;
+    }
+    return cropToAspect(uri, aspect);
   };
 
-  const captureFromGallery = async (): Promise<string | null> => {
+  /** Picks from gallery and center-crops to the scan guide aspect. */
+  const captureFromGallery = async (aspect: number = GUIDE_ASPECT): Promise<string | null> => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
@@ -60,7 +81,12 @@ export function useFabricCapture() {
       return null;
     }
 
-    return pickImage(() => ImagePicker.launchImageLibraryAsync(PICKER_OPTIONS));
+    const uri = await pickImage(() => ImagePicker.launchImageLibraryAsync(PICKER_OPTIONS));
+    if (!uri) {
+      return null;
+    }
+
+    return cropToAspect(uri, aspect);
   };
 
   return { captureFromCamera, captureFromGallery };

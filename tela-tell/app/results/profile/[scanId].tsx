@@ -1,21 +1,35 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 
-import { FabricProfileCard } from '@/features/profile/components/fabric-profile-card';
+import { BlendFiberProfileContent } from '@/features/fabrics/components/blend-fiber-profile-content';
+import { FiberProfileContent } from '@/features/fabrics/components/fiber-profile-content';
 import { FabricReferenceComparison } from '@/features/results/components/fabric-reference-comparison';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
-import { ScanAnotherButton } from '@/features/results/components/scan-another-button';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getScanResult, resolveScanId } from '@/data/scans/mock-data';
-import { getFabricReference } from '@/data/fabrics/fabric-references';
+import { useScanResult } from '@/features/results/hooks/use-scan-result';
+import {
+  getFabricReference,
+  resolveSupportedFabric,
+} from '@/data/fabrics/fabric-references';
+import { getFiberProfile } from '@/data/fabrics/fiber-profiles';
+import { isBlendDetected } from '@/data/scans/analysis';
+import { getScanResultHeadline } from '@/features/results/lib/scan-result-headline';
 import { getLastCaptureUri } from '@/features/scan/lib/last-capture';
-import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 
 export default function FabricProfileScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
+  const { result, isLoading } = useScanResult(scanId);
   const router = useRouter();
-  const result = getScanResult(resolveScanId(scanId));
+
+  if (isLoading) {
+    return (
+      <View style={styles.fallback}>
+        <ActivityIndicator size="large" color={BrandColors.primary} />
+      </View>
+    );
+  }
 
   if (!result) {
     return (
@@ -28,13 +42,13 @@ export default function FabricProfileScreen() {
     );
   }
 
-  const handleScanAnother = () => {
-    requestFreshScan();
-    router.push('/(tabs)/scan' as Href);
-  };
-
-  const fabricReference = getFabricReference(result.dominantFabric, result.compositions);
-  const capturedPhotoUri = getLastCaptureUri();
+  const compositions = result.compositions ?? [];
+  const isBlend = isBlendDetected(compositions);
+  const supportedFabric = resolveSupportedFabric(result.dominantFabric, compositions);
+  const fabricReference = getFabricReference(result.dominantFabric, compositions);
+  const capturedPhotoUri = getLastCaptureUri() ?? result.imageUri ?? null;
+  const fiberProfile = supportedFabric ? getFiberProfile(supportedFabric) : null;
+  const headline = getScanResultHeadline(result.dominantFabric, compositions);
 
   return (
     <View style={styles.root}>
@@ -47,17 +61,24 @@ export default function FabricProfileScreen() {
           <FabricReferenceComparison
             scanImageUri={capturedPhotoUri}
             reference={fabricReference}
-            detectedLabel={result.dominantFabric}
+            detectedLabel={headline.title}
             confidence={result.confidence}
+            compact
           />
         ) : null}
 
-        <FabricProfileCard
-          profile={result.profile}
-          sustainabilityScore={result.sustainability.score}
-          sustainabilityRating={result.sustainability.rating}
-        />
-        <ScanAnotherButton onPress={handleScanAnother} />
+        {isBlend ? (
+          <BlendFiberProfileContent compositions={compositions} />
+        ) : fiberProfile ? (
+          <FiberProfileContent profile={fiberProfile} showHero={false} />
+        ) : (
+          <View style={styles.missingCard}>
+            <Text style={styles.missingTitle}>Detailed profile unavailable</Text>
+            <Text style={styles.missingBody}>
+              We could not match this scan to a known fiber profile yet.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -70,10 +91,29 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 20,
     paddingBottom: 40,
-    gap: 20,
+    gap: 18,
     flexGrow: 1,
+  },
+  missingCard: {
+    gap: 8,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.lavenderCard,
+  },
+  missingTitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: BrandColors.text,
+  },
+  missingBody: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BrandColors.textMuted,
   },
   fallback: {
     flex: 1,

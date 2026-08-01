@@ -3,9 +3,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
-import { BlendNotice } from '@/features/results/components/blend-notice';
 import { Info } from '@/components/ui/lucide-icons';
-import { COMPOSITION_DISCLAIMER, getBlendNotice } from '@/data/scans/analysis';
+import { COMPOSITION_DISCLAIMER } from '@/data/scans/analysis';
 import { FABRIC_CATEGORY_COLORS, getFabricCategory } from '@/data/fabrics/fabrics';
 import { BrandColors, FabricBarFallback, FabricBarStyles } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -13,17 +12,15 @@ import { type FabricComposition } from '@/data/scans/mock-data';
 
 type CompositionCardProps = {
   compositions: FabricComposition[];
-  confidence?: number;
 };
 
 function getBarStyle(material: string, index: number) {
   return FabricBarStyles[material] ?? FabricBarFallback[index % FabricBarFallback.length];
 }
 
-export function CompositionCard({ compositions, confidence }: CompositionCardProps) {
+export function CompositionCard({ compositions }: CompositionCardProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const items = compositions ?? [];
-  const blendNotice = getBlendNotice(items, confidence);
 
   return (
     <View style={styles.card}>
@@ -58,7 +55,7 @@ export function CompositionCard({ compositions, confidence }: CompositionCardPro
           return (
             <View key={item.material} style={styles.row}>
               <View style={styles.rowHeader}>
-                <View style={styles.materialBlock}>
+                <View style={styles.materialRow}>
                   <Text style={styles.material}>{item.material}</Text>
                   {category && categoryColors ? (
                     <View
@@ -89,8 +86,6 @@ export function CompositionCard({ compositions, confidence }: CompositionCardPro
           );
         })}
       </View>
-
-      {blendNotice ? <BlendNotice notice={blendNotice} /> : null}
     </View>
   );
 }
@@ -121,20 +116,24 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.border,
   },
   list: {
-    gap: 14,
+    gap: 12,
   },
   row: {
-    gap: 8,
+    gap: 6,
   },
   rowHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
   },
-  materialBlock: {
+  materialRow: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
+    minWidth: 0,
   },
   material: {
     fontFamily: Fonts.semiBold,
@@ -142,21 +141,21 @@ const styles = StyleSheet.create({
     color: BrandColors.text,
   },
   categoryPill: {
-    alignSelf: 'flex-start',
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
   categoryText: {
     fontFamily: Fonts.medium,
     fontSize: 10,
-    lineHeight: 14,
+    lineHeight: 13,
   },
   percentage: {
     fontFamily: Fonts.semiBold,
     fontSize: 15,
     color: BrandColors.text,
+    flexShrink: 0,
   },
   track: {
     height: 8,

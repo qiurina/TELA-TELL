@@ -11,6 +11,7 @@ type FabricReferenceComparisonProps = {
   scanImageUri?: string | null;
   reference: FabricReference;
   detectedLabel: string;
+  detectedSubtitle?: string;
   confidence?: number;
   compact?: boolean;
 };
@@ -35,16 +36,12 @@ export function FabricReferenceComparison({
   scanImageUri,
   reference,
   detectedLabel,
+  detectedSubtitle,
   confidence,
   compact = false,
 }: FabricReferenceComparisonProps) {
-  const confidenceLine =
-    confidence !== undefined ? `${detectedLabel} — ${confidence}% confidence` : detectedLabel;
-
   return (
     <View style={[styles.container, compact && styles.containerCompact, faintCardShadow()]}>
-      <Text style={styles.sectionLabel}>FABRIC REFERENCE COMPARISON</Text>
-
       <View style={styles.compareRow}>
         <View style={styles.compareColumn}>
           <ScanThumb uri={scanImageUri} />
@@ -53,12 +50,17 @@ export function FabricReferenceComparison({
 
         <View style={styles.compareColumn}>
           <ReferenceSwatch reference={reference} />
-          <Text style={styles.columnCaption}>Reference: {reference.title}</Text>
+          <Text style={styles.columnCaption}>{reference.title}</Text>
         </View>
       </View>
 
-      <Text style={styles.detectedLine}>{confidenceLine}</Text>
-      <Text style={styles.compareHint}>Compare your fabric to the reference image above.</Text>
+      <View style={styles.metaBlock}>
+        <Text style={styles.detectedLine}>{detectedLabel}</Text>
+        {detectedSubtitle ? <Text style={styles.detectedSub}>{detectedSubtitle}</Text> : null}
+        {confidence !== undefined ? (
+          <Text style={styles.confidenceLine}>{confidence}% confidence</Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -75,12 +77,6 @@ const styles = StyleSheet.create({
   containerCompact: {
     padding: 12,
     gap: 10,
-  },
-  sectionLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: BrandColors.textMuted,
   },
   compareRow: {
     flexDirection: 'row',
@@ -114,16 +110,25 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
     textAlign: 'center',
   },
-  detectedLine: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.primaryDark,
-    lineHeight: 21,
+  metaBlock: {
+    gap: 2,
   },
-  compareHint: {
-    fontFamily: Fonts.regular,
+  detectedLine: {
+    fontFamily: Fonts.bold,
+    fontSize: 16,
+    color: BrandColors.text,
+    lineHeight: 22,
+  },
+  detectedSub: {
+    fontFamily: Fonts.medium,
     fontSize: 13,
-    lineHeight: 19,
+    color: BrandColors.primaryDark,
+    lineHeight: 18,
+  },
+  confidenceLine: {
+    fontFamily: Fonts.medium,
+    fontSize: 12,
     color: BrandColors.textMuted,
+    marginTop: 2,
   },
 });

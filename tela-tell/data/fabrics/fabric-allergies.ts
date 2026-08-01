@@ -1,5 +1,6 @@
 import { resolveSupportedFabric } from '@/data/fabrics/fabric-references';
 import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import { getSignificantFibers } from '@/data/scans/analysis';
 import type { FabricComposition } from '@/data/scans/mock-data';
 
 export type HypoallergenicAlternative = {
@@ -13,6 +14,8 @@ export type AllergyAlert = {
   conflictDetected: boolean;
   message: string;
   alternatives: HypoallergenicAlternative[];
+  /** Significant fibers that conflict with the user's sensitivity list. */
+  conflictFibers?: { fabric: SupportedFabric; percentage?: number }[];
 };
 
 const DEFAULT_ALTERNATIVES: HypoallergenicAlternative[] = [
@@ -22,6 +25,21 @@ const DEFAULT_ALTERNATIVES: HypoallergenicAlternative[] = [
 ];
 
 const FABRIC_ALTERNATIVES: Partial<Record<SupportedFabric, HypoallergenicAlternative[]>> = {
+  Cotton: [
+    { name: 'Linen', note: 'Breathable natural weave with a crisp hand-feel' },
+    { name: 'Bamboo fabric', note: 'Smooth, gentle option for reactive skin' },
+    { name: 'Tencel / lyocell', note: 'Soft drape with moisture-wicking comfort' },
+  ],
+  Linen: [
+    { name: 'Cotton', note: 'Soft everyday option when linen feels too coarse' },
+    { name: 'Bamboo fabric', note: 'Smooth finish with low irritation' },
+    { name: 'Tencel / lyocell', note: 'Fluid drape without linen stiffness' },
+  ],
+  Abaca: [
+    { name: 'Cotton', note: 'Softer hand-feel for everyday comfort' },
+    { name: 'Linen', note: 'Similar breathability with a familiar weave' },
+    { name: 'Bamboo fabric', note: 'Gentle alternative for sensitive skin' },
+  ],
   Wool: [
     { name: 'Cotton', note: 'Naturally hypoallergenic and breathable for everyday wear' },
     { name: 'Bamboo fabric', note: 'Gentle on skin with a smooth hand-feel' },
@@ -84,12 +102,64 @@ function formatDetectedFabric(dominantFabric: string, compositions: FabricCompos
   return cleaned || 'this material';
 }
 
-function fabricMatchesScan(fabric: SupportedFabric, dominantFabric: string, top: string): boolean {
-  return resolveFabricAlias(dominantFabric) === fabric || resolveFabricAlias(top) === fabric;
+function resolveScanFibers(
+  dominantFabric: string,
+  compositions: FabricComposition[],
+): { fabric: SupportedFabric; percentage?: number }[] {
+  const significant = getSignificantFibers(compositions);
+  const resolved: { fabric: SupportedFabric; percentage?: number }[] = [];
+
+  for (const item of significant) {
+    const fabric = resolveFabricAlias(item.material);
+    if (!fabric || resolved.some((entry) => entry.fabric === fabric)) {
+      continue;
+    }
+    resolved.push({ fabric, percentage: item.percentage });
+  }
+
+  if (resolved.length === 0) {
+    const top = topMaterial(compositions);
+    const fromDominant = resolveFabricAlias(dominantFabric);
+    const fromTop = resolveFabricAlias(top);
+    if (fromDominant) {
+      resolved.push({ fabric: fromDominant });
+    } else if (fromTop) {
+      resolved.push({ fabric: fromTop });
+    }
+  }
+
+  return resolved;
 }
 
-function getAlternatives(fabric: SupportedFabric): HypoallergenicAlternative[] {
-  return FABRIC_ALTERNATIVES[fabric] ?? DEFAULT_ALTERNATIVES;
+function alternativeMatchesFabric(alternativeName: string, fabric: SupportedFabric): boolean {
+  return alternativeName.toLowerCase().includes(fabric.toLowerCase());
+}
+
+function filterAlternatives(
+  alternatives: HypoallergenicAlternative[],
+  excludeFabrics: SupportedFabric[],
+): HypoallergenicAlternative[] {
+  const filtered = alternatives.filter(
+    (alternative) =>
+      !excludeFabrics.some((fabric) => alternativeMatchesFabric(alternative.name, fabric)),
+  );
+
+  if (filtered.length > 0) {
+    return filtered;
+  }
+
+  return DEFAULT_ALTERNATIVES.filter(
+    (alternative) =>
+      !excludeFabrics.some((fabric) => alternativeMatchesFabric(alternative.name, fabric)),
+  );
+}
+
+function getAlternatives(
+  fabric: SupportedFabric,
+  excludeFabrics: SupportedFabric[] = [],
+): HypoallergenicAlternative[] {
+  const base = FABRIC_ALTERNATIVES[fabric] ?? DEFAULT_ALTERNATIVES;
+  return filterAlternatives(base, excludeFabrics);
 }
 
 export function getAllergyAlert(
@@ -101,11 +171,10 @@ export function getAllergyAlert(
     return null;
   }
 
-  const top = topMaterial(compositions);
   const detectedFabric = formatDetectedFabric(dominantFabric, compositions);
-  const matchedSensitive = sensitiveFabrics.find((fabric) =>
-    fabricMatchesScan(fabric, dominantFabric, top),
-  );
+  const scanFibers = resolveScanFibers(dominantFabric, compositions);
+  const conflictFibers = scanFibers.filter((item) => sensitiveFabrics.includes(item.fabric));
+  const matchedSensitive = conflictFibers[0]?.fabric;
 
   if (!matchedSensitive) {
     return {
@@ -113,15 +182,24 @@ export function getAllergyAlert(
       detectedFabric,
       conflictDetected: false,
       message: 'No conflict',
-      alternatives: getAlternatives(sensitiveFabrics[0]),
+      alternatives: getAlternatives(sensitiveFabrics[0], sensitiveFabrics),
     };
   }
+
+  const conflictLabel = conflictFibers
+    .map((item) =>
+      typeof item.percentage === 'number'
+        ? `${item.fabric} ${item.percentage}%`
+        : item.fabric,
+    )
+    .join(' · ');
 
   return {
     sensitiveFabric: matchedSensitive,
     detectedFabric,
     conflictDetected: true,
-    message: `${detectedFabric} detected`,
-    alternatives: getAlternatives(matchedSensitive),
+    message: `Contains ${conflictLabel}`,
+    alternatives: getAlternatives(matchedSensitive, sensitiveFabrics),
+    conflictFibers,
   };
 }

@@ -58,6 +58,8 @@ type ResultsExploreActionsProps = {
   onPersonalizedInsights: () => void;
   onLockedPersonalizedInsights?: () => void;
   personalizedInsightsLocked?: boolean;
+  /** When true, explore copy reflects blend-aware destinations. */
+  isBlend?: boolean;
   onScanAgain: () => void;
 };
 
@@ -67,6 +69,7 @@ export function ResultsExploreActions({
   onPersonalizedInsights,
   onLockedPersonalizedInsights,
   personalizedInsightsLocked = false,
+  isBlend = false,
   onScanAgain,
 }: ResultsExploreActionsProps) {
   return (
@@ -74,12 +77,22 @@ export function ResultsExploreActions({
       <Text style={styles.sectionLabel}>EXPLORE FABRIC</Text>
 
       <View style={styles.cardRow}>
-        <ExploreCard icon={Layers} label="Profile" subtitle="Traits & care" onPress={onProfile} />
-        <ExploreCard icon={Leaf} label="Eco tips" subtitle="Reuse ideas" onPress={onEcoTips} />
+        <ExploreCard
+          icon={Layers}
+          label="Profile"
+          subtitle={isBlend ? 'Fibers in this fabric' : 'Traits & care'}
+          onPress={onProfile}
+        />
+        <ExploreCard
+          icon={Leaf}
+          label="Eco tips"
+          subtitle="Microplastics, reuse & alternatives"
+          onPress={onEcoTips}
+        />
         <ExploreCard
           icon={Sparkles}
-          label="Personalized Insights"
-          subtitle={personalizedInsightsLocked ? 'Sign in required' : 'Colors, fit & allergies'}
+          label="Insights"
+          subtitle={personalizedInsightsLocked ? 'Sign in for personal tips' : 'Colors, fit & allergies'}
           locked={personalizedInsightsLocked}
           onPress={
             personalizedInsightsLocked

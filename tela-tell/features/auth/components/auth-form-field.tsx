@@ -17,6 +17,7 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 
 const ICON_COLOR = BrandColors.textMuted;
+const ERROR_COLOR = '#B91C1C';
 
 type AuthFieldLabelProps = {
   label: string;
@@ -32,12 +33,34 @@ export function AuthFieldLabel({ label, required }: AuthFieldLabelProps) {
   );
 }
 
+export function AuthFieldError({ message }: { message?: string | null }) {
+  if (!message) {
+    return null;
+  }
+
+  return <Text style={styles.errorText}>{message}</Text>;
+}
+
+/** Compact banner for form-level auth failures (invalid credentials, etc.). */
+export function AuthFormBanner({ message }: { message?: string | null }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <View style={styles.banner} accessibilityRole="alert">
+      <Text style={styles.bannerText}>{message}</Text>
+    </View>
+  );
+}
+
 type AuthTextFieldProps = Omit<TextInputProps, 'placeholder'> & {
   label: string;
   required?: boolean;
   icon?: FC<IconProps>;
   placeholder?: string;
   hideIcon?: boolean;
+  error?: string | null;
   groupStyle?: StyleProp<ViewStyle>;
   fieldStyle?: StyleProp<ViewStyle>;
 };
@@ -48,16 +71,21 @@ export function AuthTextField({
   icon: Icon = User,
   placeholder,
   hideIcon = false,
+  error,
   groupStyle,
   fieldStyle,
   style,
   ...props
 }: AuthTextFieldProps) {
+  const hasError = Boolean(error);
+
   return (
     <View style={[styles.fieldGroup, groupStyle]}>
       <AuthFieldLabel label={label} required={required} />
-      <View style={[styles.field, fieldStyle]}>
-        {hideIcon ? null : <Icon size={18} color={ICON_COLOR} strokeWidth={2} />}
+      <View style={[styles.field, hasError && styles.fieldError, fieldStyle]}>
+        {hideIcon ? null : (
+          <Icon size={18} color={hasError ? ERROR_COLOR : ICON_COLOR} strokeWidth={2} />
+        )}
         <TextInput
           style={[styles.input, hideIcon && styles.inputNoIcon, style]}
           placeholder={placeholder ?? label}
@@ -65,6 +93,7 @@ export function AuthTextField({
           {...props}
         />
       </View>
+      <AuthFieldError message={error} />
     </View>
   );
 }
@@ -73,20 +102,24 @@ type AuthEmailFieldProps = Omit<TextInputProps, 'placeholder'> & {
   label?: string;
   required?: boolean;
   placeholder?: string;
+  error?: string | null;
 };
 
 export function AuthEmailField({
   label = 'Email Address',
   required = true,
   placeholder = 'Email Address',
+  error,
   style,
   ...props
 }: AuthEmailFieldProps) {
+  const hasError = Boolean(error);
+
   return (
     <View style={styles.fieldGroup}>
       <AuthFieldLabel label={label} required={required} />
-      <View style={styles.field}>
-        <Mail size={18} color={ICON_COLOR} strokeWidth={2} />
+      <View style={[styles.field, hasError && styles.fieldError]}>
+        <Mail size={18} color={hasError ? ERROR_COLOR : ICON_COLOR} strokeWidth={2} />
         <TextInput
           style={[styles.input, style]}
           placeholder={placeholder}
@@ -99,6 +132,7 @@ export function AuthEmailField({
           {...props}
         />
       </View>
+      <AuthFieldError message={error} />
     </View>
   );
 }
@@ -107,22 +141,25 @@ type AuthPasswordFieldProps = Omit<TextInputProps, 'placeholder' | 'secureTextEn
   label?: string;
   required?: boolean;
   placeholder?: string;
+  error?: string | null;
 };
 
 export function AuthPasswordField({
   label = 'Password',
   required = true,
   placeholder = 'Password',
+  error,
   style,
   ...props
 }: AuthPasswordFieldProps) {
   const [visible, setVisible] = useState(false);
+  const hasError = Boolean(error);
 
   return (
     <View style={styles.fieldGroup}>
       <AuthFieldLabel label={label} required={required} />
-      <View style={styles.field}>
-        <Lock size={18} color={ICON_COLOR} strokeWidth={2} />
+      <View style={[styles.field, hasError && styles.fieldError]}>
+        <Lock size={18} color={hasError ? ERROR_COLOR : ICON_COLOR} strokeWidth={2} />
         <TextInput
           style={[styles.input, style]}
           placeholder={placeholder}
@@ -140,12 +177,13 @@ export function AuthPasswordField({
           accessibilityRole="button"
           accessibilityLabel={visible ? 'Hide password' : 'Show password'}>
           {visible ? (
-            <EyeOff size={18} color={ICON_COLOR} strokeWidth={2} />
+            <EyeOff size={18} color={hasError ? ERROR_COLOR : ICON_COLOR} strokeWidth={2} />
           ) : (
-            <Eye size={18} color={ICON_COLOR} strokeWidth={2} />
+            <Eye size={18} color={hasError ? ERROR_COLOR : ICON_COLOR} strokeWidth={2} />
           )}
         </Pressable>
       </View>
+      <AuthFieldError message={error} />
     </View>
   );
 }
@@ -198,6 +236,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 4,
     minHeight: 52,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  fieldError: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
   },
   input: {
     flex: 1,
@@ -208,6 +252,28 @@ const styles = StyleSheet.create({
   },
   inputNoIcon: {
     paddingHorizontal: 4,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontFamily: Fonts.medium,
+    fontSize: 12,
+    lineHeight: 16,
+    color: ERROR_COLOR,
+    paddingLeft: 4,
+  },
+  banner: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  bannerText: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    lineHeight: 18,
+    color: ERROR_COLOR,
     textAlign: 'center',
   },
   rememberRow: {

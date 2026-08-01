@@ -4,55 +4,48 @@ import { CircleCheck, Tag, TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
-import { type FabricComposition } from '@/data/scans/mock-data';
 
 type SellerComparisonCardProps = {
   sellerLabel: string | null;
-  detectedDominant: string;
-  compositions: FabricComposition[];
+  /** Clean detected headline (e.g. Mostly Cotton / Cotton-Polyester blend). */
+  detectedLabel: string;
   mislabelingDetected: boolean;
+  /** Optional explanation when a mismatch is detected. */
+  mislabelMessage?: string;
   onAddLabel?: () => void;
 };
 
 export function SellerComparisonCard({
   sellerLabel,
-  detectedDominant,
-  compositions,
+  detectedLabel,
   mislabelingDetected,
+  mislabelMessage,
   onAddLabel,
 }: SellerComparisonCardProps) {
   const trimmedLabel = sellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
-  const detectedSummary = compositions
-    .map((item) => `${item.material} (${item.percentage}%)`)
-    .join(', ');
 
   if (!hasSellerLabel) {
     return (
-      <View style={[styles.card, styles.cardNeutral, faintCardShadow()]}>
-        <View style={styles.header}>
-          <Tag size={16} color={BrandColors.primary} strokeWidth={2} />
-          <Text style={styles.headerTitle}>Seller label comparison</Text>
+      <Pressable
+        style={({ pressed }) => [styles.ctaRow, faintCardShadow(), pressed && styles.pressed]}
+        onPress={onAddLabel}
+        disabled={!onAddLabel}
+        accessibilityRole="button"
+        accessibilityLabel="Add seller label to compare">
+        <View style={styles.ctaIcon}>
+          <Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />
         </View>
-
-        <Text style={styles.neutralPrompt}>Add seller label to compare</Text>
-
-        {onAddLabel ? (
-          <Pressable
-            style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
-            onPress={onAddLabel}
-            accessibilityRole="button"
-            accessibilityLabel="Add seller label">
-            <Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />
-            <Text style={styles.addButtonText}>Add seller label</Text>
-          </Pressable>
-        ) : null}
-      </View>
+        <View style={styles.ctaText}>
+          <Text style={styles.ctaTitle}>Compare seller label</Text>
+          <Text style={styles.ctaBody}>Add what the seller claimed to check for mislabeling</Text>
+        </View>
+      </Pressable>
     );
   }
 
   const isConflict = mislabelingDetected;
-  const cardTitle = isConflict ? 'MISLABELED' : 'NOT MISLABELED';
+  const detail = mislabelMessage?.trim();
 
   return (
     <View
@@ -68,36 +61,67 @@ export function SellerComparisonCard({
           <CircleCheck size={16} color="#15803d" strokeWidth={2.25} />
         )}
         <Text style={[styles.headerTitle, isConflict ? styles.headerConflict : styles.headerClear]}>
-          {cardTitle}
+          {isConflict ? 'Possible mislabel' : 'Label matches'}
         </Text>
       </View>
 
       <View style={styles.compareRow}>
         <View style={styles.compareCol}>
-          <Text style={styles.compareLabel}>DECLARED</Text>
+          <Text style={styles.compareLabel}>SELLER SAID</Text>
           <Text style={styles.compareValue}>{trimmedLabel}</Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.compareCol}>
-          <Text style={styles.compareLabel}>DETECTED MATERIAL</Text>
-          <Text style={styles.compareValue}>{detectedDominant}</Text>
-          <Text style={styles.compareSub}>{detectedSummary}</Text>
+          <Text style={styles.compareLabel}>SCAN FOUND</Text>
+          <Text style={styles.compareValue}>{detectedLabel}</Text>
         </View>
       </View>
+
+      {isConflict && detail ? <Text style={styles.message}>{detail}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    padding: 16,
+  ctaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-  },
-  cardNeutral: {
     borderColor: BrandColors.borderLight,
     backgroundColor: BrandColors.white,
+  },
+  ctaIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.lavenderCard,
+  },
+  ctaText: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  ctaTitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: BrandColors.primaryDark,
+  },
+  ctaBody: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: BrandColors.textMuted,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
   },
   cardConflict: {
     borderColor: '#fecaca',
@@ -114,36 +138,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Fonts.semiBold,
-    fontSize: 12,
-    letterSpacing: 0.8,
-    color: BrandColors.text,
+    fontSize: 13,
+    letterSpacing: 0.2,
   },
   headerConflict: {
     color: '#dc2626',
   },
   headerClear: {
     color: '#15803d',
-  },
-  neutralPrompt: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: BrandColors.primary,
-    backgroundColor: BrandColors.white,
-  },
-  addButtonText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.primary,
   },
   compareRow: {
     flexDirection: 'row',
@@ -165,15 +167,15 @@ const styles = StyleSheet.create({
     color: BrandColors.text,
     lineHeight: 20,
   },
-  compareSub: {
+  message: {
     fontFamily: Fonts.regular,
-    fontSize: 11,
-    lineHeight: 16,
-    color: BrandColors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#991b1b',
   },
   divider: {
     width: 1,
-    backgroundColor: BrandColors.borderLight,
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   pressed: {
     opacity: 0.88,

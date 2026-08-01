@@ -4,8 +4,93 @@ export type ColorToken = {
 };
 
 const COLOR_HEX: Record<string, string> = {
-  'blush pink': '#F4C2C2',
+  // Season-specific additions
+  'warm mint': '#A8D8B9',
+  apricot: '#FBCEB1',
+  'light coral': '#F08080',
+  'light aqua': '#B2D8D8',
+  'warm sky': '#87CEEB',
+  'pale gold': '#EEE8AA',
+  'warm ivory': '#FFFFF0',
+  'powder pink': '#FFB6C1',
+  buttercup: '#FAD961',
+  'soft peach': '#FFDAB9',
+  'warm yellow': '#FFD700',
+  'fresh lime': '#90EE90',
+  'golden orange': '#FF8C00',
+  'warm turquoise': '#40E0D0',
+  'bright coral': '#FF7F50',
+  'sunny yellow': '#FFE135',
+  'spring green': '#00FF7F',
+  'warm aqua': '#00CED1',
+  'electric orange': '#FF6700',
+  'hot pink': '#FF69B4',
+  'pure white': '#FFFFFF',
+  'warm tan': '#D2B48C',
+  'bright camel': '#C19A6B',
+  'vivid lime': '#BFFF00',
+  'baby blue': '#89CFF0',
+  'rose quartz': '#F7CAC9',
+  periwinkle: '#CCCCFF',
+  'soft lilac': '#C8A2C8',
+  'soft pink': '#FFB7C5',
   'powder blue': '#B0E0E6',
+  'light mint': '#98FF98',
+  'pale blue grey': '#B0C4DE',
+  'dove grey': '#B8B8B8',
+  'rose beige': '#ECC8AF',
+  'soft navy': '#4A6FA5',
+  'dusty blue': '#7B9EB9',
+  'muted teal': '#5F9EA0',
+  'smoky lavender': '#9E90A2',
+  'greyish pink': '#C8A8A8',
+  'soft blue green': '#8FBC8F',
+  'cool taupe': '#8B8682',
+  'ash grey': '#B2BEB5',
+  'rose grey': '#C4A0A0',
+  'greyish beige': '#C8B8A8',
+  'cool stone': '#918E85',
+  'ash taupe': '#A09080',
+  'slate blue': '#6A8CAF',
+  'soft plum': '#9B4F6A',
+  'muted gold': '#B5A642',
+  'warm caramel': '#C68642',
+  'dusty terracotta': '#C8735A',
+  'warm taupe': '#9E8872',
+  'soft rust': '#C46050',
+  'muted olive': '#8A8A4A',
+  sand: '#C2B280',
+  'peach beige': '#F5CBA7',
+  'bronze tan': '#9E7B50',
+  'warm teal': '#2E8B8B',
+  'dark camel': '#9E6B3A',
+  'warm burgundy': '#8B2252',
+  'deep teal': '#004040',
+  'dark olive': '#4A4A1A',
+  'dark amber': '#B8860B',
+  'deep rust': '#8B3A2A',
+  'dark gold': '#A07800',
+  'warm plum': '#6A3050',
+  'black brown': '#2C1810',
+  'dark copper': '#8C4A2A',
+  'deep blue': '#003080',
+  'dark emerald': '#004020',
+  'deep burgundy': '#5A0020',
+  'dark navy': '#000050',
+  'deep plum': '#4A0040',
+  'dark teal': '#004050',
+  crimson: '#DC143C',
+  'royal blue': '#4169E1',
+  'cool red': '#CC2244',
+  'electric teal': '#00FFCF',
+  'electric blue': '#0077FF',
+  'bright silver': '#C0C0C0',
+  'vivid emerald': '#10C070',
+  'icy pink': '#FFB3C6',
+  'vivid teal': '#00B2A9',
+  'neon blue': '#1F51FF',
+  'earthy tones': '#A07850',
+  'blush pink': '#F4C2C2',
   lavender: '#C4B5FD',
   mint: '#98D8C8',
   grey: '#9CA3AF',
@@ -17,7 +102,6 @@ const COLOR_HEX: Record<string, string> = {
   emerald: '#50C878',
   ruby: '#E0115F',
   'soft white': '#F5F5F0',
-  'dove grey': '#B8B8B8',
   'pale blue': '#AEC6CF',
   'light taupe': '#B8A99A',
   peach: '#FFCBA4',
@@ -93,6 +177,14 @@ const COLOR_HEX: Record<string, string> = {
   'bright orange': '#FF8C00',
   'lime green': '#32CD32',
   'cool baby pink': '#F8C8DC',
+  chocolate: '#3D2314',
+  'chocolate brown': '#3D2314',
+  'warm copper': '#B87333',
+  amber: '#FFBF00',
+  'cool pink': '#E8A0BF',
+  'cool blue': '#6B8CAE',
+  'cool grey': '#8A8D8F',
+  silver: '#C0C0C0',
 };
 
 const FALLBACK_HEX = '#D1D5DB';
@@ -119,14 +211,24 @@ function lookupHex(label: string): string {
 export function tokenizeColorString(colorsString: string): ColorToken[] {
   const cleaned = colorsString
     .replace(/\s*[—–-]\s*in small doses/gi, '')
+    // Some guidance strings omit the dash (e.g. "yellow-green near the face").
+    .replace(/\s*in small doses/gi, '')
     .replace(/\s*[—–-]\s*near the face/gi, '')
+    .replace(/\s*near the face/gi, '')
     .replace(/\s*[—–-]\s*at neckline/gi, '')
+    .replace(/\s*at neckline/gi, '')
     .replace(/\s*[—–-]\s*that dulls warmth/gi, '')
+    .replace(/\s*that dulls warmth/gi, '')
     .replace(/\s*[—–-]\s*that dulls the complexion/gi, '')
+    .replace(/\s*that dulls the complexion/gi, '')
     .replace(/\s*[—–-]\s*that washes out warm depth/gi, '')
+    .replace(/\s*that washes out warm depth/gi, '')
     .replace(/\s*[—–-]\s*that turns ashy/gi, '')
+    .replace(/\s*that turns ashy/gi, '')
     .replace(/\s*[—–-]\s*that clashes/gi, '')
-    .replace(/\s*[—–-]\s*that look ashy/gi, '');
+    .replace(/\s*that clashes/gi, '')
+    .replace(/\s*[—–-]\s*that look ashy/gi, '')
+    .replace(/\s*that look ashy/gi, '');
 
   return cleaned
     .split(',')

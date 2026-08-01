@@ -1,5 +1,5 @@
 import type { CareInstruction, SustainabilityRating } from '@/data/scans/mock-data';
-import type { WeatherContext } from '@/data/preferences/occasion-weather';
+import type { OccasionContext, WeatherContext } from '@/data/preferences/occasion-weather';
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
 
 export type SustainabilityBreakdown = {
@@ -28,7 +28,7 @@ export type FiberProfile = {
   weight: string;
   origin: string;
   bestWeather: WeatherContext[];
-  useCases: string[];
+  bestOccasion: OccasionContext[];
   careInstructions: CareInstruction[];
   philippineMarkets: string;
 };
@@ -72,7 +72,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light to medium',
     origin: 'Plant fiber',
     bestWeather: ['sunny', 'partly_cloudy', 'cloudy'],
-    useCases: ['Casual wear', 'School uniform', 'Bedsheets', 'Towels', 'Hot weather'],
+    bestOccasion: ['casual', 'school', 'beach', 'home_wear', 'sleepwear', 'outdoor_activities'],
     careInstructions: [
       { text: 'Machine wash warm (30 to 40°C)', recommended: true },
       { text: 'Tumble dry on low heat', recommended: true },
@@ -102,7 +102,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Medium to heavy',
     origin: 'Animal fiber',
     bestWeather: ['cool', 'foggy', 'windy'],
-    useCases: ['Sweaters', 'Coats', 'Scarves', 'Imported knits'],
+    bestOccasion: ['office_work', 'travel', 'outdoor_activities'],
     careInstructions: [
       { text: 'Hand wash cold with mild soap', recommended: true },
       { text: 'Lay flat to dry', recommended: true },
@@ -132,7 +132,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light',
     origin: 'Animal fiber',
     bestWeather: ['cool', 'sunny', 'partly_cloudy'],
-    useCases: ['Blouses', 'Barong lining', 'Scarves', 'Formal wear'],
+    bestOccasion: ['formal', 'wedding', 'party'],
     careInstructions: [
       { text: 'Hand wash cold or dry clean', recommended: true },
       { text: 'Steam to remove wrinkles', recommended: true },
@@ -162,7 +162,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light to medium',
     origin: 'Plant fiber',
     bestWeather: ['sunny', 'partly_cloudy'],
-    useCases: ['Resort shirts', 'Pants', 'Table linen', 'Beach cover-ups'],
+    bestOccasion: ['casual', 'formal', 'wedding', 'beach', 'travel'],
     careInstructions: [
       { text: 'Machine wash cold on gentle cycle', recommended: true },
       { text: 'Line dry to reduce shrinkage', recommended: true },
@@ -191,7 +191,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light to medium',
     origin: 'Synthetic',
     bestWeather: ['rainy', 'windy', 'thunderstorms'],
-    useCases: ['Athletic wear', 'Printed shirts', 'Jackets', 'Ukay blends'],
+    bestOccasion: ['sports_gym', 'party', 'travel'],
     careInstructions: [
       { text: 'Machine wash cold', recommended: true },
       { text: 'Tumble dry low or air dry', recommended: true },
@@ -220,7 +220,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light',
     origin: 'Synthetic',
     bestWeather: ['rainy', 'windy', 'thunderstorms'],
-    useCases: ['Bags', 'Jackets', 'Sportswear', 'Hosiery'],
+    bestOccasion: ['sports_gym', 'travel', 'outdoor_activities'],
     careInstructions: [
       { text: 'Machine wash cold in a mesh bag', recommended: true },
       { text: 'Air dry away from direct sun', recommended: true },
@@ -249,7 +249,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light to medium',
     origin: 'Synthetic',
     bestWeather: ['cool', 'cloudy', 'foggy'],
-    useCases: ['Budget sweaters', 'Blankets', 'Scarves', 'Craft yarn'],
+    bestOccasion: ['home_wear', 'travel', 'casual'],
     careInstructions: [
       { text: 'Machine wash cold on gentle cycle', recommended: true },
       { text: 'Lay flat to dry', recommended: true },
@@ -278,7 +278,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light',
     origin: 'Synthetic',
     bestWeather: ['sunny', 'partly_cloudy', 'cloudy'],
-    useCases: ['Leggings', 'Jeans', 'Swimwear', 'Stretch tops'],
+    bestOccasion: ['sports_gym', 'beach', 'casual'],
     careInstructions: [
       { text: 'Wash cold on gentle cycle', recommended: true },
       { text: 'Air dry to protect stretch', recommended: true },
@@ -307,7 +307,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light',
     origin: 'Plant pulp',
     bestWeather: ['sunny', 'partly_cloudy'],
-    useCases: ['Dresses', 'Blouses', 'Linings', 'Flowy ukay tops'],
+    bestOccasion: ['casual', 'office_work', 'school', 'party', 'home_wear', 'sleepwear'],
     careInstructions: [
       { text: 'Hand wash cold or delicate cycle', recommended: true },
       { text: 'Hang dry in shade', recommended: true },
@@ -336,7 +336,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Medium to heavy',
     origin: 'Animal hide',
     bestWeather: ['sunny', 'cool', 'cloudy'],
-    useCases: ['Jackets', 'Belts', 'Bags', 'Shoes'],
+    bestOccasion: ['formal', 'outdoor_activities', 'travel'],
     careInstructions: [
       { text: 'Wipe with damp cloth and air dry', recommended: true },
       { text: 'Condition to prevent cracking', recommended: true },
@@ -365,7 +365,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Medium',
     origin: 'Animal hide',
     bestWeather: ['sunny', 'cool'],
-    useCases: ['Shoes', 'Bags', 'Jackets', 'Accent panels'],
+    bestOccasion: ['formal', 'party', 'travel'],
     careInstructions: [
       { text: 'Brush nap with a suede brush', recommended: true },
       { text: 'Spot clean only', recommended: true },
@@ -394,7 +394,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Light to medium',
     origin: 'Philippine plant',
     bestWeather: ['sunny', 'windy', 'partly_cloudy'],
-    useCases: ['Barong panels', 'Sinamay', 'Bags', 'Home textiles'],
+    bestOccasion: ['formal', 'wedding', 'beach', 'outdoor_activities'],
     careInstructions: [
       { text: 'Spot clean with damp cloth', recommended: true },
       { text: 'Steam lightly to smooth creases', recommended: true },

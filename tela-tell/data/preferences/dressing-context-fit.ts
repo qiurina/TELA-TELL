@@ -1,4 +1,6 @@
 import { resolveSupportedFabric } from '@/data/fabrics/fabric-references';
+import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import { getSignificantFibers, type CompositionInput } from '@/data/scans/analysis';
 import type { FabricComposition } from '@/data/scans/mock-data';
 import {
   getDressingContextLabel,
@@ -23,17 +25,63 @@ const STATUS_RANK: Record<DressingContextFitStatus, number> = {
   great: 2,
 };
 
-function fabricMatchesNeedle(dominant: string, top: string, needle: string): boolean {
-  const normalized = needle.trim().toLowerCase();
-  return dominant.includes(normalized) || top.includes(normalized);
+type ResolvedShare = {
+  fabric: SupportedFabric;
+  percentage: number;
+  label: string;
+};
+
+function resolveSignificantShares(
+  dominantFabric: string,
+  compositions: CompositionInput[],
+): ResolvedShare[] {
+  const significant = getSignificantFibers(compositions);
+  const resolved: ResolvedShare[] = [];
+
+  for (const item of significant) {
+    const fabric = resolveFabricAlias(item.material);
+    if (!fabric) {
+      continue;
+    }
+    if (resolved.some((entry) => entry.fabric === fabric)) {
+      continue;
+    }
+    resolved.push({
+      fabric,
+      percentage: item.percentage,
+      label: fabric,
+    });
+  }
+
+  if (resolved.length === 0) {
+    const fallback = resolveSupportedFabric(dominantFabric, compositions as FabricComposition[]);
+    if (fallback) {
+      resolved.push({ fabric: fallback, percentage: 100, label: fallback });
+    }
+  }
+
+  return resolved;
 }
 
-function matchesFabricList(
-  dominant: string,
-  top: string,
+function findMatchingRec(
+  share: ResolvedShare,
   items: FabricRecommendation[],
-): boolean {
-  return items.some((item) => fabricMatchesNeedle(dominant, top, item.fabric));
+): FabricRecommendation | undefined {
+  const fabricLower = share.fabric.toLowerCase();
+  return items.find((item) => {
+    const needle = item.fabric.trim().toLowerCase();
+    return fabricLower.includes(needle) || needle.includes(fabricLower);
+  });
+}
+
+function garmentLabel(shares: ResolvedShare[], dominantFabric: string): string {
+  if (shares.length >= 2) {
+    return `${shares[0].fabric}-${shares[1].fabric} blend`;
+  }
+  if (shares.length === 1) {
+    return shares[0].fabric;
+  }
+  return dominantFabric.replace(/\s*dominant\s*/i, '').trim() || 'This fabric';
 }
 
 export function getDressingContextFits(
@@ -41,35 +89,61 @@ export function getDressingContextFits(
   dominantFabric: string,
   compositions: FabricComposition[] = [],
 ): DressingContextFit[] {
-  const sorted = [...compositions].sort((a, b) => b.percentage - a.percentage);
-  const top = sorted[0]?.material?.toLowerCase() ?? '';
-  const dominant = dominantFabric.toLowerCase();
-  const detected = resolveSupportedFabric(dominantFabric, compositions);
-  const detectedLabel = detected ?? dominantFabric.replace(/\s*dominant\s*/i, '').trim();
+  const shares = resolveSignificantShares(dominantFabric, compositions);
+  const labelForGarment = garmentLabel(shares, dominantFabric);
 
   const fits = contexts.map((context) => {
     const guide = getOccasionWeatherGuide(context);
     const label = getDressingContextLabel(context);
-    const matchesBest = matchesFabricList(dominant, top, guide.bestChoices);
-    const matchesAvoid = matchesFabricList(dominant, top, guide.avoid);
 
-    if (matchesBest) {
+    const bestHits = shares
+      .map((share) => ({ share, rec: findMatchingRec(share, guide.bestChoices) }))
+      .filter((item): item is { share: ResolvedShare; rec: FabricRecommendation } =>
+        Boolean(item.rec),
+      );
+    const avoidHits = shares
+      .map((share) => ({ share, rec: findMatchingRec(share, guide.avoid) }))
+      .filter((item): item is { share: ResolvedShare; rec: FabricRecommendation } =>
+        Boolean(item.rec),
+      );
+
+    const avoidShare = avoidHits.reduce((max, item) => Math.max(max, item.share.percentage), 0);
+    const bestShare = bestHits.reduce((max, item) => Math.max(max, item.share.percentage), 0);
+
+    if (bestHits.length > 0 && avoidHits.length === 0) {
+      const top = bestHits[0];
       return {
         context,
         label,
         status: 'great' as const,
-        summary: `${detectedLabel} is a strong match for ${label.toLowerCase()}.`,
+        summary:
+          shares.length > 1
+            ? `${top.share.fabric} (${top.share.percentage}%) suits ${label.toLowerCase()}.`
+            : `${labelForGarment} is a strong match for ${label.toLowerCase()}.`,
         alternatives: [],
       };
     }
 
-    if (matchesAvoid) {
-      const avoid = guide.avoid[0];
+    if (avoidHits.length > 0 && bestHits.length === 0) {
+      const top = avoidHits[0];
       return {
         context,
         label,
         status: 'poor' as const,
-        summary: `${detectedLabel} may not be ideal for ${label.toLowerCase()} — ${avoid?.reason ?? 'consider another fiber'}.`,
+        summary: `${top.share.fabric} (${top.share.percentage}%) is less ideal for ${label.toLowerCase()}. ${top.rec.reason}.`,
+        alternatives: guide.bestChoices.slice(0, 3),
+      };
+    }
+
+    if (bestHits.length > 0 && avoidHits.length > 0) {
+      const avoid = avoidHits[0];
+      const best = bestHits[0];
+      const status: DressingContextFitStatus = avoidShare >= 25 && avoidShare >= bestShare ? 'poor' : 'okay';
+      return {
+        context,
+        label,
+        status,
+        summary: `This mix has ${best.share.fabric} and ${avoid.share.fabric}. It can work for some uses, but is trickier for ${label.toLowerCase()}.`,
         alternatives: guide.bestChoices.slice(0, 3),
       };
     }
@@ -78,7 +152,7 @@ export function getDressingContextFits(
       context,
       label,
       status: 'okay' as const,
-      summary: `${detectedLabel} can work for ${label.toLowerCase()}, but other materials may feel better.`,
+      summary: `${labelForGarment} can work for ${label.toLowerCase()}; other fibers may feel better.`,
       alternatives: guide.bestChoices.slice(0, 3),
     };
   });

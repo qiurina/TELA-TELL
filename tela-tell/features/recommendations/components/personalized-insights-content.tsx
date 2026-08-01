@@ -1,32 +1,65 @@
-import { useRouter, type Href } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useRouter } from 'expo-router';
+import type { FC, ReactNode } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CircleCheck, TriangleAlert } from '@/components/ui/lucide-icons';
+import {
+  ChevronRight,
+  CircleCheck,
+  CircleX,
+  Heart,
+  Info,
+  type IconProps,
+} from '@/components/ui/lucide-icons';
+import { Calendar } from 'lucide-react-native';
+import { DRESSING_CONTEXT_ICONS } from '@/features/profile/dressing-context-icons';
 import { AllergyAlertCard } from '@/features/results/components/allergy-alert-card';
-import { ScanAnotherButton } from '@/features/results/components/scan-another-button';
 import { SkinToneColorsSection } from '@/features/recommendations/components/skin-tone-colors-section';
+import {
+  getInsightsSetupItems,
+  getPreferenceMatch,
+  type InsightsSetupItem,
+  type PreferenceMatchResult,
+} from '@/features/recommendations/lib/personalized-insights';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { faintCardShadow } from '@/constants/shadows';
 import { getAllergyAlert } from '@/data/fabrics/fabric-allergies';
-import { resolveSupportedFabric } from '@/data/fabrics/fabric-references';
 import {
   getDressingContextFits,
   type DressingContextFit,
+  type DressingContextFitStatus,
 } from '@/data/preferences/dressing-context-fit';
-import {
-  OCCASION_CONTEXT_OPTIONS,
-  WEATHER_CONTEXT_OPTIONS,
-} from '@/data/preferences/occasion-weather';
+import { WEATHER_CONTEXT_OPTIONS } from '@/data/preferences/occasion-weather';
 import { getSkinToneColorGuidance } from '@/data/preferences/skin-tone-colors';
 import type { FabricComposition } from '@/data/scans/mock-data';
-import { getUserPreferences } from '@/features/profile/lib/user-preferences';
+import {
+  getUserPreferencesSnapshot,
+  subscribeUserPreferences,
+} from '@/features/profile/lib/user-preferences';
 
 type PersonalizedInsightsContentProps = {
   dominantFabric: string;
   detectedCompositions?: FabricComposition[];
-  onScanAnother: () => void;
+};
+
+const STATUS_STYLES: Record<
+  DressingContextFitStatus,
+  { label: string; text: string; background: string; border: string }
+> = {
+  great: { label: 'Great', text: '#15803D', background: '#F0FDF4', border: '#BBF7D0' },
+  okay: {
+    label: 'Okay',
+    text: BrandColors.primaryDark,
+    background: BrandColors.lavender,
+    border: BrandColors.border,
+  },
+  poor: { label: 'Less ideal', text: '#B45309', background: '#FFFBEB', border: '#FDE68A' },
+};
+
+const STATUS_ICON: Record<DressingContextFitStatus, { icon: FC<IconProps>; color: string }> = {
+  great: { icon: CircleCheck, color: '#15803D' },
+  okay: { icon: Info, color: BrandColors.primaryDark },
+  poor: { icon: CircleX, color: '#B45309' },
 };
 
 function SectionBlock({ title, children }: { title: string; children: ReactNode }) {
@@ -38,72 +71,132 @@ function SectionBlock({ title, children }: { title: string; children: ReactNode 
   );
 }
 
-function ProfilePrompt({
-  title,
-  body,
-  onPress,
-}: {
-  title: string;
-  body: string;
-  onPress: () => void;
-}) {
-  return (
-    <View style={[styles.promptCard, faintCardShadow()]}>
-      <Text style={styles.promptTitle}>{title}</Text>
-      <Text style={styles.promptBody}>{body}</Text>
-      <Pressable
-        style={({ pressed }) => [styles.promptButton, pressed && styles.pressed]}
-        onPress={onPress}>
-        <Text style={styles.promptButtonText}>Open Profile</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-const WEATHER_CONTEXT_IDS = new Set(WEATHER_CONTEXT_OPTIONS.map((option) => option.id));
-const OCCASION_CONTEXT_IDS = new Set(OCCASION_CONTEXT_OPTIONS.map((option) => option.id));
-
-function partitionDressingFits(fits: DressingContextFit[]) {
-  return {
-    weather: fits.filter((fit) => WEATHER_CONTEXT_IDS.has(fit.context)),
-    occasion: fits.filter((fit) => OCCASION_CONTEXT_IDS.has(fit.context)),
-  };
-}
-
-function ContextFitRow({ fit }: { fit: DressingContextFit }) {
-  const statusStyle =
-    fit.status === 'great'
-      ? styles.fitGreat
-      : fit.status === 'poor'
-        ? styles.fitPoor
-        : styles.fitOkay;
-  const alternativeNames = fit.alternatives.map((item) => item.fabric).join(' · ');
+function SetupChecklist({ items }: { items: InsightsSetupItem[] }) {
+  const router = useRouter();
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
-    <View style={styles.fitCard}>
-      <View style={styles.fitHeader}>
-        <Text style={styles.fitLabel}>{fit.label}</Text>
-        <Text style={[styles.fitBadge, statusStyle]}>
-          {fit.status === 'great' ? 'Great' : fit.status === 'poor' ? 'Poor' : 'Okay'}
-        </Text>
+    <View style={styles.setupBlock}>
+      <Text style={styles.setupHint}>Finish setup for fuller insights</Text>
+      <View style={styles.setupRow}>
+        {items.map((item) => (
+          <Pressable
+            key={item.key}
+            style={({ pressed }) => [styles.setupChip, pressed && styles.pressed]}
+            onPress={() => router.push(item.href)}
+            accessibilityRole="button"
+            accessibilityLabel={`Set up ${item.label}`}>
+            <Text style={styles.setupChipText}>{item.label}</Text>
+            <ChevronRight size={12} color={BrandColors.primary} strokeWidth={2.5} />
+          </Pressable>
+        ))}
       </View>
-      {alternativeNames ? (
-        <Text style={styles.altNames}>{alternativeNames}</Text>
-      ) : null}
     </View>
   );
 }
 
-function ContextFitList({ fits }: { fits: DressingContextFit[] }) {
+function ContextFitRow({ fit, isLast }: { fit: DressingContextFit; isLast: boolean }) {
+  const Icon = DRESSING_CONTEXT_ICONS[fit.context] ?? Calendar;
+  const statusCfg = STATUS_STYLES[fit.status];
+  const StatusIcon = STATUS_ICON[fit.status].icon;
+  const showAlternatives = fit.status !== 'great' && fit.alternatives.length > 0;
+  const altLine = showAlternatives
+    ? fit.alternatives
+        .slice(0, 3)
+        .map((alt) => alt.fabric)
+        .join(' · ')
+    : null;
+  const altReason = showAlternatives ? fit.alternatives[0]?.reason : null;
+
   return (
-    <View style={[styles.fitList, faintCardShadow()]}>
-      {fits.map((fit, index) => (
-        <View
-          key={fit.context}
-          style={index < fits.length - 1 ? styles.fitCardBorder : undefined}>
-          <ContextFitRow fit={fit} />
+    <View style={[styles.fitRow, !isLast && styles.fitRowBorder]}>
+      <View style={styles.fitIconWrap}>
+        <Icon size={15} color={BrandColors.primaryDark} strokeWidth={2.25} />
+      </View>
+
+      <View style={styles.fitBody}>
+        <View style={styles.fitHeaderRow}>
+          <Text style={styles.fitLabel}>{fit.label}</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: statusCfg.background, borderColor: statusCfg.border },
+            ]}>
+            <StatusIcon size={11} color={statusCfg.text} strokeWidth={2.5} />
+            <Text style={[styles.statusBadgeText, { color: statusCfg.text }]}>
+              {statusCfg.label}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.fitSummary}>{fit.summary}</Text>
+
+        {altLine ? (
+          <Text style={styles.fitAltLine}>
+            Better: <Text style={styles.fitAltValue}>{altLine}</Text>
+            {altReason ? `. ${altReason}` : ''}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function ContextFitGroups({ fits }: { fits: DressingContextFit[] }) {
+  const weatherIds = new Set(WEATHER_CONTEXT_OPTIONS.map((item) => item.id));
+  const weatherFits = fits.filter((fit) => weatherIds.has(fit.context));
+  const occasionFits = fits.filter((fit) => !weatherIds.has(fit.context));
+
+  const groups = [
+    { key: 'weather', title: 'Weather', items: weatherFits },
+    { key: 'occasion', title: 'Occasion', items: occasionFits },
+  ].filter((group) => group.items.length > 0);
+
+  return (
+    <View style={styles.fitGroups}>
+      {groups.map((group) => (
+        <View key={group.key} style={styles.fitGroup}>
+          {groups.length > 1 ? <Text style={styles.fitGroupLabel}>{group.title}</Text> : null}
+          <View style={styles.fitCard}>
+            {group.items.map((fit, index) => (
+              <ContextFitRow
+                key={fit.context}
+                fit={fit}
+                isLast={index === group.items.length - 1}
+              />
+            ))}
+          </View>
         </View>
       ))}
+    </View>
+  );
+}
+
+function PreferenceMatchRow({ match }: { match: PreferenceMatchResult }) {
+  const hasMatch = match.matched.length > 0;
+  const matchLine = match.matched
+    .map((item) =>
+      typeof item.percentage === 'number' ? `${item.fabric} ${item.percentage}%` : item.fabric,
+    )
+    .join(' · ');
+
+  return (
+    <View style={styles.preferenceCard}>
+      {hasMatch ? (
+        <CircleCheck size={16} color="#15803D" strokeWidth={2.25} />
+      ) : (
+        <Heart size={16} color={BrandColors.primaryDark} strokeWidth={2.25} />
+      )}
+      <Text style={styles.preferenceTitle} numberOfLines={2}>
+        {hasMatch ? 'Matches your list' : 'Not in your list'}
+      </Text>
+      <Text style={styles.preferenceBody} numberOfLines={3}>
+        {hasMatch
+          ? matchLine
+          : `You usually look for ${match.unmatchedPreferred.slice(0, 3).join(', ')}.`}
+      </Text>
     </View>
   );
 }
@@ -111,18 +204,20 @@ function ContextFitList({ fits }: { fits: DressingContextFit[] }) {
 export function PersonalizedInsightsContent({
   dominantFabric,
   detectedCompositions,
-  onScanAnother,
 }: PersonalizedInsightsContentProps) {
-  const router = useRouter();
+  const preferences = useSyncExternalStore(
+    subscribeUserPreferences,
+    getUserPreferencesSnapshot,
+    getUserPreferencesSnapshot,
+  );
   const compositions = detectedCompositions ?? [];
-  const preferences = getUserPreferences();
-  const openProfile = () => router.push('/(tabs)/profile' as Href);
 
   const skinToneGuidance = getSkinToneColorGuidance(
     preferences.skinTone,
     dominantFabric,
     compositions,
     preferences.skinUndertone,
+    preferences.colorSeason,
   );
   const allergyAlert = getAllergyAlert(
     preferences.sensitiveFabrics,
@@ -134,99 +229,58 @@ export function PersonalizedInsightsContent({
     dominantFabric,
     compositions,
   );
-  const { weather: weatherFits, occasion: occasionFits } = partitionDressingFits(dressingFits);
-  const hasDressingContexts = (preferences.dressingContexts ?? []).length > 0;
-  const detected = resolveSupportedFabric(dominantFabric, compositions);
-  const preferredMatch = preferences.preferredFabrics.find(
-    (fabric) =>
-      dominantFabric.toLowerCase().includes(fabric.toLowerCase()) ||
-      compositions.some((item) => item.material.toLowerCase().includes(fabric.toLowerCase())),
+  const preferenceMatch = getPreferenceMatch(
+    preferences.preferredFabrics,
+    dominantFabric,
+    compositions,
   );
+  const setupItems = getInsightsSetupItems(preferences);
+  const hasDressingContexts = (preferences.dressingContexts ?? []).length > 0;
   const hasSensitivities = preferences.sensitiveFabrics.length > 0;
+  const showColor = Boolean(skinToneGuidance);
+  const showSensitivities = hasSensitivities && Boolean(allergyAlert);
+  const showFit = hasDressingContexts && dressingFits.length > 0;
+  const showPreference = preferenceMatch.hasPreferredList;
 
   return (
     <View style={styles.container}>
-      <SectionBlock title="COLOR ANALYSIS">
-        {skinToneGuidance ? (
-          <SkinToneColorsSection guidance={skinToneGuidance} />
-        ) : (
-          <ProfilePrompt
-            title="Add your skin tone"
-            body="Set skin tone and undertone in Profile to see color swatches for this scan."
-            onPress={openProfile}
-          />
-        )}
-      </SectionBlock>
+      <SetupChecklist items={setupItems} />
 
-      <SectionBlock title="FIBER SENSITIVITIES">
-        {hasSensitivities && allergyAlert ? (
-          <AllergyAlertCard alert={allergyAlert} />
-        ) : (
-          <ProfilePrompt
-            title="No sensitivities set"
-            body="Mark fiber types you react to in Profile — we'll flag conflicts on every scan."
-            onPress={openProfile}
-          />
-        )}
-      </SectionBlock>
-
-      {weatherFits.length > 0 ? (
-        <SectionBlock title="WEATHER FIT">
-          <ContextFitList fits={weatherFits} />
+      {showColor ? (
+        <SectionBlock title="COLOR">
+          <SkinToneColorsSection guidance={skinToneGuidance!} />
         </SectionBlock>
       ) : null}
 
-      {occasionFits.length > 0 ? (
-        <SectionBlock title="OCCASION FIT">
-          <ContextFitList fits={occasionFits} />
-        </SectionBlock>
-      ) : null}
-
-      {!hasDressingContexts ? (
-        <SectionBlock title="WEATHER & OCCASION">
-          <ProfilePrompt
-            title="No contexts set"
-            body="Pick weather and occasion chips in Profile to see fit ratings for this scan."
-            onPress={openProfile}
-          />
-        </SectionBlock>
-      ) : null}
-
-      <SectionBlock title="PREFERENCE MATCH">
-        <View
-          style={[
-            styles.preferenceCard,
-            faintCardShadow(),
-            preferredMatch ? styles.preferenceMatch : styles.preferenceNeutral,
-          ]}>
-          {preferredMatch ? (
-            <CircleCheck size={20} color="#15803d" strokeWidth={2.25} />
-          ) : (
-            <TriangleAlert size={20} color={BrandColors.textMuted} strokeWidth={2.25} />
-          )}
-          <View style={styles.preferenceText}>
-            <Text style={styles.preferenceTitle}>
-              {preferredMatch ? 'Matches your list' : 'Not in your preferred list'}
-            </Text>
-            <Text style={styles.preferenceBody}>
-              {preferredMatch
-                ? `${detected ?? dominantFabric} is a preferred fiber type for you.`
-                : preferences.preferredFabrics.length > 0
-                  ? `You usually shop for ${preferences.preferredFabrics.join(', ')}.`
-                  : 'Add preferred fiber types in Profile to highlight good finds.'}
-            </Text>
-          </View>
+      {showSensitivities || showPreference ? (
+        <View style={styles.pairRow}>
+          {showSensitivities ? (
+            <View style={styles.pairCol}>
+              <Text style={styles.sectionLabel}>SENSITIVITIES</Text>
+              <AllergyAlertCard alert={allergyAlert!} compact stacked />
+            </View>
+          ) : null}
+          {showPreference ? (
+            <View style={styles.pairCol}>
+              <Text style={styles.sectionLabel}>PREFERENCE</Text>
+              <PreferenceMatchRow match={preferenceMatch} />
+            </View>
+          ) : null}
         </View>
-      </SectionBlock>
+      ) : null}
 
-      <ScanAnotherButton onPress={onScanAnother} />
+      {showFit ? (
+        <SectionBlock title="WEATHER & OCCASION">
+          <ContextFitGroups fits={dressingFits} />
+        </SectionBlock>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 22,
+    gap: 20,
   },
   section: {
     gap: 10,
@@ -237,113 +291,142 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: BrandColors.textMuted,
   },
-  promptCard: {
+  pairRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+  pairCol: {
+    flex: 1,
     gap: 8,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
-    backgroundColor: BrandColors.white,
+    minWidth: 0,
   },
-  promptTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.text,
+  setupBlock: {
+    gap: 8,
   },
-  promptBody: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
+  setupHint: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
     color: BrandColors.textMuted,
   },
-  promptButton: {
-    alignSelf: 'flex-start',
-    marginTop: 2,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+  setupRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  setupChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
     borderRadius: 999,
-    backgroundColor: BrandColors.lavenderCard,
     borderWidth: 1,
     borderColor: BrandColors.border,
+    backgroundColor: BrandColors.lavender,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  promptButtonText: {
+  setupChipText: {
     fontFamily: Fonts.semiBold,
-    fontSize: 12,
-    color: BrandColors.primary,
+    fontSize: 13,
+    color: BrandColors.primaryDark,
   },
-  fitList: {
+  fitGroups: {
+    gap: 12,
+  },
+  fitGroup: {
+    gap: 6,
+  },
+  fitGroupLabel: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    color: BrandColors.textMuted,
+    paddingHorizontal: 2,
+  },
+  fitCard: {
     borderRadius: 14,
     borderWidth: 1,
     borderColor: BrandColors.borderLight,
     backgroundColor: BrandColors.white,
-    overflow: 'hidden',
+    paddingHorizontal: 12,
   },
-  fitCard: {
-    gap: 4,
-    padding: 14,
+  fitRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 12,
   },
-  fitCardBorder: {
-    borderBottomWidth: 1,
+  fitRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: BrandColors.borderLight,
   },
-  fitHeader: {
+  fitIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.lavender,
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  fitBody: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  fitHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
   },
   fitLabel: {
-    flex: 1,
     fontFamily: Fonts.semiBold,
     fontSize: 14,
     color: BrandColors.text,
+    flex: 1,
   },
-  fitBadge: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 10,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
+  fitSummary: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BrandColors.textMuted,
   },
-  fitGreat: {
-    color: '#15803d',
-    backgroundColor: '#f0fdf4',
-  },
-  fitOkay: {
-    color: BrandColors.primaryDark,
-    backgroundColor: BrandColors.lavenderCard,
-  },
-  fitPoor: {
-    color: '#b45309',
-    backgroundColor: '#fffbeb',
-  },
-  altNames: {
-    fontFamily: Fonts.medium,
+  fitAltLine: {
+    fontFamily: Fonts.regular,
     fontSize: 12,
     lineHeight: 17,
+    color: BrandColors.textMuted,
+    marginTop: 1,
+  },
+  fitAltValue: {
+    fontFamily: Fonts.semiBold,
     color: BrandColors.primaryDark,
   },
-  preferenceCard: {
+  statusBadge: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    flexShrink: 0,
+  },
+  statusBadgeText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 11,
+  },
+  preferenceCard: {
+    flex: 1,
+    gap: 6,
     borderRadius: 14,
-    padding: 14,
     borderWidth: 1,
     borderColor: BrandColors.borderLight,
     backgroundColor: BrandColors.white,
-  },
-  preferenceMatch: {
-    backgroundColor: '#fafffe',
-  },
-  preferenceNeutral: {
-    backgroundColor: BrandColors.white,
-  },
-  preferenceText: {
-    flex: 1,
-    gap: 3,
+    padding: 12,
+    minHeight: 112,
   },
   preferenceTitle: {
     fontFamily: Fonts.semiBold,
@@ -352,7 +435,7 @@ const styles = StyleSheet.create({
   },
   preferenceBody: {
     fontFamily: Fonts.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
     color: BrandColors.textMuted,
   },

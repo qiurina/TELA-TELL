@@ -320,7 +320,7 @@ export const Recycle: FC<IconProps> = (props) => {
 };
 
 export const Heart: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
+  const { color, strokeWidth, fill } = { ...defaults, ...props };
   return (
     <Svg {...iconProps(props)}>
       <Path
@@ -329,7 +329,49 @@ export const Heart: FC<IconProps> = (props) => {
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
+        fill={fill}
       />
+    </Svg>
+  );
+};
+
+export const Bookmark: FC<IconProps> = (props) => {
+  const { color, strokeWidth, fill } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path
+        d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={fill}
+      />
+    </Svg>
+  );
+};
+
+export const Trash2: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path d="M3 6h18" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M10 11v6" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M14 11v6" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 };
@@ -355,6 +397,33 @@ export const Smile: FC<IconProps> = (props) => {
       <Path d="M8 14s1.5 2 4 2 4-2 4-2" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
       <Path d="M9 9h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
       <Path d="M15 9h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+};
+
+export const Baby: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path
+        d="M10 16c3.5 0 5-1.5 5-3.5V11h-1.5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M14 16c-3.5 0-5-1.5-5-3.5V11h1.5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M12 4a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3Z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M9 8H5a2 2 0 0 0-2 2v1a3 3 0 0 0 3 3h1" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M15 8h4a2 2 0 0 1 2 2v1a3 3 0 0 1-3 3h-1" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx="9.5" cy="12.5" r="0.5" fill={color} stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx="14.5" cy="12.5" r="0.5" fill={color} stroke={color} strokeWidth={strokeWidth} />
     </Svg>
   );
 };
@@ -417,6 +486,23 @@ export const Shield: FC<IconProps> = (props) => {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </Svg>
+  );
+};
+
+export const ShieldAlert: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path
+        d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M12 8v4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 16h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 };

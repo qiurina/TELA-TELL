@@ -7,13 +7,12 @@ import {
 } from '@/features/auth/components/auth-buttons';
 import { AuthWelcomeLayout } from '@/features/auth/components/auth-welcome-layout';
 import { useAuth } from '@/features/auth/context/auth-provider';
-import { PROTOTYPE_ALWAYS_SHOW_WELCOME } from '@/features/auth/lib/auth-session';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { isLoading, hasCompletedOnboarding } = useAuth();
+  const { isLoading, isSignedIn } = useAuth();
 
-  if (!PROTOTYPE_ALWAYS_SHOW_WELCOME && !isLoading && hasCompletedOnboarding) {
+  if (!isLoading && isSignedIn) {
     return <Redirect href={'/(tabs)' as Href} />;
   }
 

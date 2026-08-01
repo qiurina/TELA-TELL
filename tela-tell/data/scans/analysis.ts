@@ -14,7 +14,6 @@ export {
 
 export const CONFIDENCE_HIGH_THRESHOLD = 75;
 export const CONFIDENCE_LOW_THRESHOLD = 60;
-export const MISLABEL_ALERT_MIN_CONFIDENCE = 75;
 
 export type ConfidenceLevel = 'high' | 'moderate' | 'low';
 
@@ -70,48 +69,4 @@ export function getSignificantFibers(
 
 export function isBlendDetected(compositions: CompositionInput[]): boolean {
   return getSignificantFibers(compositions).length >= 2;
-}
-
-function formatBlendFiberPhrase(fibers: string[]): string {
-  const labels = fibers.map((fiber) => fiber.toLowerCase());
-
-  if (labels.length === 0) {
-    return '';
-  }
-  if (labels.length === 1) {
-    return labels[0];
-  }
-  if (labels.length === 2) {
-    return `${labels[0]} and ${labels[1]}`;
-  }
-
-  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
-}
-
-export type BlendNoticeContent = {
-  title: string;
-  body: string;
-  caution?: string;
-};
-
-export function getBlendNotice(
-  compositions: CompositionInput[],
-  confidence?: number,
-): BlendNoticeContent | null {
-  if (!isBlendDetected(compositions)) {
-    return null;
-  }
-
-  const topFibers = getSignificantFibers(compositions)
-    .slice(0, 2)
-    .map((item) => item.material);
-  const fiberPhrase = formatBlendFiberPhrase(topFibers);
-  const isLowConfidence =
-    confidence !== undefined && getConfidenceLevel(confidence) === 'low';
-
-  return {
-    title: 'Multiple fibers detected',
-    body: `Possible ${fiberPhrase} blend. Visual estimate only.`,
-    caution: isLowConfidence ? 'Low confidence. Rescan recommended.' : undefined,
-  };
 }

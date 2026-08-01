@@ -84,7 +84,7 @@ export default function RegionSelectScreen() {
         </Pressable>
         <View style={styles.headerText}>
           <Text style={styles.title}>Mark Fabric Regions</Text>
-          <Text style={styles.subtitle}>Step 2 — box each swatch on the photo</Text>
+          <Text style={styles.subtitle}>Step 2. Box each swatch on the photo</Text>
         </View>
       </View>
 

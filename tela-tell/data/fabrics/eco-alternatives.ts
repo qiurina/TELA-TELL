@@ -1,5 +1,10 @@
 import type { EcoAlternative, FabricComposition } from '@/data/scans/mock-data';
-import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import {
+  getFabricCategory,
+  resolveFabricAlias,
+  type SupportedFabric,
+} from '@/data/fabrics/fabrics';
+import { getSignificantFibers, isBlendDetected } from '@/data/scans/analysis';
 
 export type EcoGuidance = {
   ecoAlternatives: EcoAlternative[];
@@ -9,6 +14,17 @@ export type EcoGuidance = {
     donate: string;
     upcycle: string;
   };
+};
+
+export type EcoGuidanceContext = {
+  kind: 'blend' | 'mostly' | 'mixed';
+  title: string;
+  /** Optional mix / detail line (e.g. fiber %). */
+  detail?: string;
+};
+
+export type EcoGuidanceResult = EcoGuidance & {
+  context: EcoGuidanceContext;
 };
 
 type EcoFiberGuide = EcoGuidance;
@@ -271,11 +287,11 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Cotton-linen blend',
-        similarity: 'Softer everyday drape for warm-climate pieces.',
+        similarity: 'Softer everyday drape for warm climate pieces.',
       },
       {
         name: 'Linen',
-        similarity: 'Breathable warm-climate apparel. European flax with similar airiness.',
+        similarity: 'Breathable warm climate apparel. European flax with similar airiness.',
       },
       {
         name: 'Sisal / maguey blends',
@@ -335,33 +351,196 @@ function resolvePrimaryFiber(
   return null;
 }
 
-export function getDetectedFiberName(
-  dominantFabric: string,
-  compositions?: FabricComposition[],
+function resolveSignificantSupported(
+  compositions: FabricComposition[],
+): { fabric: SupportedFabric; percentage: number }[] {
+  const significant = getSignificantFibers(compositions);
+  const resolved: { fabric: SupportedFabric; percentage: number }[] = [];
+
+  for (const item of significant) {
+    const fabric = resolveFabricAlias(item.material);
+    if (!fabric) {
+      continue;
+    }
+    if (resolved.some((entry) => entry.fabric === fabric)) {
+      continue;
+    }
+    resolved.push({ fabric, percentage: item.percentage });
+  }
+
+  return resolved;
+}
+
+function formatFiberPhrase(fibers: SupportedFabric[]): string {
+  const labels = fibers.map((fiber) => fiber.toLowerCase());
+  if (labels.length === 0) {
+    return 'mixed fibers';
+  }
+  if (labels.length === 1) {
+    return labels[0];
+  }
+  if (labels.length === 2) {
+    return `${labels[0]}-${labels[1]}`;
+  }
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
+}
+
+function dedupeAlternatives(items: EcoAlternative[], max = 3): EcoAlternative[] {
+  const seen = new Set<string>();
+  const result: EcoAlternative[] = [];
+
+  for (const item of items) {
+    const key = item.name.trim().toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(item);
+    if (result.length >= max) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+function buildBlendAlternatives(
+  primary: SupportedFabric,
+  fibers: { fabric: SupportedFabric; percentage: number }[],
+): EcoAlternative[] {
+  const primaryGuide = ECO_GUIDANCE_BY_FIBER[primary];
+  const syntheticShare = fibers
+    .filter((item) => getFabricCategory(item.fabric) === 'Synthetic')
+    .reduce((sum, item) => sum + item.percentage, 0);
+  const hasPolyester = fibers.some((item) => item.fabric === 'Polyester');
+  const hasAcrylic = fibers.some((item) => item.fabric === 'Acrylic');
+
+  const blendFirst: EcoAlternative[] = [];
+
+  if (syntheticShare >= 15) {
+    blendFirst.push({
+      name: 'Natural-dominant blend',
+      similarity:
+        'Choose cotton, linen, or abaca-heavy pieces next time to cut synthetic share and shedding.',
+    });
+  }
+
+  if (hasPolyester) {
+    blendFirst.push({
+      name: 'Recycled polyester (rPET) blend',
+      similarity:
+        'If you still need poly performance, look for GRS or rPET tags instead of virgin polyester.',
+    });
+  }
+
+  if (hasAcrylic) {
+    blendFirst.push({
+      name: 'Cotton or wool knit',
+      similarity: 'Warmer knits with less acrylic shedding. Check loft and pilling before buying.',
+    });
+  }
+
+  if (syntheticShare < 40) {
+    blendFirst.push(...primaryGuide.ecoAlternatives);
+  } else {
+    blendFirst.push(
+      {
+        name: 'Organic cotton',
+        similarity: 'Softer everyday option with lower microplastic load than heavy synthetics.',
+      },
+      ...primaryGuide.ecoAlternatives,
+    );
+  }
+
+  return dedupeAlternatives(blendFirst, 3);
+}
+
+function buildBlendReuse(
+  fibers: { fabric: SupportedFabric; percentage: number }[],
+): EcoGuidance['reuse'] {
+  const names = fibers.map((item) => item.fabric);
+  const phrase = formatFiberPhrase(names);
+  const syntheticShare = fibers
+    .filter((item) => getFabricCategory(item.fabric) === 'Synthetic')
+    .reduce((sum, item) => sum + item.percentage, 0);
+
+  return {
+    resale: `List as a ${phrase} blend and mention the estimated mix. Buyers ask about composition on ukay pieces.`,
+    donate:
+      syntheticShare >= 25
+        ? 'Check if the donation program accepts synthetic blends before dropping it off.'
+        : 'Most barangay textile drives accept natural-leaning blends when clean and usable.',
+    upcycle:
+      syntheticShare >= 25
+        ? 'Synthetics in the blend may not compost. Better as cleaning cloths, bags, or patchwork than garden use.'
+        : 'Natural-leaning blends can become cloths, tote panels, or patchwork more easily.',
+  };
+}
+
+function buildBlendRecycledAwareness(
+  primary: SupportedFabric,
+  fibers: { fabric: SupportedFabric; percentage: number }[],
 ): string {
-  return resolvePrimaryFiber(dominantFabric, compositions) ?? 'this material';
+  const syntheticShare = fibers
+    .filter((item) => getFabricCategory(item.fabric) === 'Synthetic')
+    .reduce((sum, item) => sum + item.percentage, 0);
+  const primaryNote = ECO_GUIDANCE_BY_FIBER[primary].recycledAwareness;
+
+  if (syntheticShare >= 25) {
+    return `This looks like a blend with about ${Math.round(syntheticShare)}% synthetic content. Prefer recycled or natural-dominant tags when buying again. ${primaryNote}`;
+  }
+
+  return `Detected as a blend. Keep the full mix in mind when comparing tags. ${primaryNote}`;
 }
 
 export function getEcoGuidance(
   dominantFabric: string,
-  compositions?: FabricComposition[],
-): EcoGuidance {
-  const primary = resolvePrimaryFiber(dominantFabric, compositions);
+  compositions: FabricComposition[] = [],
+): EcoGuidanceResult {
+  const items = compositions.length > 0 ? compositions : [];
+  const significant = resolveSignificantSupported(items);
+  const primary = resolvePrimaryFiber(dominantFabric, items) ?? significant[0]?.fabric ?? null;
+  const blend = isBlendDetected(items) && significant.length >= 2;
 
   if (!primary) {
-    return MIXED_FIBER_GUIDANCE;
+    return {
+      ...MIXED_FIBER_GUIDANCE,
+      context: {
+        kind: 'mixed',
+        title: 'Mixed fibers',
+        detail: 'Check the garment tag when you can',
+      },
+    };
   }
 
-  return ECO_GUIDANCE_BY_FIBER[primary];
+  if (blend) {
+    return {
+      ecoAlternatives: buildBlendAlternatives(primary, significant),
+      recycledAwareness: buildBlendRecycledAwareness(primary, significant),
+      reuse: buildBlendReuse(significant),
+      context: {
+        kind: 'blend',
+        title: 'Blend',
+      },
+    };
+  }
+
+  return {
+    ...ECO_GUIDANCE_BY_FIBER[primary],
+    context: {
+      kind: 'mostly',
+      title: `Mostly ${primary}`,
+    },
+  };
 }
 
 export function formatDetectedLabel(dominantFabric: string): string {
   const trimmed = dominantFabric.trim();
   if (/^detected:/i.test(trimmed)) {
-    return trimmed;
+    return trimmed.replace(/^detected:\s*/i, '').trim() || trimmed;
   }
 
-  return `Primary material: ${trimmed}`;
+  return trimmed;
 }
 
 export function getEcoAlternativeText(alternative: EcoAlternative): string {

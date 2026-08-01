@@ -1,12 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const PROTOTYPE_ALWAYS_SHOW_WELCOME = true;
 
 const ONBOARDING_KEY = '@tela-tell/onboarding-complete';
 const SESSION_KEY = '@tela-tell/auth-session';
 
 export type AuthSession = {
+  userId: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  middleInitial?: string | null;
 };
 
 export async function getOnboardingComplete(): Promise<boolean> {
@@ -25,8 +28,21 @@ export async function getStoredSession(): Promise<AuthSession | null> {
   }
 
   try {
-    const parsed = JSON.parse(raw) as AuthSession;
-    return parsed.email ? parsed : null;
+    const parsed = JSON.parse(raw) as Partial<AuthSession>;
+
+    // Must have the fields from a real SQLite login/register.
+    // Old sessions that only had { email } are treated as logged out.
+    if (!parsed.userId || !parsed.email || !parsed.firstName || !parsed.lastName) {
+      return null;
+    }
+
+    return {
+      userId: parsed.userId,
+      email: parsed.email,
+      firstName: parsed.firstName,
+      lastName: parsed.lastName,
+      middleInitial: parsed.middleInitial ?? null,
+    };
   } catch {
     return null;
   }
@@ -40,7 +56,7 @@ export async function clearStoredSession(): Promise<void> {
   await AsyncStorage.removeItem(SESSION_KEY);
 }
 
-/** Prototype helper — reset first-launch welcome during development. */
+/** Dev helper — clears welcome + session during testing. */
 export async function clearOnboardingForDev(): Promise<void> {
   await AsyncStorage.multiRemove([ONBOARDING_KEY, SESSION_KEY]);
 }

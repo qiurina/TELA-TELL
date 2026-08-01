@@ -3,18 +3,35 @@ import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { ChevronRight, Eye, Search } from '@/components/ui/lucide-icons';
+import { ChevronRight, Leaf, Search, Shield } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import { FABRIC_REFERENCES } from '@/data/fabrics/fabric-references';
-import { getFiberSlug } from '@/data/fabrics/fiber-profiles';
+import { getFiberProfile, getFiberSlug } from '@/data/fabrics/fiber-profiles';
 import {
   FABRIC_CATEGORY_COLORS,
   FABRIC_REGISTRY,
   type FabricCategory,
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
+import {
+  getFiberHealthRiskLabel,
+  getFiberHealthRiskLevel,
+  type HealthRiskLevel,
+} from '@/data/fabrics/synthetic-health-risk';
+
+const RISK_CHIP_COLORS: Record<HealthRiskLevel, { text: string; background: string; border: string }> = {
+  low: { text: '#15803D', background: '#F0FDF4', border: '#BBF7D0' },
+  moderate: { text: '#B45309', background: '#FFFBEB', border: '#FDE68A' },
+  high: { text: '#B91C1C', background: '#FEF2F2', border: '#FECACA' },
+};
+
+const SUSTAINABLE_CHIP = {
+  text: '#15803D',
+  background: '#F0FDF4',
+  border: '#BBF7D0',
+};
 
 const CATEGORY_ORDER: FabricCategory[] = [
   'Natural',
@@ -134,6 +151,10 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
   const reference = FABRIC_REFERENCES[fabric];
   const category = FABRIC_REGISTRY.find((item) => item.name === fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
+  const riskLevel = getFiberHealthRiskLevel(fabric);
+  const riskLabel = getFiberHealthRiskLabel(fabric);
+  const riskStyle = RISK_CHIP_COLORS[riskLevel];
+  const isSustainable = getFiberProfile(fabric).sustainabilityRating === 'green';
 
   const handlePress = () => {
     router.push(`/(tabs)/fabrics/${getFiberSlug(fabric)}` as Href);
@@ -145,41 +166,70 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
       onPress={handlePress}
       accessibilityRole="button"
       accessibilityLabel={`Open ${fabric} profile`}>
-      <View style={styles.cardHeader}>
+      <Image
+        source={reference.image}
+        style={styles.referenceImage}
+        contentFit="cover"
+        accessibilityLabel={`${fabric} reference swatch`}
+      />
+
+      <View style={styles.copyColumn}>
         <Text style={styles.fabricName}>{fabric}</Text>
-        {categoryStyle ? (
+
+        <View style={styles.metaPills}>
+          {categoryStyle && category ? (
+            <View
+              style={[
+                styles.metaPill,
+                {
+                  backgroundColor: categoryStyle.background,
+                  borderColor: categoryStyle.border,
+                },
+              ]}>
+              <Text
+                numberOfLines={1}
+                style={[styles.metaPillText, { color: categoryStyle.text }]}>
+                {FILTER_OPTIONS.find((option) => option.value === category)?.label ?? category}
+              </Text>
+            </View>
+          ) : null}
           <View
             style={[
-              styles.categoryPill,
-              {
-                backgroundColor: categoryStyle.background,
-                borderColor: categoryStyle.border,
-              },
-            ]}>
-            <Text style={[styles.categoryText, { color: categoryStyle.text }]}>{category}</Text>
+              styles.metaPill,
+              { backgroundColor: riskStyle.background, borderColor: riskStyle.border },
+            ]}
+            accessibilityLabel={`Synthetic fiber health risk: ${riskLabel}`}>
+            <Shield size={9} color={riskStyle.text} strokeWidth={2.5} />
+            <Text numberOfLines={1} style={[styles.metaPillText, { color: riskStyle.text }]}>
+              {riskLabel}
+            </Text>
           </View>
-        ) : null}
-      </View>
-
-      <View style={styles.cardBody}>
-        <Image
-          source={reference.image}
-          style={styles.referenceImage}
-          contentFit="cover"
-          accessibilityLabel={`${fabric} reference swatch`}
-        />
-
-        <View style={styles.copyColumn}>
-          <View style={styles.detailRow}>
-            <Eye size={14} color={BrandColors.primary} strokeWidth={2} />
-            <Text style={styles.detailLabel}>Look for</Text>
-          </View>
-          <Text style={styles.detailText}>{reference.lookFor}</Text>
-          <Text style={styles.textureText}>{reference.textureNote}</Text>
+          {isSustainable ? (
+            <View
+              style={[
+                styles.metaPill,
+                {
+                  backgroundColor: SUSTAINABLE_CHIP.background,
+                  borderColor: SUSTAINABLE_CHIP.border,
+                },
+              ]}
+              accessibilityLabel="Sustainable fiber">
+              <Leaf size={9} color={SUSTAINABLE_CHIP.text} strokeWidth={2.5} />
+              <Text
+                numberOfLines={1}
+                style={[styles.metaPillText, { color: SUSTAINABLE_CHIP.text }]}>
+                Eco
+              </Text>
+            </View>
+          ) : null}
         </View>
 
-        <ChevronRight size={16} color={BrandColors.textMuted} strokeWidth={2.25} />
+        <Text style={styles.detailText} numberOfLines={2}>
+          {reference.lookFor}
+        </Text>
       </View>
+
+      <ChevronRight size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
     </Pressable>
   );
 }
@@ -303,76 +353,62 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: BrandColors.white,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: BrandColors.border,
     gap: 12,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  cardBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
   referenceImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 12,
+    width: 72,
+    height: 72,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: BrandColors.borderLight,
     backgroundColor: BrandColors.lavenderCard,
+    flexShrink: 0,
   },
   copyColumn: {
     flex: 1,
-    gap: 6,
+    gap: 4,
+    minWidth: 0,
   },
   fabricName: {
     fontFamily: Fonts.bold,
-    fontSize: 16,
+    fontSize: 15,
     color: BrandColors.text,
   },
-  categoryPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
+  metaPills: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: 4,
   },
-  categoryText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 10,
-    letterSpacing: 0.3,
-  },
-  detailRow: {
+  metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    flexShrink: 1,
+    gap: 3,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
   },
-  detailLabel: {
+  metaPillText: {
     fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    color: BrandColors.textMuted,
+    fontSize: 9,
+    letterSpacing: 0.2,
+    flexShrink: 1,
   },
   detailText: {
     fontFamily: Fonts.medium,
-    fontSize: 13,
-    lineHeight: 19,
-    color: BrandColors.text,
-  },
-  textureText: {
-    fontFamily: Fonts.regular,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
     color: BrandColors.textMuted,
+    marginTop: 2,
   },
   emptyText: {
     fontFamily: Fonts.regular,

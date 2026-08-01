@@ -14,7 +14,6 @@ import {
 
 import { ScanLine } from '@/components/ui/lucide-icons';
 import { RegionBoxOverlay } from '@/features/results/components/region-box-overlay';
-import { formatDetectedLabel } from '@/data/fabrics/eco-alternatives';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getConfidenceLabel } from '@/data/scans/analysis';
@@ -24,27 +23,35 @@ const SLIDE_HEIGHT = 320;
 
 type FabricPhotoPreviewProps = {
   imageUri?: string | null;
+  /** Main detection title shown in the photo footer. */
   detectedFabric?: string;
+  /** Optional secondary line under the title (e.g. blend percentages). */
+  detectedSubtitle?: string;
   confidence?: number;
   markedRegions?: NormalizedRect[];
   /** When set, enables swipe between the scan photo and this reference image. */
   referenceImage?: ImageSourcePropType | null;
   referenceTitle?: string;
+  /** Optional top-line caption in the photo footer (e.g. "Your scan"). */
+  scanCaption?: string;
 };
 
 export function FabricPhotoPreview({
   imageUri,
   detectedFabric,
+  detectedSubtitle,
   confidence,
   markedRegions,
   referenceImage,
   referenceTitle,
+  scanCaption,
 }: FabricPhotoPreviewProps) {
   const [slideWidth, setSlideWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const showDetection = Boolean(detectedFabric?.trim());
-  const detectedLabel = detectedFabric ? formatDetectedLabel(detectedFabric) : '';
+  const detectedLabel = detectedFabric?.trim() ?? '';
+  const subtitle = detectedSubtitle?.trim() ?? '';
   const confidenceLabel =
     confidence !== undefined ? getConfidenceLabel(confidence) : undefined;
   const hasReference = Boolean(referenceImage);
@@ -52,6 +59,8 @@ export function FabricPhotoPreview({
   const referenceLabel = referenceTitle
     ? `Reference: ${referenceTitle}`
     : 'Reference';
+  const footerCaption = scanCaption?.trim() || (hasReference ? 'Your scan' : '');
+  const showFooter = Boolean(footerCaption || showDetection);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const nextWidth = Math.round(event.nativeEvent.layout.width);
@@ -72,7 +81,7 @@ export function FabricPhotoPreview({
     <View style={[styles.slide, slideWidth > 0 ? { width: slideWidth } : styles.slideFill]}>
       {imageUri ? (
         <>
-          <Image source={{ uri: imageUri }} style={styles.image} contentFit="cover" />
+          <Image source={{ uri: imageUri }} style={styles.image} contentFit="contain" />
           {markedRegions && markedRegions.length > 0 ? (
             <RegionBoxOverlay regions={markedRegions} />
           ) : null}
@@ -85,10 +94,13 @@ export function FabricPhotoPreview({
         </View>
       )}
 
-      {hasReference || showDetection ? (
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.footerGradient}>
-          {hasReference ? <Text style={styles.slideCaption}>Your scan</Text> : null}
+      {showFooter ? (
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.78)']} style={styles.footerGradient}>
+          {footerCaption ? <Text style={styles.slideCaption}>{footerCaption}</Text> : null}
           {showDetection ? <Text style={styles.detectedLabel}>{detectedLabel}</Text> : null}
+          {showDetection && subtitle ? (
+            <Text style={styles.detectedSubtitle}>{subtitle}</Text>
+          ) : null}
         </LinearGradient>
       ) : null}
     </View>
@@ -100,9 +112,12 @@ export function FabricPhotoPreview({
         <Image source={referenceImage} style={styles.image} contentFit="cover" />
       ) : null}
 
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.footerGradient}>
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.78)']} style={styles.footerGradient}>
         <Text style={styles.slideCaption}>{referenceLabel}</Text>
         {showDetection ? <Text style={styles.detectedLabel}>{detectedLabel}</Text> : null}
+        {showDetection && subtitle ? (
+          <Text style={styles.detectedSubtitle}>{subtitle}</Text>
+        ) : null}
       </LinearGradient>
     </View>
   );
@@ -158,14 +173,17 @@ const styles = StyleSheet.create({
   },
   slide: {
     minHeight: SLIDE_HEIGHT,
+    height: SLIDE_HEIGHT,
     position: 'relative',
+    backgroundColor: '#101820',
+    overflow: 'hidden',
   },
   slideFill: {
     width: '100%',
   },
   image: {
     width: '100%',
-    minHeight: SLIDE_HEIGHT,
+    height: SLIDE_HEIGHT,
   },
   placeholder: {
     flex: 1,
@@ -220,20 +238,30 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 28,
+    paddingTop: 52,
+    paddingBottom: 30,
   },
   slideCaption: {
     fontFamily: Fonts.medium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
-    marginBottom: 2,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.78)',
+    marginBottom: 4,
   },
   detectedLabel: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: 20,
     color: BrandColors.white,
-    lineHeight: 24,
+    lineHeight: 26,
+    letterSpacing: -0.2,
+  },
+  detectedSubtitle: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.88)',
+    lineHeight: 18,
+    marginTop: 3,
   },
   dots: {
     position: 'absolute',

@@ -20,6 +20,7 @@ type SyntheticHealthRiskCardProps = {
   risk: SyntheticHealthRisk;
 };
 
+/** Compact health-risk alert for Scan Results. Detail stays in Eco Tips. */
 export function SyntheticHealthRiskCard({ risk }: SyntheticHealthRiskCardProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const levelStyle = LEVEL_STYLES[risk.level];
@@ -42,35 +43,26 @@ export function SyntheticHealthRiskCard({ risk }: SyntheticHealthRiskCardProps) 
       />
 
       <View style={styles.headerRow}>
-        <Text style={styles.cardLabel}>SYNTHETIC FIBER HEALTH RISK</Text>
+        <View style={styles.titleWrap}>
+          <Shield size={16} color={levelStyle.accent} strokeWidth={2.25} />
+          <Text style={[styles.cardLabel, { color: levelStyle.accent }]}>HEALTH RISK</Text>
+          <Text style={[styles.levelValue, { color: levelStyle.accent }]}>{risk.label}</Text>
+        </View>
         <Pressable
-          style={styles.infoButton}
+          style={[
+            styles.infoButton,
+            { backgroundColor: levelStyle.background, borderColor: levelStyle.border },
+          ]}
           onPress={() => setShowDisclaimer(true)}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="About synthetic fiber health risk">
-          <Info size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
+          <Info size={14} color={levelStyle.accent} strokeWidth={2.25} />
         </Pressable>
       </View>
 
-      <View style={styles.levelRow}>
-        <Shield size={18} color={levelStyle.accent} strokeWidth={2.25} />
-        <Text style={[styles.levelValue, { color: levelStyle.accent }]}>{risk.label}</Text>
-        <Text style={styles.fiberList} numberOfLines={1}>
-          {fiberList}
-        </Text>
-      </View>
-
-      {risk.factors.length > 0 ? (
-        <View style={styles.factorList}>
-          {risk.factors.map((factor) => (
-            <View key={factor} style={styles.factorRow}>
-              <Text style={[styles.factorBullet, { color: levelStyle.accent }]}>•</Text>
-              <Text style={styles.factorText}>{factor}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
+      <Text style={styles.summary}>{risk.summary}</Text>
+      {fiberList ? <Text style={styles.fiberList}>{fiberList}</Text> : null}
     </View>
   );
 }
@@ -80,18 +72,29 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
     padding: 14,
-    gap: 6,
+    gap: 8,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  titleWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
+    minWidth: 0,
   },
   cardLabel: {
     fontFamily: Fonts.semiBold,
     fontSize: 11,
-    letterSpacing: 1,
-    color: BrandColors.textMuted,
+    letterSpacing: 0.8,
+  },
+  levelValue: {
+    fontFamily: Fonts.bold,
+    fontSize: 14,
   },
   infoButton: {
     width: 22,
@@ -99,45 +102,17 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: BrandColors.lavenderCard,
     borderWidth: 1,
-    borderColor: BrandColors.border,
   },
-  levelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  levelValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 16,
+  summary: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BrandColors.text,
   },
   fiberList: {
-    flex: 1,
     fontFamily: Fonts.medium,
     fontSize: 12,
     color: BrandColors.textMuted,
-    textAlign: 'right',
-  },
-  factorList: {
-    gap: 4,
-    marginTop: 2,
-  },
-  factorRow: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'flex-start',
-  },
-  factorBullet: {
-    fontFamily: Fonts.bold,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  factorText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.text,
   },
 });

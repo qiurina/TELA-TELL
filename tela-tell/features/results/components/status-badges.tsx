@@ -31,22 +31,25 @@ export function StatusBadges({ sustainability }: StatusBadgesProps) {
           backgroundColor: SUSTAINABILITY_BG[sustainability.rating],
         },
       ]}>
-      <Text style={styles.badgeLabel}>SUSTAINABILITY</Text>
+      <Text style={[styles.badgeLabel, { color: sustainColor }]}>SUSTAINABILITY</Text>
       <View style={styles.badgeValueRow}>
         <View style={[styles.dot, { backgroundColor: sustainColor }]} />
         <Text style={[styles.badgeValue, { color: sustainColor }]}>{sustainability.label}</Text>
-        <Text style={styles.score}>{sustainability.score}/10</Text>
+        <Text style={[styles.score, { color: sustainColor }]}>{sustainability.score}/10</Text>
       </View>
-      <View style={styles.factorList}>
-        {(sustainability.factors ?? []).map((factor) => (
-          <View key={factor.text} style={styles.factorRow}>
-            <Text style={[styles.factorBullet, factor.positive ? styles.factorUp : styles.factorDown]}>
-              {factor.positive ? '+' : '−'}
-            </Text>
-            <Text style={styles.factorText}>{factor.text}</Text>
-          </View>
-        ))}
-      </View>
+
+      {(sustainability.factors ?? []).length > 0 ? (
+        <View style={styles.factorList}>
+          {(sustainability.factors ?? []).map((factor) => (
+            <View key={factor.text} style={styles.factorRow}>
+              <Text style={[styles.factorBullet, factor.positive ? styles.factorUp : styles.factorDown]}>
+                {factor.positive ? '+' : '−'}
+              </Text>
+              <Text style={styles.factorText}>{factor.text}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -62,7 +65,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
     fontSize: 11,
     letterSpacing: 1,
-    color: BrandColors.textMuted,
   },
   badgeValueRow: {
     flexDirection: 'row',
@@ -80,30 +82,29 @@ const styles = StyleSheet.create({
   },
   score: {
     fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.textMuted,
+    fontSize: 13,
     marginLeft: 'auto',
   },
   factorList: {
-    gap: 6,
-    marginTop: 2,
+    marginTop: 6,
+    gap: 4,
   },
   factorRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 6,
   },
   factorBullet: {
     fontFamily: Fonts.bold,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
     width: 12,
   },
   factorUp: {
-    color: '#16a34a',
+    color: '#15803d',
   },
   factorDown: {
-    color: '#ca8a04',
+    color: '#b45309',
   },
   factorText: {
     flex: 1,

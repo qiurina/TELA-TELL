@@ -52,6 +52,7 @@ export const WEATHER_CONTEXT_OPTIONS: DressingContextOption[] = [
 ];
 
 export type WeatherContext = (typeof WEATHER_CONTEXT_OPTIONS)[number]['id'];
+export type OccasionContext = (typeof OCCASION_CONTEXT_OPTIONS)[number]['id'];
 
 export const OCCASION_CONTEXT_OPTIONS: DressingContextOption[] = [
   { id: 'casual', label: 'Casual', category: 'occasion' },
@@ -78,7 +79,7 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     id: 'sunny',
     label: 'Sunny',
     bestChoices: [
-      { fabric: 'Linen', reason: 'Most breathable — stays cool under direct sun' },
+      { fabric: 'Linen', reason: 'Most breathable. Stays cool under direct sun' },
       { fabric: 'Cotton', reason: 'Absorbs sweat and feels light in heat' },
       { fabric: 'Rayon', reason: 'Flows well and dries quickly in warm air' },
     ],

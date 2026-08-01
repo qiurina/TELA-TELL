@@ -1,6 +1,7 @@
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { AuthError } from '@/db/users';
 
 import {
   AuthPrimaryButton,
@@ -8,6 +9,7 @@ import {
 } from '@/features/auth/components/auth-buttons';
 import {
   AuthEmailField,
+  AuthFormBanner,
   AuthPasswordField,
   AuthTextField,
 } from '@/features/auth/components/auth-form-field';
@@ -24,9 +26,17 @@ type RegisterFormProps = {
   onSwitchToLogin: () => void;
 };
 
+type FieldErrors = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+};
+
 export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signUp } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [middleInitial, setMiddleInitial] = useState('');
   const [lastName, setLastName] = useState('');
@@ -34,41 +44,71 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const clearErrors = () => {
+    setFieldErrors({});
+    setFormError(null);
+  };
 
   const handleRegister = async () => {
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     const trimmedEmail = email.trim();
+    const nextErrors: FieldErrors = {};
 
     if (!trimmedFirstName) {
-      Alert.alert('First name required', 'Enter your first name to continue.');
-      return;
+      nextErrors.firstName = 'Enter your first name.';
     }
 
     if (!trimmedLastName) {
-      Alert.alert('Last name required', 'Enter your last name to continue.');
-      return;
+      nextErrors.lastName = 'Enter your last name.';
     }
 
     if (!isValidEmail(trimmedEmail)) {
-      Alert.alert('Check your email', 'Enter a valid email address to continue.');
-      return;
+      nextErrors.email = 'Enter a valid email address.';
     }
 
     if (!isPasswordValid(password)) {
-      Alert.alert('Check your password', 'Make sure your password meets all requirements.');
-      return;
+      nextErrors.password = 'Password must meet all requirements below.';
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Passwords do not match', 'Make sure both password fields match.');
+      nextErrors.confirmPassword = 'Passwords do not match.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError(null);
       return;
     }
 
+    setFieldErrors({});
+    setFormError(null);
     setIsSubmitting(true);
+
     try {
-      await signIn(trimmedEmail);
+      await signUp({
+        firstName: trimmedFirstName,
+        lastName: trimmedLastName,
+        middleInitial: middleInitial.trim() || null,
+        email: trimmedEmail,
+        password,
+      });
       router.replace('/(tabs)' as Href);
+    } catch (error) {
+      const message =
+        error instanceof AuthError
+          ? error.message
+          : 'Could not create your account. Please try again.';
+
+      if (/already exists/i.test(message)) {
+        setFieldErrors({ email: message });
+        setFormError(null);
+      } else {
+        setFormError(message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -83,10 +123,14 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
               label="First Name"
               required
               value={firstName}
-              onChangeText={setFirstName}
+              onChangeText={(value) => {
+                setFirstName(value);
+                clearErrors();
+              }}
               autoCapitalize="words"
               autoComplete="given-name"
               textContentType="givenName"
+              error={fieldErrors.firstName}
             />
           </View>
           <View style={styles.miCol}>
@@ -95,7 +139,9 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
               hideIcon
               fieldStyle={styles.miField}
               value={middleInitial}
-              onChangeText={(value) => setMiddleInitial(value.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase())}
+              onChangeText={(value) =>
+                setMiddleInitial(value.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase())
+              }
               autoCapitalize="characters"
               autoComplete="off"
               maxLength={2}
@@ -107,18 +153,33 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           label="Last Name"
           required
           value={lastName}
-          onChangeText={setLastName}
+          onChangeText={(value) => {
+            setLastName(value);
+            clearErrors();
+          }}
           autoCapitalize="words"
           autoComplete="family-name"
           textContentType="familyName"
+          error={fieldErrors.lastName}
         />
-        <AuthEmailField value={email} onChangeText={setEmail} />
+        <AuthEmailField
+          value={email}
+          onChangeText={(value) => {
+            setEmail(value);
+            clearErrors();
+          }}
+          error={fieldErrors.email}
+        />
         <View>
           <AuthPasswordField
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(value) => {
+              setPassword(value);
+              clearErrors();
+            }}
             textContentType="newPassword"
             autoComplete="new-password"
+            error={fieldErrors.password}
           />
           <PasswordRequirements password={password} />
         </View>
@@ -126,13 +187,18 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           label="Confirm Password"
           placeholder="Confirm Password"
           value={confirmPassword}
-          onChangeText={setConfirmPassword}
+          onChangeText={(value) => {
+            setConfirmPassword(value);
+            clearErrors();
+          }}
           textContentType="newPassword"
           autoComplete="new-password"
+          error={fieldErrors.confirmPassword}
         />
       </AuthFormFields>
 
       <AuthFormActions>
+        <AuthFormBanner message={formError} />
         <AuthPrimaryButton
           label={isSubmitting ? 'Creating account...' : 'Sign up'}
           onPress={() => void handleRegister()}

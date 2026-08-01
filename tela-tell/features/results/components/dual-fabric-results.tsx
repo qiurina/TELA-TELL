@@ -12,6 +12,7 @@ import { getLastCaptureUri } from '@/features/scan/lib/last-capture';
 
 type DualFabricResultsProps = {
   regions: DualSwatchRegion[];
+  scanImageUri?: string | null;
 };
 
 function getBarStyle(material: string, index: number) {
@@ -43,9 +44,15 @@ function CompositionBars({ region }: { region: DualSwatchRegion }) {
   );
 }
 
-function FabricRegionCard({ region }: { region: DualSwatchRegion }) {
+function FabricRegionCard({
+  region,
+  scanImageUri,
+}: {
+  region: DualSwatchRegion;
+  scanImageUri?: string | null;
+}) {
   const reference = getFabricReference(region.dominantFabric, region.compositions);
-  const capturedPhotoUri = getLastCaptureUri();
+  const photoUri = scanImageUri ?? getLastCaptureUri();
 
   return (
     <View style={[styles.card, faintCardShadow()]}>
@@ -59,7 +66,7 @@ function FabricRegionCard({ region }: { region: DualSwatchRegion }) {
 
       {reference ? (
         <FabricReferenceComparison
-          scanImageUri={capturedPhotoUri}
+          scanImageUri={photoUri}
           reference={reference}
           detectedLabel={region.dominantFabric}
           confidence={region.confidence}
@@ -72,16 +79,16 @@ function FabricRegionCard({ region }: { region: DualSwatchRegion }) {
   );
 }
 
-export function DualFabricResults({ regions }: DualFabricResultsProps) {
+export function DualFabricResults({ regions, scanImageUri }: DualFabricResultsProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.sectionLabel}>MULTI-FABRIC DETECTION</Text>
       <Text style={styles.sectionHint}>
-        Each boxed region was classified separately — prototype demo (Fabric 1 → linen, Fabric 2 →
-        cotton).
+        Each boxed region was classified separately. Prototype demo: Fabric 1 is linen, Fabric 2 is
+        cotton.
       </Text>
       {regions.map((region) => (
-        <FabricRegionCard key={region.label} region={region} />
+        <FabricRegionCard key={region.label} region={region} scanImageUri={scanImageUri} />
       ))}
     </View>
   );

@@ -1,12 +1,15 @@
-import { useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useCallback, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
+  Bookmark,
   Calendar,
   Heart,
   Info,
   LogOut,
   Sun,
+  Trash2,
   TriangleAlert,
 } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
@@ -24,31 +27,67 @@ import {
   getOccasionDisplay,
   getPreferredFabricsDisplay,
   getProfileInitial,
-  getScanStats,
   getSensitiveFabricsDisplay,
   getSkinToneDisplay,
   getWeatherDisplay,
 } from '@/features/profile/lib/profile-display';
+import {
+  getUserPreferencesSnapshot,
+  hydrateUserPreferences,
+  subscribeUserPreferences,
+} from '@/features/profile/lib/user-preferences';
 
-const PROFILE_SKIN_TONE_HREF = '/(tabs)/profile/skin-tone' as Href;
-const PROFILE_ALLERGIES_HREF = '/(tabs)/profile/fabric-allergies' as Href;
-const PROFILE_PREFERRED_HREF = '/(tabs)/profile/preferred-fabrics' as Href;
-const PROFILE_WEATHER_HREF = '/(tabs)/profile/weather' as Href;
-const PROFILE_OCCASION_HREF = '/(tabs)/profile/occasion' as Href;
-const PROFILE_ABOUT_HREF = '/(tabs)/profile/about' as Href;
+/** Root-stack routes (siblings of tabs) — tab bar stays under the push, no mid-anim hide. */
+const PROFILE_SKIN_TONE_HREF = '/skin-tone' as Href;
+const PROFILE_ALLERGIES_HREF = '/fabric-allergies' as Href;
+const PROFILE_PREFERRED_HREF = '/preferred-fabrics' as Href;
+const PROFILE_WEATHER_HREF = '/weather' as Href;
+const PROFILE_OCCASION_HREF = '/occasion' as Href;
+const PROFILE_ABOUT_HREF = '/about' as Href;
+const PROFILE_FAVORITES_HREF = '/favorite-scans' as Href;
+const PROFILE_DELETED_HREF = '/deleted-scans' as Href;
 
 export function ProfileSignedInView() {
   const router = useRouter();
   const { session, signOut } = useAuth();
   const email = session?.email ?? '';
-  const displayName = formatProfileDisplayName(email);
-  const initial = getProfileInitial(email);
-  const stats = getScanStats();
-  const skinTone = getSkinToneDisplay();
-  const allergies = getSensitiveFabricsDisplay();
-  const preferred = getPreferredFabricsDisplay();
-  const weather = getWeatherDisplay();
-  const occasion = getOccasionDisplay();
+  const displayName = session
+    ? formatProfileDisplayName(session)
+    : formatProfileDisplayName(email);
+  const initial = session ? getProfileInitial(session) : getProfileInitial(email);
+
+  const prefs = useSyncExternalStore(
+    subscribeUserPreferences,
+    getUserPreferencesSnapshot,
+    getUserPreferencesSnapshot,
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      void (async () => {
+        await hydrateUserPreferences(session?.userId ?? null);
+        if (!active) {
+          return;
+        }
+      })();
+
+      return () => {
+        active = false;
+      };
+    }, [session?.userId]),
+  );
+
+  const openNested = (href: Href) => {
+    router.push(href);
+  };
+
+  const skinTone = getSkinToneDisplay(prefs);
+  const allergies = getSensitiveFabricsDisplay(prefs);
+  const preferred = getPreferredFabricsDisplay(prefs);
+  const weather = getWeatherDisplay(prefs);
+  const occasion = getOccasionDisplay(prefs);
 
   return (
     <>
@@ -58,21 +97,6 @@ export function ProfileSignedInView() {
         </View>
         <Text style={styles.name}>{displayName}</Text>
         <Text style={styles.email}>{email}</Text>
-      </View>
-
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, faintCardShadow()]}>
-          <Text style={[styles.statValue, styles.statPrimary]}>{stats.totalScans}</Text>
-          <Text style={styles.statLabel}>scans</Text>
-        </View>
-        <View style={[styles.statCard, faintCardShadow()]}>
-          <Text style={[styles.statValue, styles.statSustainable]}>{stats.sustainableCount}</Text>
-          <Text style={styles.statLabel}>sustainable</Text>
-        </View>
-        <View style={[styles.statCard, faintCardShadow()]}>
-          <Text style={[styles.statValue, styles.statMislabeled]}>{stats.mislabeledCount}</Text>
-          <Text style={styles.statLabel}>mislabeled</Text>
-        </View>
       </View>
 
       <View style={styles.section}>
@@ -88,31 +112,50 @@ export function ProfileSignedInView() {
                 <View style={styles.toneDotEmpty} />
               )
             }
-            onPress={() => router.push(PROFILE_SKIN_TONE_HREF)}
+            onPress={() => openNested(PROFILE_SKIN_TONE_HREF)}
           />
           <ProfilePreferenceRow
             title="Fabric allergies"
             value={allergies}
             icon={<TriangleAlert size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
-            onPress={() => router.push(PROFILE_ALLERGIES_HREF)}
+            onPress={() => openNested(PROFILE_ALLERGIES_HREF)}
           />
           <ProfilePreferenceRow
             title="Preferred fabrics"
             value={preferred}
             icon={<Heart size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
-            onPress={() => router.push(PROFILE_PREFERRED_HREF)}
+            onPress={() => openNested(PROFILE_PREFERRED_HREF)}
           />
           <ProfilePreferenceRow
             title="Weather"
             value={weather}
             icon={<Sun size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
-            onPress={() => router.push(PROFILE_WEATHER_HREF)}
+            onPress={() => openNested(PROFILE_WEATHER_HREF)}
           />
           <ProfilePreferenceRow
             title="Occasion"
             value={occasion}
             icon={<Calendar size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
-            onPress={() => router.push(PROFILE_OCCASION_HREF)}
+            onPress={() => openNested(PROFILE_OCCASION_HREF)}
+            isLast
+          />
+        </ProfileGroupedCard>
+      </View>
+
+      <View style={styles.section}>
+        <ProfileSectionLabel title="My scans" />
+        <ProfileGroupedCard>
+          <ProfilePreferenceRow
+            title="Favorite scans"
+            value="Bookmarked results"
+            icon={<Bookmark size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
+            onPress={() => openNested(PROFILE_FAVORITES_HREF)}
+          />
+          <ProfilePreferenceRow
+            title="Recently deleted"
+            value="Restore within 30 days"
+            icon={<Trash2 size={18} color="#DC2626" strokeWidth={2.25} />}
+            onPress={() => openNested(PROFILE_DELETED_HREF)}
             isLast
           />
         </ProfileGroupedCard>
@@ -124,7 +167,7 @@ export function ProfileSignedInView() {
           <ProfilePreferenceRow
             title="About TELA-TELL"
             icon={<Info size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
-            onPress={() => router.push(PROFILE_ABOUT_HREF)}
+            onPress={() => openNested(PROFILE_ABOUT_HREF)}
             isLast
           />
         </ProfileGroupedCard>
@@ -132,7 +175,12 @@ export function ProfileSignedInView() {
 
       <Pressable
         style={({ pressed }) => [styles.logoutButton, faintCardShadow(), pressed && styles.pressed]}
-        onPress={() => void signOut()}
+        onPress={() => {
+          void (async () => {
+            await signOut();
+            router.replace('/welcome' as Href);
+          })();
+        }}
         accessibilityRole="button"
         accessibilityLabel="Log out">
         <LogOut size={18} color={SUSTAINABILITY_DOT.red} strokeWidth={2.25} />
@@ -173,41 +221,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     fontSize: 13,
     color: BrandColors.textMuted,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 8,
-  },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: BrandColors.white,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
-  },
-  statValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 22,
-  },
-  statPrimary: {
-    color: BrandColors.primary,
-  },
-  statSustainable: {
-    color: SUSTAINABILITY_DOT.green,
-  },
-  statMislabeled: {
-    color: SUSTAINABILITY_DOT.red,
-  },
-  statLabel: {
-    fontFamily: Fonts.medium,
-    fontSize: 11,
-    color: BrandColors.textMuted,
-    textTransform: 'lowercase',
   },
   section: {
     marginTop: 8,

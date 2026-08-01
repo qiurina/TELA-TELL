@@ -1,14 +1,19 @@
 import type { FC } from 'react';
 import { Image } from 'expo-image';
-import { StyleSheet, Text, View, type DimensionValue } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import {
+  Calendar,
+  Check,
   CircleCheck,
   CircleX,
   Droplets,
   Leaf,
   MoveHorizontal,
+  Recycle,
   Shield,
+  Sun,
+  TriangleAlert,
   Wind,
   type IconProps,
 } from '@/components/ui/lucide-icons';
@@ -16,21 +21,24 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import { FABRIC_REFERENCES } from '@/data/fabrics/fabric-references';
-import type { FiberProfile, SustainabilityBreakdown } from '@/data/fabrics/fiber-profiles';
+import type { FiberProfile } from '@/data/fabrics/fiber-profiles';
 import { FABRIC_CATEGORY_COLORS, FABRIC_REGISTRY } from '@/data/fabrics/fabrics';
-import {
-  WEATHER_CONTEXT_OPTIONS,
-  type WeatherContext,
-} from '@/data/preferences/occasion-weather';
-import { DRESSING_CONTEXT_ICONS } from '@/features/profile/dressing-context-icons';
+import { getDressingContextLabel } from '@/data/preferences/occasion-weather';
 import {
   SUSTAINABILITY_DOT,
   getFabricPropertyColor,
   type SustainabilityRating,
 } from '@/data/scans/mock-data';
+import {
+  getEnvironmentalSummary,
+  getHealthVerdicts,
+  getSheddingColor,
+} from '@/features/fabrics/lib/fiber-profile-insights';
 
 type FiberProfileContentProps = {
   profile: FiberProfile;
+  /** When false, skips the large reference hero (e.g. scan results already show a comparison). */
+  showHero?: boolean;
 };
 
 const SUSTAINABILITY_BADGE: Record<
@@ -41,98 +49,6 @@ const SUSTAINABILITY_BADGE: Record<
   yellow: { background: '#FFFBEB', border: '#FDE68A', text: '#B45309' },
   red: { background: '#FEF2F2', border: '#FECACA', text: '#B91C1C' },
 };
-
-const BREAKDOWN_LABELS: { key: keyof SustainabilityBreakdown; label: string }[] = [
-  { key: 'biodegradability', label: 'Biodegradability' },
-  { key: 'waterEfficiency', label: 'Water usage' },
-  { key: 'recyclability', label: 'Recyclability' },
-  { key: 'lowCarbon', label: 'Carbon footprint' },
-];
-
-const BREAKDOWN_GOOD = '#16a34a';
-const BREAKDOWN_WARN = '#ea580c';
-const BREAKDOWN_MID = '#ca8a04';
-
-function getBreakdownStatus(
-  metric: keyof SustainabilityBreakdown,
-  score: number,
-): { label: string; color: string; fillColor: string; barWidth: number } {
-  const clamped = Math.min(Math.max(score, 0), 10);
-
-  if (metric === 'waterEfficiency') {
-    if (clamped < 5) {
-      return {
-        label: 'High concern',
-        color: BREAKDOWN_WARN,
-        fillColor: BREAKDOWN_WARN,
-        barWidth: (10 - clamped) * 10 + 10,
-      };
-    }
-    if (clamped < 7) {
-      return {
-        label: 'Moderate',
-        color: BREAKDOWN_MID,
-        fillColor: BREAKDOWN_MID,
-        barWidth: clamped * 10,
-      };
-    }
-    return {
-      label: 'Low usage',
-      color: BREAKDOWN_GOOD,
-      fillColor: BREAKDOWN_GOOD,
-      barWidth: clamped * 10,
-    };
-  }
-
-  if (metric === 'lowCarbon') {
-    if (clamped >= 8) {
-      return { label: 'Low', color: BREAKDOWN_GOOD, fillColor: BREAKDOWN_GOOD, barWidth: clamped * 10 };
-    }
-    if (clamped >= 6) {
-      return { label: 'Good', color: BREAKDOWN_GOOD, fillColor: BREAKDOWN_GOOD, barWidth: clamped * 10 };
-    }
-    if (clamped >= 4) {
-      return { label: 'Moderate', color: BREAKDOWN_MID, fillColor: BREAKDOWN_MID, barWidth: clamped * 10 };
-    }
-    return { label: 'High', color: BREAKDOWN_WARN, fillColor: BREAKDOWN_WARN, barWidth: clamped * 10 };
-  }
-
-  if (clamped >= 8.5) {
-    return { label: 'High', color: BREAKDOWN_GOOD, fillColor: BREAKDOWN_GOOD, barWidth: clamped * 10 };
-  }
-  if (clamped >= 6.5) {
-    return { label: 'Good', color: BREAKDOWN_GOOD, fillColor: BREAKDOWN_GOOD, barWidth: clamped * 10 };
-  }
-  if (clamped >= 4.5) {
-    return { label: 'Moderate', color: BREAKDOWN_MID, fillColor: BREAKDOWN_MID, barWidth: clamped * 10 };
-  }
-  return { label: 'Low', color: BREAKDOWN_WARN, fillColor: BREAKDOWN_WARN, barWidth: clamped * 10 };
-}
-
-function BreakdownBar({
-  label,
-  metric,
-  score,
-}: {
-  label: string;
-  metric: keyof SustainabilityBreakdown;
-  score: number;
-}) {
-  const status = getBreakdownStatus(metric, score);
-  const width = `${Math.min(status.barWidth, 100)}%` as DimensionValue;
-
-  return (
-    <View style={styles.breakdownRow}>
-      <View style={styles.breakdownHeader}>
-        <Text style={styles.breakdownLabel}>{label}</Text>
-        <Text style={[styles.breakdownStatus, { color: status.color }]}>{status.label}</Text>
-      </View>
-      <View style={styles.breakdownTrack}>
-        <View style={[styles.breakdownFill, { width, backgroundColor: status.fillColor }]} />
-      </View>
-    </View>
-  );
-}
 
 function QuickStat({
   icon: Icon,
@@ -147,31 +63,109 @@ function QuickStat({
 }) {
   return (
     <View style={[styles.quickStat, faintCardShadow()]}>
-      <Icon size={16} color={BrandColors.primary} strokeWidth={2.25} />
-      <Text style={styles.quickStatLabel}>{label}</Text>
+      <View style={styles.quickStatHeader}>
+        <Icon size={15} color={BrandColors.primary} strokeWidth={2.25} />
+        <Text style={styles.quickStatLabel} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
       <Text style={[styles.quickStatValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
     </View>
   );
 }
 
-function PropertyCell({ label, value }: { label: string; value: string }) {
+function SustainabilityScoreStack({
+  score,
+  label,
+  rating,
+}: {
+  score: number;
+  label: string;
+  rating: SustainabilityRating;
+}) {
+  const badgeStyle = SUSTAINABILITY_BADGE[rating];
+  const scoreColor = SUSTAINABILITY_DOT[rating];
+
+  return (
+    <View style={styles.sustainabilityBadgeWrap}>
+      <View
+        style={[
+          styles.sustainabilityBadge,
+          { backgroundColor: badgeStyle.background, borderColor: badgeStyle.border },
+        ]}>
+        <View style={[styles.sustainabilityDot, { backgroundColor: scoreColor }]} />
+        <Text style={[styles.sustainabilityBadgeText, { color: badgeStyle.text }]}>{label}</Text>
+      </View>
+      <Text style={[styles.sustainabilityScore, { color: scoreColor }]}>
+        {score.toFixed(1)}
+        <Text style={styles.sustainabilityScoreSuffix}> / 10</Text>
+      </Text>
+    </View>
+  );
+}
+
+function PropertyCell({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon?: FC<IconProps>;
+  label: string;
+  value: string;
+}) {
   return (
     <View style={styles.propertyCell}>
-      <Text style={styles.propertyLabel}>{label}</Text>
+      <View style={styles.propertyLabelRow}>
+        {Icon ? <Icon size={13} color={BrandColors.textMuted} strokeWidth={2.25} /> : null}
+        <Text style={styles.propertyLabel}>{label}</Text>
+      </View>
       <Text style={styles.propertyValue}>{value}</Text>
     </View>
   );
 }
 
-function WeatherChip({ context }: { context: WeatherContext }) {
-  const label =
-    WEATHER_CONTEXT_OPTIONS.find((option) => option.id === context)?.label ?? context;
-  const Icon = DRESSING_CONTEXT_ICONS[context];
+function InsightLine({
+  text,
+  tone,
+}: {
+  text: string;
+  tone: 'good' | 'caution' | 'warn';
+}) {
+  const icon =
+    tone === 'good' ? (
+      <CircleCheck size={16} color="#16A34A" strokeWidth={2.25} />
+    ) : tone === 'caution' ? (
+      <TriangleAlert size={16} color="#B45309" strokeWidth={2.25} />
+    ) : (
+      <CircleX size={16} color="#DC2626" strokeWidth={2.25} />
+    );
 
   return (
-    <View style={styles.weatherChip}>
-      <Icon size={14} color={BrandColors.primaryDark} strokeWidth={2.25} />
-      <Text style={styles.weatherChipText}>{label}</Text>
+    <View style={styles.insightLine}>
+      {icon}
+      <Text style={styles.insightText}>{text}</Text>
+    </View>
+  );
+}
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+  valueColor,
+}: {
+  icon: FC<IconProps>;
+  label: string;
+  value: string;
+  valueColor?: string;
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabelWrap}>
+        <Icon size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
+        <Text style={styles.infoLabel}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
     </View>
   );
 }
@@ -180,109 +174,165 @@ function SectionLabel({ children }: { children: string }) {
   return <Text style={styles.sectionLabel}>{children}</Text>;
 }
 
-export function FiberProfileContent({ profile }: FiberProfileContentProps) {
+function ContextChipGroup({
+  title,
+  icon: Icon,
+  labels,
+}: {
+  title: string;
+  icon: FC<IconProps>;
+  labels: string[];
+}) {
+  if (labels.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.contextGroup}>
+      <View style={styles.contextHeader}>
+        <Icon size={14} color={BrandColors.primary} strokeWidth={2.25} />
+        <Text style={styles.contextTitle}>{title}</Text>
+      </View>
+      <View style={styles.chipWrap}>
+        {labels.map((label) => (
+          <View key={label} style={styles.useChip}>
+            <Text style={styles.useChipText}>{label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export function FiberProfileContent({ profile, showHero = true }: FiberProfileContentProps) {
   const reference = FABRIC_REFERENCES[profile.fabric];
   const category = FABRIC_REGISTRY.find((item) => item.name === profile.fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
-  const badgeStyle = SUSTAINABILITY_BADGE[profile.sustainabilityRating];
-  const scoreColor = SUSTAINABILITY_DOT[profile.sustainabilityRating];
+  const health = getHealthVerdicts(profile);
+  const environment = getEnvironmentalSummary(profile);
+
+  const categoryPill = categoryStyle ? (
+    <View
+      style={[
+        styles.categoryPill,
+        {
+          backgroundColor: categoryStyle.background,
+          borderColor: categoryStyle.border,
+        },
+      ]}>
+      <Text style={[styles.categoryText, { color: categoryStyle.text }]}>{category}</Text>
+    </View>
+  ) : (
+    <Text style={styles.fiberType}>{profile.fiberType}</Text>
+  );
+
+  const sustainabilityStack = (
+    <SustainabilityScoreStack
+      score={profile.sustainabilityScore}
+      label={profile.sustainabilityLabel}
+      rating={profile.sustainabilityRating}
+    />
+  );
 
   return (
     <View style={styles.root}>
-      <View style={[styles.heroCard, faintCardShadow()]}>
-        <Image
-          source={reference.image}
-          style={styles.heroImage}
-          contentFit="cover"
-          accessibilityLabel={`${profile.fabric} reference swatch`}
-        />
+      {showHero ? (
+        <View style={[styles.heroCard, faintCardShadow()]}>
+          <Image
+            source={reference.image}
+            style={styles.heroImage}
+            contentFit="cover"
+            accessibilityLabel={`${profile.fabric} reference swatch`}
+          />
 
-        <View style={styles.heroBody}>
+          <View style={styles.heroBody}>
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroIdentity}>
+                <Text style={styles.fabricName}>{profile.fabric}</Text>
+                <Text style={styles.scientificName}>{profile.scientificName}</Text>
+                {categoryPill}
+              </View>
+              {sustainabilityStack}
+            </View>
+
+            <Text style={styles.description}>{profile.description}</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={[styles.summaryCard, faintCardShadow()]}>
           <View style={styles.heroTopRow}>
             <View style={styles.heroIdentity}>
               <Text style={styles.fabricName}>{profile.fabric}</Text>
               <Text style={styles.scientificName}>{profile.scientificName}</Text>
-              <Text style={styles.fiberType}>{profile.fiberType}</Text>
+              {categoryPill}
             </View>
-
-            <View style={styles.sustainabilityBadgeWrap}>
-              <View
-                style={[
-                  styles.sustainabilityBadge,
-                  { backgroundColor: badgeStyle.background, borderColor: badgeStyle.border },
-                ]}>
-                <View style={[styles.sustainabilityDot, { backgroundColor: scoreColor }]} />
-                <Text style={[styles.sustainabilityBadgeText, { color: badgeStyle.text }]}>
-                  {profile.sustainabilityLabel}
-                </Text>
-              </View>
-              <Text style={[styles.sustainabilityScore, { color: scoreColor }]}>
-                {profile.sustainabilityScore.toFixed(1)}
-                <Text style={styles.sustainabilityScoreSuffix}> / 10</Text>
-              </Text>
-            </View>
+            {sustainabilityStack}
           </View>
-
-          {categoryStyle ? (
-            <View
-              style={[
-                styles.categoryPill,
-                {
-                  backgroundColor: categoryStyle.background,
-                  borderColor: categoryStyle.border,
-                },
-              ]}>
-              <Text style={[styles.categoryText, { color: categoryStyle.text }]}>{category}</Text>
-            </View>
-          ) : null}
-
           <Text style={styles.description}>{profile.description}</Text>
+        </View>
+      )}
+
+      <View style={styles.quickStatsGrid}>
+        <View style={styles.quickStatsRow}>
+          <QuickStat
+            icon={Wind}
+            label="Breathability"
+            value={profile.breathability}
+            valueColor={getFabricPropertyColor(profile.breathability)}
+          />
+          <QuickStat
+            icon={Shield}
+            label="Durability"
+            value={profile.durability}
+            valueColor={getFabricPropertyColor(profile.durability)}
+          />
+        </View>
+        <View style={styles.quickStatsRow}>
+          <QuickStat
+            icon={MoveHorizontal}
+            label="Stretch"
+            value={profile.stretch}
+            valueColor={getFabricPropertyColor(profile.stretch)}
+          />
+          <QuickStat icon={Droplets} label="Moisture" value={profile.moisture} />
         </View>
       </View>
 
-      <View style={styles.quickStatsRow}>
-        <QuickStat
-          icon={Wind}
-          label="Breathability"
-          value={profile.breathability}
-          valueColor={getFabricPropertyColor(profile.breathability)}
-        />
-        <QuickStat
-          icon={Shield}
-          label="Durability"
-          value={profile.durability}
-          valueColor={getFabricPropertyColor(profile.durability)}
-        />
-        <QuickStat
-          icon={MoveHorizontal}
-          label="Stretch"
-          value={profile.stretch}
-          valueColor={getFabricPropertyColor(profile.stretch)}
-        />
-        <QuickStat icon={Droplets} label="Moisture" value={profile.moisture} />
+      <View style={styles.section}>
+        <SectionLabel>Skin health</SectionLabel>
+        <View style={[styles.textCard, faintCardShadow()]}>
+          <InsightLine text={health.skinFriendliness.label} tone={health.skinFriendliness.tone} />
+          <InsightLine
+            text={`Heat retention: ${health.heatRetention.label}`}
+            tone={health.heatRetention.tone}
+          />
+          <InsightLine
+            text={`Irritation potential: ${health.irritationPotential.label}`}
+            tone={health.irritationPotential.tone}
+          />
+          <InsightLine text={health.tip.text} tone={health.tip.tone} />
+        </View>
       </View>
 
       <View style={styles.section}>
-        <SectionLabel>Fabric properties</SectionLabel>
+        <SectionLabel>Environmental impact</SectionLabel>
         <View style={[styles.propertiesCard, faintCardShadow()]}>
           <View style={styles.propertyRow}>
-            <PropertyCell label="Texture" value={profile.texture} />
-            <PropertyCell label="Weave type" value={profile.weaveType} />
+            <PropertyCell icon={Leaf} label="Renewable" value={environment.renewable} />
+            <PropertyCell icon={Check} label="Biodegradable" value={environment.biodegradable} />
           </View>
           <View style={styles.propertyDivider} />
           <View style={styles.propertyRow}>
-            <PropertyCell label="Weight" value={profile.weight} />
-            <PropertyCell label="Origin" value={profile.origin} />
+            <PropertyCell icon={Recycle} label="Recyclable" value={environment.recyclable} />
+            <PropertyCell icon={Wind} label="Carbon impact" value={environment.carbonImpact} />
           </View>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sustainabilitySectionLabel}>Sustainability breakdown</Text>
-        <View style={[styles.breakdownCard, faintCardShadow()]}>
-          {BREAKDOWN_LABELS.map(({ key, label }) => (
-            <BreakdownBar key={key} label={label} metric={key} score={profile.breakdown[key]} />
-          ))}
+          <View style={styles.propertyDivider} />
+          <InfoRow
+            icon={Droplets}
+            label="Microplastic shedding"
+            value={environment.microplasticShedding}
+            valueColor={getSheddingColor(environment.microplasticShedding)}
+          />
         </View>
       </View>
 
@@ -303,22 +353,18 @@ export function FiberProfileContent({ profile }: FiberProfileContentProps) {
       </View>
 
       <View style={styles.section}>
-        <SectionLabel>Best weather</SectionLabel>
-        <View style={styles.chipWrap}>
-          {profile.bestWeather.map((weather) => (
-            <WeatherChip key={weather} context={weather} />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <SectionLabel>Best used for</SectionLabel>
-        <View style={styles.chipWrap}>
-          {profile.useCases.map((useCase) => (
-            <View key={useCase} style={styles.weatherChip}>
-              <Text style={styles.weatherChipText}>{useCase}</Text>
-            </View>
-          ))}
+        <SectionLabel>Good for</SectionLabel>
+        <View style={[styles.contextCard, faintCardShadow()]}>
+          <ContextChipGroup
+            title="Weather"
+            icon={Sun}
+            labels={profile.bestWeather.map((id) => getDressingContextLabel(id))}
+          />
+          <ContextChipGroup
+            title="Occasion"
+            icon={Calendar}
+            labels={profile.bestOccasion.map((id) => getDressingContextLabel(id))}
+          />
         </View>
       </View>
 
@@ -344,6 +390,14 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.border,
     overflow: 'hidden',
   },
+  summaryCard: {
+    backgroundColor: BrandColors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    padding: 16,
+    gap: 12,
+  },
   heroImage: {
     width: '100%',
     aspectRatio: 1,
@@ -360,7 +414,7 @@ const styles = StyleSheet.create({
   },
   heroIdentity: {
     flex: 1,
-    gap: 2,
+    gap: 6,
   },
   fabricName: {
     fontFamily: Fonts.bold,
@@ -371,13 +425,12 @@ const styles = StyleSheet.create({
   scientificName: {
     fontFamily: Fonts.medium,
     fontSize: 12,
-    color: '#15803D',
+    color: BrandColors.textMuted,
   },
   fiberType: {
     fontFamily: Fonts.regular,
     fontSize: 13,
     color: BrandColors.textMuted,
-    marginTop: 2,
   },
   sustainabilityBadgeWrap: {
     alignItems: 'flex-end',
@@ -428,6 +481,9 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: BrandColors.text,
   },
+  quickStatsGrid: {
+    gap: 8,
+  },
   quickStatsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -438,22 +494,25 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: BrandColors.borderLight,
-    padding: 10,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  quickStatHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 88,
+    gap: 6,
   },
   quickStatLabel: {
+    flex: 1,
     fontFamily: Fonts.medium,
-    fontSize: 9,
+    fontSize: 12,
     color: BrandColors.textMuted,
-    textAlign: 'center',
   },
   quickStatValue: {
     fontFamily: Fonts.bold,
-    fontSize: 11,
+    fontSize: 14,
     color: BrandColors.text,
-    textAlign: 'center',
   },
   section: {
     gap: 8,
@@ -481,6 +540,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
+  propertyLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   propertyLabel: {
     fontFamily: Fonts.medium,
     fontSize: 11,
@@ -494,6 +558,31 @@ const styles = StyleSheet.create({
     color: BrandColors.text,
     lineHeight: 20,
   },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  infoLabelWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: 11,
+    color: BrandColors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  infoValue: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: BrandColors.text,
+    textAlign: 'right',
+  },
   propertyDivider: {
     height: 1,
     backgroundColor: BrandColors.borderLight,
@@ -506,49 +595,17 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.borderLight,
     gap: 12,
   },
-  sustainabilitySectionLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: '#15803D',
-    textTransform: 'uppercase',
-  },
-  breakdownCard: {
-    backgroundColor: BrandColors.white,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
-    gap: 14,
-  },
-  breakdownRow: {
-    gap: 8,
-  },
-  breakdownHeader: {
+  insightLine: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    alignItems: 'flex-start',
+    gap: 10,
   },
-  breakdownLabel: {
+  insightText: {
     flex: 1,
     fontFamily: Fonts.medium,
-    fontSize: 13,
-    color: BrandColors.textMuted,
-  },
-  breakdownStatus: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 12,
-  },
-  breakdownTrack: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: BrandColors.inputBackground,
-    overflow: 'hidden',
-  },
-  breakdownFill: {
-    height: '100%',
-    borderRadius: 999,
+    fontSize: 14,
+    lineHeight: 20,
+    color: BrandColors.text,
   },
   careRow: {
     flexDirection: 'row',
@@ -567,10 +624,28 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  weatherChip: {
+  contextCard: {
+    backgroundColor: BrandColors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    padding: 14,
+    gap: 14,
+  },
+  contextGroup: {
+    gap: 8,
+  },
+  contextHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  contextTitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: BrandColors.text,
+  },
+  useChip: {
     backgroundColor: BrandColors.lavenderCard,
     borderRadius: 999,
     paddingHorizontal: 12,
@@ -578,7 +653,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BrandColors.primary,
   },
-  weatherChipText: {
+  useChipText: {
     fontFamily: Fonts.semiBold,
     fontSize: 12,
     color: BrandColors.primaryDark,

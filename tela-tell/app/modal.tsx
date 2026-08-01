@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,24 +15,80 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
-import { SUPPORTED_FABRICS } from '@/data/fabrics/fabrics';
+import {
+  resolveAllFabricAliases,
+  SUPPORTED_FABRICS,
+  type SupportedFabric,
+} from '@/data/fabrics/fabrics';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
-import { clearLastSellerLabel, getLastSellerLabel, setLastSellerLabel } from '@/features/scan/lib/last-seller-label';
+import { getScanById, updateScanSellerLabel } from '@/db/scans';
+import {
+  clearLastSellerLabel,
+  getLastSellerLabel,
+  setLastSellerLabel,
+} from '@/features/scan/lib/last-seller-label';
 
-const QUICK_LABELS = [...SUPPORTED_FABRICS];
+const FIBER_CHIPS = [...SUPPORTED_FABRICS];
+
+const BLEND_PRESETS = [
+  'Cotton / Polyester blend',
+  'Linen / Cotton blend',
+  'Cotton / Spandex blend',
+  'Rayon / Polyester blend',
+  'Wool / Acrylic blend',
+] as const;
+
+function formatBlendLabel(fibers: SupportedFabric[]): string {
+  if (fibers.length === 0) {
+    return '';
+  }
+  if (fibers.length === 1) {
+    return fibers[0];
+  }
+  return `${fibers.join(' / ')} blend`;
+}
 
 export default function SellerLabelModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const params = useLocalSearchParams<{ scanId?: string | string[] }>();
+  const scanIdParam = params.scanId;
+  const scanId = Array.isArray(scanIdParam) ? scanIdParam[0] : scanIdParam;
   const [sellerLabel, setSellerLabel] = useState(() => getLastSellerLabel() ?? '');
-  const sheetHeight = Math.min(windowHeight * 0.62, 520);
+  const sheetHeight = Math.min(windowHeight * 0.72, 620);
   const keyboardVerticalOffset = Platform.select({
     ios: 0,
     android: insets.bottom,
     default: 0,
   });
+
+  const selectedFibers = useMemo(
+    () => resolveAllFabricAliases(sellerLabel),
+    [sellerLabel],
+  );
+
+  useEffect(() => {
+    if (!scanId || scanId === 'dual') {
+      return;
+    }
+
+    let active = true;
+    void (async () => {
+      const scan = await getScanById(scanId);
+      if (!active) {
+        return;
+      }
+      if (scan?.sellerLabel) {
+        setSellerLabel(scan.sellerLabel);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [scanId]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -57,6 +113,18 @@ export default function SellerLabelModal() {
     } else {
       clearLastSellerLabel();
     }
+
+    if (scanId && scanId !== 'dual') {
+      void updateScanSellerLabel(scanId, trimmed.length > 0 ? trimmed : null);
+    }
+  };
+
+  const toggleFiber = (fiber: SupportedFabric) => {
+    const current = resolveAllFabricAliases(sellerLabel);
+    const next = current.includes(fiber)
+      ? current.filter((item) => item !== fiber)
+      : [...current, fiber];
+    commitLabel(formatBlendLabel(next));
   };
 
   return (
@@ -94,8 +162,8 @@ export default function SellerLabelModal() {
             keyboardShouldPersistTaps="handled"
             bounces={false}>
             <Text style={styles.intro}>
-              Enter the fiber content the seller claimed. TELA-TELL will compare it against your
-              scan results.
+              Enter what the care tag or seller claimed. Tap one fiber for a single label, or tap
+              several for a blend.
             </Text>
 
             <View style={styles.section}>
@@ -103,39 +171,70 @@ export default function SellerLabelModal() {
               <View style={[styles.card, faintCardShadow()]}>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. 100% Cotton"
+                  placeholder="e.g. 60% Cotton / 40% Polyester"
                   placeholderTextColor={BrandColors.textMuted}
                   value={sellerLabel}
                   onChangeText={commitLabel}
                 />
               </View>
+              {selectedFibers.length >= 2 ? (
+                <Text style={styles.blendHint}>
+                  Blend selected: {selectedFibers.join(' · ')}
+                </Text>
+              ) : null}
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>QUICK SELECT</Text>
+              <Text style={styles.sectionLabel}>COMMON BLENDS</Text>
+              <View style={styles.presetRow}>
+                {BLEND_PRESETS.map((preset) => {
+                  const selected = sellerLabel.trim() === preset;
+                  return (
+                    <Pressable
+                      key={preset}
+                      style={({ pressed }) => [
+                        styles.presetChip,
+                        selected && styles.chipSelected,
+                        pressed && styles.chipPressed,
+                      ]}
+                      onPress={() => commitLabel(selected ? '' : preset)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={selected ? `Deselect ${preset}` : `Select ${preset}`}>
+                      <Text
+                        style={[styles.presetText, selected && styles.chipTextSelected]}
+                        numberOfLines={2}>
+                        {preset}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>QUICK SELECT (TAP MORE FOR A BLEND)</Text>
               <View style={styles.chipGrid}>
-                {QUICK_LABELS.map((example) => {
-                  const selected = sellerLabel === example;
+                {FIBER_CHIPS.map((fiber) => {
+                  const selected = selectedFibers.includes(fiber);
 
                   return (
                     <Pressable
-                      key={example}
+                      key={fiber}
                       style={({ pressed }) => [
                         styles.chip,
                         faintCardShadow(),
                         selected && styles.chipSelected,
                         pressed && styles.chipPressed,
                       ]}
-                      onPress={() => {
-                        commitLabel(selected ? '' : example);
-                      }}
+                      onPress={() => toggleFiber(fiber)}
                       accessibilityRole="button"
                       accessibilityState={{ selected }}
                       accessibilityLabel={
-                        selected ? `Deselect ${example}` : `Select ${example}`
+                        selected ? `Remove ${fiber} from label` : `Add ${fiber} to label`
                       }>
                       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                        {example}
+                        {fiber}
                       </Text>
                       {selected ? (
                         <X size={14} color={BrandColors.primary} strokeWidth={2.5} />
@@ -228,6 +327,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: BrandColors.text,
     padding: 0,
+  },
+  blendHint: {
+    fontFamily: Fonts.medium,
+    fontSize: 12,
+    color: BrandColors.primaryDark,
+  },
+  presetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  presetChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+    backgroundColor: BrandColors.lavender,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    maxWidth: '100%',
+  },
+  presetText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 12,
+    color: BrandColors.primaryDark,
   },
   chipGrid: {
     flexDirection: 'row',

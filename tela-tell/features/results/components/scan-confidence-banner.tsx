@@ -27,17 +27,12 @@ export function ScanConfidenceBanner({
 
   if (level === 'low') {
     return (
-      <View style={styles.wrapper}>
-        <View style={[styles.warningCard, faintCardShadow()]}>
-          <TriangleAlert size={20} color="#ca8a04" strokeWidth={2.5} />
-          <View style={styles.warningTextBlock}>
-            <Text style={styles.warningTitle}>{LOW_CONFIDENCE_WARNING.title}</Text>
-            <Text style={styles.warningMessage}>{LOW_CONFIDENCE_WARNING.message}</Text>
-          </View>
+      <View style={[styles.warningCard, faintCardShadow()]}>
+        <TriangleAlert size={20} color="#ca8a04" strokeWidth={2.5} />
+        <View style={styles.warningTextBlock}>
+          <Text style={styles.warningTitle}>{LOW_CONFIDENCE_WARNING.title}</Text>
+          <Text style={styles.warningMessage}>{LOW_CONFIDENCE_WARNING.message}</Text>
         </View>
-        <Text style={styles.lowConfidenceDetected}>
-          Primary material: {dominantFabric} ({confidence}%)
-        </Text>
       </View>
     );
   }
@@ -174,11 +169,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: '#92400e',
-  },
-  lowConfidenceDetected: {
-    fontFamily: Fonts.medium,
-    fontSize: 13,
-    color: BrandColors.textMuted,
-    paddingHorizontal: 4,
   },
 });

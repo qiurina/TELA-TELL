@@ -81,7 +81,7 @@ export const FABRIC_REFERENCES: Record<SupportedFabric, FabricReference> = {
     fabric: 'Spandex',
     title: 'Spandex',
     lookFor: 'High stretch with a smooth, tight knit or woven recovery',
-    textureNote: 'Also known as elastane or Lycra — common in jeans, leggings, and activewear blends',
+    textureNote: 'Also known as elastane or Lycra. Common in jeans, leggings, and activewear blends',
     image: FABRIC_REFERENCE_IMAGES.Spandex,
   },
   Rayon: {
@@ -102,7 +102,7 @@ export const FABRIC_REFERENCES: Record<SupportedFabric, FabricReference> = {
     fabric: 'Suede',
     title: 'Suede',
     lookFor: 'Soft napped surface with a matte, velvety texture',
-    textureNote: 'Napped leather — often confused with leather; check the fuzzy finish',
+    textureNote: 'Napped leather. Often confused with leather. Check the fuzzy finish',
     image: FABRIC_REFERENCE_IMAGES.Suede,
   },
   Abaca: {

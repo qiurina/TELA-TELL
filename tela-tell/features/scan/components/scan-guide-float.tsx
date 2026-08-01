@@ -15,16 +15,17 @@ type ScanGuideFloatProps = {
   visible: boolean;
   onDismiss: () => void;
   onShow: () => void;
+  topOffset?: number;
 };
 
-export function ScanGuideFloat({ visible, onDismiss, onShow }: ScanGuideFloatProps) {
+export function ScanGuideFloat({ visible, onDismiss, onShow, topOffset = 12 }: ScanGuideFloatProps) {
   const checklist = QUALITY_CHECKLIST;
 
   return (
     <>
       {!visible ? (
         <Pressable
-          style={styles.infoButton}
+          style={[styles.infoButton, { top: topOffset }]}
           onPress={onShow}
           accessibilityRole="button"
           accessibilityLabel="Show scan quality checklist">
@@ -40,23 +41,25 @@ export function ScanGuideFloat({ visible, onDismiss, onShow }: ScanGuideFloatPro
             accessibilityRole="button"
             accessibilityLabel="Dismiss scan quality checklist"
           />
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Scan quality checklist</Text>
-              <Pressable
-                onPress={onDismiss}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss checklist">
-                <X size={16} color="rgba(255,255,255,0.85)" strokeWidth={2.5} />
-              </Pressable>
-            </View>
-            {checklist.map((item) => (
-              <View key={item} style={styles.checkRow}>
-                <CircleCheck size={16} color="rgba(255,255,255,0.9)" strokeWidth={2.25} />
-                <Text style={styles.checkText}>{item}</Text>
+          <View style={styles.cardWrap} pointerEvents="box-none">
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Scan quality checklist</Text>
+                <Pressable
+                  onPress={onDismiss}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss checklist">
+                  <X size={16} color="rgba(255,255,255,0.85)" strokeWidth={2.5} />
+                </Pressable>
               </View>
-            ))}
+              {checklist.map((item) => (
+                <View key={item} style={styles.checkRow}>
+                  <CircleCheck size={16} color="rgba(255,255,255,0.9)" strokeWidth={2.25} />
+                  <Text style={styles.checkText}>{item}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         </>
       ) : null}
@@ -80,15 +83,19 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 9,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  cardWrap: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   card: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: 72,
-    zIndex: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: 'rgba(0, 0, 0, 0.78)',
     borderRadius: 16,
     padding: 14,
     gap: 8,

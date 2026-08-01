@@ -1,46 +1,86 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CameraGuide } from '@/features/scan/components/camera-guide';
-import { ScanActions } from '@/features/scan/components/scan-actions';
+import {
+  CameraGuide,
+  type CameraGuideHandle,
+} from '@/features/scan/components/camera-guide';
+import {
+  FloatingCaptureBar,
+  ScanDetailsPanel,
+} from '@/features/scan/components/scan-actions';
+import { FabricPhotoPreview } from '@/features/results/components/fabric-photo-preview';
+import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
+import { ScanLine } from '@/components/ui/lucide-icons';
+import { primaryButtonShadow } from '@/constants/shadows';
 import { DEFAULT_GARMENT_CONDITION, type GarmentCondition } from '@/data/scans/garment-condition';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
 import { clearLastCaptureUri, setLastCaptureUri } from '@/features/scan/lib/last-capture';
-import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
+import { getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 import { clearRegionSelection } from '@/features/scan/lib/region-selection';
-import { clearLastGarmentCondition, getLastGarmentCondition, setLastGarmentCondition } from '@/features/scan/lib/garment-condition';
+import {
+  clearLastGarmentCondition,
+  getLastGarmentCondition,
+  setLastGarmentCondition,
+} from '@/features/scan/lib/garment-condition';
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
 import { getScanMode } from '@/features/scan/lib/scan-session';
+import { useAuth } from '@/features/auth/context/auth-provider';
+import { saveScan } from '@/db/scans';
+import { createScanRecord } from '@/features/scan/lib/create-scan-record';
 
 export default function ScanScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const insets = useSafeAreaInsets();
+  const cameraGuideRef = useRef<CameraGuideHandle>(null);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
+  const [detailsExpanded, setDetailsExpanded] = useState(true);
   const [savedSellerLabel, setSavedSellerLabel] = useState<string | null>(null);
   const [garmentCondition, setGarmentCondition] = useState<GarmentCondition>(
     () => getLastGarmentCondition(),
   );
   const { captureFromCamera, captureFromGallery } = useFabricCapture();
+  const hasPreview = Boolean(previewUri);
+  const busy = isAnalyzing || isCapturing;
 
   useFocusEffect(
     useCallback(() => {
       if (consumeFreshScan()) {
         setPreviewUri(null);
+        clearLastCaptureUri();
         clearRegionSelection();
         clearLastGarmentCondition();
         setGarmentCondition(DEFAULT_GARMENT_CONDITION);
+        setDetailsExpanded(true);
       }
       setGuideVisible(true);
       setSavedSellerLabel(getLastSellerLabel());
     }, []),
   );
+
+  const commitPreviewUri = (photoUri: string) => {
+    // Same URI is used on review + results (via last-capture + saveScan imageUri).
+    setLastCaptureUri(photoUri);
+    setPreviewUri(photoUri);
+    setDetailsExpanded(true);
+  };
 
   const runAnalysis = (photoUri?: string | null) => {
     if (photoUri) {
@@ -49,48 +89,102 @@ export default function ScanScreen() {
       clearLastCaptureUri();
     }
 
-    // Dual-swatch remains supported in code but is hidden from the UI for now.
-    const resultId = getScanMode() === 'dual' ? 'dual' : '1';
+    const ANALYSIS_MS = 1500;
 
-    setIsAnalyzing(true);
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      router.push(`/results/${resultId}` as Href);
-    }, 1500);
-  };
-
-  const handleTakePhoto = async () => {
-    if (isAnalyzing) {
+    if (getScanMode() === 'dual') {
+      setIsAnalyzing(true);
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        router.push('/results/dual' as Href);
+      }, ANALYSIS_MS);
       return;
     }
 
-    const photoUri = await captureFromCamera();
-    if (photoUri) {
-      setPreviewUri(photoUri);
+    setIsAnalyzing(true);
+
+    void (async () => {
+      const startedAt = Date.now();
+      try {
+        const result = createScanRecord({
+          sellerLabel: getLastSellerLabel(),
+        });
+
+        await saveScan(result, {
+          userId: session?.userId ?? null,
+          garmentCondition,
+          imageUri: photoUri ?? null,
+        });
+
+        const remaining = Math.max(0, ANALYSIS_MS - (Date.now() - startedAt));
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+
+        setIsAnalyzing(false);
+        router.push(`/results/${result.id}` as Href);
+      } catch (error) {
+        setIsAnalyzing(false);
+        Alert.alert(
+          'Could not save scan',
+          error instanceof Error ? error.message : 'Please try again.',
+        );
+      }
+    })();
+  };
+
+  const guideAspect = () => cameraGuideRef.current?.getGuideAspect() ?? 1;
+
+  const handleTakePhoto = async () => {
+    if (busy) {
+      return;
+    }
+
+    setIsCapturing(true);
+    try {
+      let photoUri: string | null = null;
+
+      if (cameraGuideRef.current?.hasLiveCamera()) {
+        photoUri = await cameraGuideRef.current.captureAndCrop();
+      }
+
+      if (!photoUri) {
+        photoUri = await captureFromCamera(guideAspect());
+      }
+
+      if (photoUri) {
+        commitPreviewUri(photoUri);
+      }
+    } catch (error) {
+      Alert.alert(
+        'Could not capture photo',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setIsCapturing(false);
     }
   };
 
   const handleUpload = async () => {
-    if (isAnalyzing) {
+    if (busy) {
       return;
     }
 
-    const photoUri = await captureFromGallery();
-    if (photoUri) {
-      setPreviewUri(photoUri);
+    setIsCapturing(true);
+    try {
+      const photoUri = await captureFromGallery(guideAspect());
+      if (photoUri) {
+        commitPreviewUri(photoUri);
+      }
+    } catch (error) {
+      Alert.alert(
+        'Could not upload photo',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setIsCapturing(false);
     }
   };
 
   const handleAnalyze = () => {
-    if (isAnalyzing) {
-      return;
-    }
-
-    if (!previewUri) {
-      Alert.alert(
-        'No fabric photo',
-        'Capture or upload a fabric image first, then tap Analyze Fabric.',
-      );
+    if (busy || !previewUri) {
       return;
     }
 
@@ -107,11 +201,13 @@ export default function ScanScreen() {
   };
 
   const handleTryAnother = () => {
-    if (isAnalyzing) {
+    if (busy) {
       return;
     }
 
     setPreviewUri(null);
+    clearLastCaptureUri();
+    setDetailsExpanded(true);
     clearRegionSelection();
     clearLastGarmentCondition();
     setGarmentCondition(DEFAULT_GARMENT_CONDITION);
@@ -130,55 +226,102 @@ export default function ScanScreen() {
     router.push('/user-preferences');
   };
 
-  const handleRemoveLabel = () => {
-    clearLastSellerLabel();
-    setSavedSellerLabel(null);
+  const handleBack = () => {
+    if (hasPreview) {
+      handleTryAnother();
+      return;
+    }
+    router.replace('/(tabs)' as Href);
   };
+
+  if (hasPreview && previewUri) {
+    return (
+      <View style={styles.reviewRoot}>
+        <ResultsScreenHeader title="Scan Fabric" onBack={handleBack} />
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.reviewContent,
+            { paddingBottom: Math.max(insets.bottom, 16) + 24 },
+          ]}
+          keyboardShouldPersistTaps="handled">
+          <FabricPhotoPreview imageUri={previewUri} scanCaption="Your scan" />
+
+          <ScanDetailsPanel
+            savedSellerLabel={savedSellerLabel}
+            garmentCondition={garmentCondition}
+            onGarmentConditionChange={handleGarmentConditionChange}
+            onAddLabel={handleAddLabel}
+            onOpenPreferences={handleOpenPreferences}
+            isAnalyzing={busy}
+            expanded={detailsExpanded}
+            onExpandedChange={setDetailsExpanded}
+            variant="sheet"
+          />
+
+          <Pressable
+            style={({ pressed }) => [pressed && styles.pressed]}
+            onPress={handleAnalyze}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel="Analyze fabric">
+            <LinearGradient
+              colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={[styles.analyzeButton, primaryButtonShadow()]}>
+              {isAnalyzing ? (
+                <ActivityIndicator color={BrandColors.white} />
+              ) : (
+                <ScanLine size={18} color={BrandColors.white} strokeWidth={2.5} />
+              )}
+              <Text style={styles.analyzeText}>
+                {isAnalyzing ? 'Analyzing...' : 'Analyze Fabric'}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.tryAgainLink, pressed && styles.pressed]}
+            onPress={handleTryAnother}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel="Try again">
+            <Text style={styles.tryAgainLinkText}>Try again</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
-        style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <CameraGuide
+        ref={cameraGuideRef}
+        previewUri={null}
+        isAnalyzing={false}
+        guideVisible={guideVisible}
+        onDismissGuide={() => setGuideVisible(false)}
+        onShowGuide={() => setGuideVisible(true)}
+        contentTopInset={insets.top + 10}
+        bottomReserve={200}
+        onBack={handleBack}
       />
 
-      <View style={[styles.page, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.topRow}>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>Scan Fabric</Text>
-          </View>
-        </View>
-
-        <View style={styles.sheet}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.sheetContent}>
-            <CameraGuide
-              previewUri={previewUri}
-              isAnalyzing={isAnalyzing}
-              guideVisible={guideVisible}
-              onDismissGuide={() => setGuideVisible(false)}
-              onShowGuide={() => setGuideVisible(true)}
-            />
-
-            <ScanActions
-              hasPreview={Boolean(previewUri)}
-              savedSellerLabel={savedSellerLabel}
-              onTakePhoto={handleTakePhoto}
-              onUpload={handleUpload}
-              onAnalyze={handleAnalyze}
-              onTryAnother={handleTryAnother}
-              garmentCondition={garmentCondition}
-              onGarmentConditionChange={handleGarmentConditionChange}
-              onAddLabel={handleAddLabel}
-              onRemoveLabel={handleRemoveLabel}
-              onOpenPreferences={handleOpenPreferences}
-              isAnalyzing={isAnalyzing}
-            />
-          </ScrollView>
-        </View>
+      <View
+        style={[
+          styles.captureOverlay,
+          { paddingBottom: Math.max(insets.bottom, 12) + 52 },
+        ]}
+        pointerEvents="box-none">
+        <FloatingCaptureBar
+          hasPreview={false}
+          onTakePhoto={handleTakePhoto}
+          onUpload={handleUpload}
+          onTryAnother={handleTryAnother}
+          isAnalyzing={busy}
+        />
       </View>
     </View>
   );
@@ -187,43 +330,49 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: BrandColors.primary,
+    backgroundColor: '#101820',
   },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 220,
-  },
-  page: {
-    flex: 1,
-  },
-  topRow: {
-    paddingHorizontal: 24,
-    marginBottom: 8,
-  },
-  headerText: {
-    gap: 1,
-  },
-  title: {
-    fontFamily: Fonts.bold,
-    fontSize: 20,
-    color: BrandColors.white,
-    letterSpacing: -0.3,
-  },
-  sheet: {
+  reviewRoot: {
     flex: 1,
     backgroundColor: BrandColors.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
   },
-  sheetContent: {
+  reviewContent: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 32,
-    gap: 12,
+    gap: 20,
     flexGrow: 1,
+  },
+  captureOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  analyzeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 999,
+  },
+  analyzeText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: BrandColors.white,
+  },
+  tryAgainLink: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 2,
+  },
+  tryAgainLinkText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: BrandColors.primary,
+  },
+  pressed: {
+    opacity: 0.88,
   },
 });

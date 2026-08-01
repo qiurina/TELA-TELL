@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 
 import { CompositionCard } from '@/features/results/components/composition-card';
 import { DualFabricResults } from '@/features/results/components/dual-fabric-results';
@@ -15,12 +16,14 @@ import { useAuth } from '@/features/auth/context/auth-provider';
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
+import { deleteScan, isScanFavorite, setScanFavorite } from '@/db/scans';
 import { getDualSwatchRegions } from '@/features/scan/lib/dual-swatch-results';
-import { getScanResult, resolveScanId } from '@/data/scans/mock-data';
+import { useScanResult } from '@/features/results/hooks/use-scan-result';
 import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 import { getFabricReference } from '@/data/fabrics/fabric-references';
-import { getLastCaptureUri } from '@/features/scan/lib/last-capture';
-import { getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
+import { getScanResultHeadline } from '@/features/results/lib/scan-result-headline';
+import { buildMislabeling } from '@/features/scan/lib/create-scan-record';
+import { clearLastCaptureUri, getLastCaptureUri } from '@/features/scan/lib/last-capture';
 import { clearRegionSelection } from '@/features/scan/lib/region-selection';
 import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 
@@ -29,18 +32,93 @@ export default function ResultsScreen() {
   const router = useRouter();
   const { isSignedIn } = useAuth();
   const [showInsightsLocked, setShowInsightsLocked] = useState(false);
-  const resolvedScanId = resolveScanId(scanId);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isActionBusy, setIsActionBusy] = useState(false);
+  const { scanId: resolvedScanId, result, isLoading, reload } = useScanResult(scanId);
   const isDualDemo = resolvedScanId === 'dual';
-  const result = getScanResult(resolvedScanId);
   const dualRegions = isDualDemo ? getDualSwatchRegions() : [];
-  const capturedPhotoUri = getLastCaptureUri();
-  const [sessionSellerLabel, setSessionSellerLabel] = useState<string | null>(() => getLastSellerLabel());
+  const capturedPhotoUri = getLastCaptureUri() ?? result?.imageUri ?? null;
 
   useFocusEffect(
     useCallback(() => {
-      setSessionSellerLabel(getLastSellerLabel());
-    }, []),
+      void reload();
+    }, [reload]),
   );
+
+  useEffect(() => {
+    let active = true;
+    if (!resolvedScanId || isDualDemo) {
+      setIsFavorite(false);
+      return;
+    }
+
+    void (async () => {
+      const favorite = await isScanFavorite(resolvedScanId);
+      if (active) {
+        setIsFavorite(favorite);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [resolvedScanId, isDualDemo]);
+
+  const handleToggleFavorite = () => {
+    if (isActionBusy || !resolvedScanId || isDualDemo) {
+      return;
+    }
+
+    const next = !isFavorite;
+    setIsFavorite(next);
+    setIsActionBusy(true);
+    void (async () => {
+      try {
+        await setScanFavorite(resolvedScanId, next);
+      } catch {
+        setIsFavorite(!next);
+        Alert.alert('Could not update favorite', 'Please try again.');
+      } finally {
+        setIsActionBusy(false);
+      }
+    })();
+  };
+
+  const handleConfirmDelete = () => {
+    if (isActionBusy || !resolvedScanId) {
+      return;
+    }
+
+    setShowDeleteConfirm(false);
+    setIsActionBusy(true);
+    void (async () => {
+      try {
+        if (!isDualDemo) {
+          await deleteScan(resolvedScanId);
+        }
+        clearLastCaptureUri();
+        clearRegionSelection();
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/(tabs)/history' as Href);
+        }
+      } catch {
+        Alert.alert('Could not delete scan', 'Please try again.');
+      } finally {
+        setIsActionBusy(false);
+      }
+    })();
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.fallback}>
+        <ActivityIndicator size="large" color={BrandColors.primary} />
+      </View>
+    );
+  }
 
   if (!result) {
     return (
@@ -53,8 +131,13 @@ export default function ResultsScreen() {
     );
   }
 
-  const sellerLabel = sessionSellerLabel?.trim() || result.sellerLabel?.trim() || null;
+  const sellerLabel = result.sellerLabel?.trim() || null;
   const hasSellerLabel = Boolean(sellerLabel);
+  const liveMislabel = buildMislabeling(
+    result.dominantFabric,
+    sellerLabel,
+    result.compositions ?? [],
+  );
 
   const handleViewProfile = () => {
     router.push(`/results/profile/${resolvedScanId}` as Href);
@@ -75,7 +158,10 @@ export default function ResultsScreen() {
   };
 
   const handleAddLabel = () => {
-    router.push('/modal');
+    router.push({
+      pathname: '/modal',
+      params: { scanId: resolvedScanId },
+    });
   };
 
   const primaryReference = !isDualDemo
@@ -85,6 +171,14 @@ export default function ResultsScreen() {
   const healthRisk = !isDualDemo
     ? getSyntheticHealthRisk(result.dominantFabric, result.compositions ?? [])
     : null;
+
+  const headline = !isDualDemo
+    ? getScanResultHeadline(result.dominantFabric, result.compositions ?? [])
+    : {
+        title: 'Linen + Cotton swatches',
+        subtitle: 'Dual-swatch demo',
+        isBlend: true,
+      };
 
   return (
     <View style={styles.root}>
@@ -102,16 +196,33 @@ export default function ResultsScreen() {
         onCancel={() => setShowInsightsLocked(false)}
       />
 
-      <ResultsScreenHeader title="Scan Results" onBack={() => router.back()} />
+      <ScanConfirmSheet
+        visible={showDeleteConfirm}
+        title="Delete this scan?"
+        message="This moves the scan to Recently Deleted for 30 days. You can restore it from Profile."
+        confirmLabel="Move to trash"
+        cancelLabel="Keep scan"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      <ResultsScreenHeader
+        title="Scan Results"
+        onBack={() => router.back()}
+        onToggleFavorite={isDualDemo ? undefined : handleToggleFavorite}
+        onDelete={() => setShowDeleteConfirm(true)}
+        isFavorite={isFavorite}
+        actionsDisabled={isActionBusy}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
         <FabricPhotoPreview
           imageUri={capturedPhotoUri}
-          detectedFabric={
-            isDualDemo ? 'Linen + Cotton swatches' : result.dominantFabric
-          }
+          scanCaption="Your scan"
+          detectedFabric={headline.title}
+          detectedSubtitle={headline.isBlend ? undefined : headline.subtitle}
           confidence={
             isDualDemo
               ? Math.round(
@@ -132,16 +243,16 @@ export default function ResultsScreen() {
         />
 
         {isDualDemo ? (
-          <DualFabricResults regions={dualRegions} />
+          <DualFabricResults regions={dualRegions} scanImageUri={capturedPhotoUri} />
         ) : (
           <>
             <ScanConfidenceBanner
               confidence={result.confidence}
-              dominantFabric={result.dominantFabric}
+              dominantFabric={headline.title}
               compact
             />
 
-            <CompositionCard compositions={result.compositions ?? []} confidence={result.confidence} />
+            <CompositionCard compositions={result.compositions ?? []} />
           </>
         )}
 
@@ -152,9 +263,9 @@ export default function ResultsScreen() {
         {!isDualDemo ? (
           <SellerComparisonCard
             sellerLabel={sellerLabel}
-            detectedDominant={result.dominantFabric}
-            compositions={result.compositions ?? []}
-            mislabelingDetected={hasSellerLabel && result.mislabeling.detected}
+            detectedLabel={headline.title}
+            mislabelingDetected={hasSellerLabel && liveMislabel.detected}
+            mislabelMessage={liveMislabel.message}
             onAddLabel={handleAddLabel}
           />
         ) : null}
@@ -165,6 +276,7 @@ export default function ResultsScreen() {
           onPersonalizedInsights={handlePersonalizedInsights}
           personalizedInsightsLocked={!isSignedIn}
           onLockedPersonalizedInsights={() => setShowInsightsLocked(true)}
+          isBlend={headline.isBlend}
           onScanAgain={handleScanAnother}
         />
       </ScrollView>
