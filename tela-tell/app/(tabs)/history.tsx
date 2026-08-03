@@ -1,13 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
 import { ScanHistoryFilters } from '@/features/history/components/scan-history-filters';
 import { filterScansByDate, type ScanDateFilter } from '@/features/history/lib/scan-date-filters';
-import { Bookmark, Leaf, ScanLine, Trash2, TriangleAlert } from '@/components/ui/lucide-icons';
+import {
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Leaf,
+  ScanLine,
+  Trash2,
+  TriangleAlert,
+} from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
@@ -20,12 +28,13 @@ const HISTORY_PAGE_SIZE = 5;
 export default function HistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList<RecentScanPreview>>(null);
   const [dateFilter, setDateFilter] = useState<ScanDateFilter>('all');
   const [customDate, setCustomDate] = useState<Date | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(HISTORY_PAGE_SIZE);
+  const [page, setPage] = useState(1);
 
   const { session } = useAuth();
   const [previews, setPreviews] = useState<RecentScanPreview[]>([]);
@@ -47,7 +56,7 @@ export default function HistoryScreen() {
           return;
         }
         setPreviews(previewList);
-        setVisibleCount(HISTORY_PAGE_SIZE);
+        setPage(1);
       })();
 
       return () => {
@@ -81,23 +90,41 @@ export default function HistoryScreen() {
     [previews, dateFilter, customDate],
   );
 
+  const totalPages = Math.max(1, Math.ceil(filteredScans.length / HISTORY_PAGE_SIZE));
+
   useEffect(() => {
-    setVisibleCount(HISTORY_PAGE_SIZE);
+    setPage(1);
   }, [dateFilter, customDate]);
 
-  const visibleScans = useMemo(
-    () => filteredScans.slice(0, visibleCount),
-    [filteredScans, visibleCount],
-  );
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
-  const hasMore = visibleCount < filteredScans.length;
+  const pageScans = useMemo(() => {
+    const start = (page - 1) * HISTORY_PAGE_SIZE;
+    return filteredScans.slice(start, start + HISTORY_PAGE_SIZE);
+  }, [filteredScans, page]);
 
-  const loadMore = useCallback(() => {
-    if (!hasMore) {
+  const goToPage = useCallback((nextPage: number) => {
+    setPage(nextPage);
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+
+  const goPrev = useCallback(() => {
+    if (page <= 1) {
       return;
     }
-    setVisibleCount((prev) => Math.min(prev + HISTORY_PAGE_SIZE, filteredScans.length));
-  }, [filteredScans.length, hasMore]);
+    goToPage(page - 1);
+  }, [goToPage, page]);
+
+  const goNext = useCallback(() => {
+    if (page >= totalPages) {
+      return;
+    }
+    goToPage(page + 1);
+  }, [goToPage, page, totalPages]);
 
   const selectedScans = useMemo(
     () => filteredScans.filter((scan) => selectedIds.has(scan.id)),
@@ -264,12 +291,14 @@ export default function HistoryScreen() {
 
         <View style={styles.sheet}>
           <FlatList
-            data={visibleScans}
+            ref={listRef}
+            data={pageScans}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               styles.sheetContent,
               selectionMode && selectedIds.size > 0 ? styles.sheetContentWithBar : null,
+              filteredScans.length > HISTORY_PAGE_SIZE ? styles.sheetContentWithPager : null,
             ]}
             ListHeaderComponent={listHeader}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -287,28 +316,64 @@ export default function HistoryScreen() {
                 No scans yet. Analyze a fabric to start your history.
               </Text>
             }
-            ListFooterComponent={
-              hasMore ? (
-                <Pressable
-                  onPress={loadMore}
-                  style={({ pressed }) => [styles.loadMoreButton, pressed && styles.loadMorePressed]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Load more scans">
-                  <Text style={styles.loadMoreText}>
-                    Load more ({filteredScans.length - visibleCount} left)
-                  </Text>
-                </Pressable>
-              ) : filteredScans.length > HISTORY_PAGE_SIZE ? (
-                <Text style={styles.endText}>All {filteredScans.length} scans shown</Text>
-              ) : null
-            }
-            onEndReached={loadMore}
-            onEndReachedThreshold={0.4}
             initialNumToRender={HISTORY_PAGE_SIZE}
             windowSize={7}
             maxToRenderPerBatch={HISTORY_PAGE_SIZE}
             removeClippedSubviews
           />
+
+          {filteredScans.length > HISTORY_PAGE_SIZE ? (
+            <View style={styles.pager}>
+              <Pressable
+                onPress={goPrev}
+                disabled={page <= 1}
+                style={({ pressed }) => [
+                  styles.pagerButton,
+                  page <= 1 && styles.pagerButtonDisabled,
+                  pressed && page > 1 && styles.pagerPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Previous page">
+                <ChevronLeft
+                  size={18}
+                  color={page <= 1 ? BrandColors.textMuted : BrandColors.primaryDark}
+                  strokeWidth={2.25}
+                />
+                <Text
+                  style={[styles.pagerButtonText, page <= 1 && styles.pagerButtonTextDisabled]}>
+                  Prev
+                </Text>
+              </Pressable>
+
+              <Text style={styles.pagerLabel}>
+                Page {page} of {totalPages}
+              </Text>
+
+              <Pressable
+                onPress={goNext}
+                disabled={page >= totalPages}
+                style={({ pressed }) => [
+                  styles.pagerButton,
+                  page >= totalPages && styles.pagerButtonDisabled,
+                  pressed && page < totalPages && styles.pagerPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Next page">
+                <Text
+                  style={[
+                    styles.pagerButtonText,
+                    page >= totalPages && styles.pagerButtonTextDisabled,
+                  ]}>
+                  Next
+                </Text>
+                <ChevronRight
+                  size={18}
+                  color={page >= totalPages ? BrandColors.textMuted : BrandColors.primaryDark}
+                  strokeWidth={2.25}
+                />
+              </Pressable>
+            </View>
+          ) : null}
 
           {selectionMode && selectedIds.size > 0 ? (
             <View style={styles.actionBar}>
@@ -410,6 +475,9 @@ const styles = StyleSheet.create({
   sheetContentWithBar: {
     paddingBottom: 24,
   },
+  sheetContentWithPager: {
+    paddingBottom: 16,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -466,31 +534,50 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     marginTop: 12,
   },
-  loadMoreButton: {
-    alignSelf: 'center',
-    marginTop: 16,
+  pager: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingTop: 10,
+    paddingBottom: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.white,
+  },
+  pagerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 999,
     backgroundColor: BrandColors.lavender,
     borderWidth: 1,
     borderColor: BrandColors.border,
+    minWidth: 84,
+    justifyContent: 'center',
   },
-  loadMorePressed: {
+  pagerButtonDisabled: {
+    backgroundColor: BrandColors.white,
+    borderColor: BrandColors.borderLight,
+  },
+  pagerPressed: {
     opacity: 0.85,
   },
-  loadMoreText: {
+  pagerButtonText: {
     fontFamily: Fonts.semiBold,
     fontSize: 13,
     color: BrandColors.primaryDark,
   },
-  endText: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
+  pagerButtonTextDisabled: {
     color: BrandColors.textMuted,
-    textAlign: 'center',
-    marginTop: 16,
-    paddingBottom: 4,
+  },
+  pagerLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    color: BrandColors.textMuted,
   },
   actionBar: {
     flexDirection: 'row',
