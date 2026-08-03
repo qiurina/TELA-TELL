@@ -9,7 +9,7 @@ import {
 const PICKER_OPTIONS: ImagePicker.ImagePickerOptions = {
   mediaTypes: ['images'],
   allowsEditing: false,
-  quality: 0.9,
+  quality: 0.85,
 };
 
 function showPermissionAlert(kind: 'camera' | 'gallery') {

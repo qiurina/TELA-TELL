@@ -100,12 +100,7 @@ export function getPasswordStrengthColor(strength: PasswordStrength): string {
   }
 }
 
-const PASSWORD_SUCCESS = '#2E7D32';
 const PASSWORD_SUCCESS_LIGHT = '#4CAF50';
-
-export function getPasswordSuccessColor(): string {
-  return PASSWORD_SUCCESS;
-}
 
 export function getPasswordSuccessLightColor(): string {
   return PASSWORD_SUCCESS_LIGHT;

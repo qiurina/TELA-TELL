@@ -61,6 +61,8 @@ export function ScanHistoryCard({
           source={scan.image}
           style={styles.thumbnail}
           contentFit="cover"
+          recyclingKey={scan.id}
+          cachePolicy="memory-disk"
           accessibilityLabel="Scanned fabric"
         />
         {scan.isFavorite && !selectionMode ? (

@@ -29,6 +29,7 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
 import { clearLastCaptureUri, setLastCaptureUri } from '@/features/scan/lib/last-capture';
+import { optimizeScanImage } from '@/features/scan/lib/crop-to-guide';
 import { getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 import { clearRegionSelection } from '@/features/scan/lib/region-selection';
 import {
@@ -109,10 +110,15 @@ export default function ScanScreen() {
           sellerLabel: getLastSellerLabel(),
         });
 
+        const optimizedUri = photoUri ? await optimizeScanImage(photoUri) : null;
+        if (optimizedUri) {
+          setLastCaptureUri(optimizedUri);
+        }
+
         await saveScan(result, {
           userId: session?.userId ?? null,
           garmentCondition,
-          imageUri: photoUri ?? null,
+          imageUri: optimizedUri,
         });
 
         const remaining = Math.max(0, ANALYSIS_MS - (Date.now() - startedAt));

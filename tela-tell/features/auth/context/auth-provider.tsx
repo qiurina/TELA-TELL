@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import {
+  clearRememberedEmail,
   clearStoredSession,
-  getOnboardingComplete,
   getStoredSession,
-  setOnboardingComplete,
+  setRememberedEmail,
   setStoredSession,
   type AuthSession,
 } from '@/features/auth/lib/auth-session';
@@ -14,12 +14,15 @@ import {
 } from '@/features/profile/lib/user-preferences';
 import { loginUser, registerUser, type RegisterUserInput } from '@/db/users';
 
+type SignInOptions = {
+  rememberMe?: boolean;
+};
+
 type AuthContextValue = {
   isLoading: boolean;
-  hasCompletedOnboarding: boolean;
   session: AuthSession | null;
   isSignedIn: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, options?: SignInOptions) => Promise<void>;
   signUp: (input: RegisterUserInput) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -28,17 +31,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
 
   useEffect(() => {
     let active = true;
 
     void (async () => {
-      const [onboardingDone, storedSession] = await Promise.all([
-        getOnboardingComplete(),
-        getStoredSession(),
-      ]);
+      const storedSession = await getStoredSession();
 
       if (storedSession?.userId) {
         await hydrateUserPreferences(storedSession.userId);
@@ -48,7 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setHasCompletedOnboarding(onboardingDone);
       setSession(storedSession);
       setIsLoading(false);
     })();
@@ -58,18 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  /** Turns a DB user into the stored session, saves it, and updates state. */
   const startSession = useCallback(async (user: AuthSession) => {
     await hydrateUserPreferences(user.userId);
-    await Promise.all([setOnboardingComplete(), setStoredSession(user)]);
-    setHasCompletedOnboarding(true);
+    await setStoredSession(user);
     setSession(user);
   }, []);
 
   const signIn = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, options?: SignInOptions) => {
+      const rememberMe = options?.rememberMe ?? false;
       const user = await loginUser({ email, password });
       await startSession(user);
+
+      if (rememberMe) {
+        await setRememberedEmail(user.email);
+      } else {
+        await clearRememberedEmail();
+      }
     },
     [startSession],
   );
@@ -78,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (input: RegisterUserInput) => {
       const user = await registerUser(input);
       await startSession(user);
+      await setRememberedEmail(user.email);
     },
     [startSession],
   );
@@ -91,14 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       isLoading,
-      hasCompletedOnboarding,
       session,
       isSignedIn: Boolean(session?.userId),
       signIn,
       signUp,
       signOut,
     }),
-    [hasCompletedOnboarding, isLoading, session, signIn, signUp, signOut],
+    [isLoading, session, signIn, signUp, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

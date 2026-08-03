@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
@@ -11,9 +11,11 @@ import { Bookmark, Leaf, ScanLine, Trash2, TriangleAlert } from '@/components/ui
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
-import { SUSTAINABILITY_DOT, type RecentScanPreview, type ScanResult } from '@/data/scans/mock-data';
-import { deleteScan, getAllScans, getAllScanResults, setScanFavorite } from '@/db/scans';
+import { SUSTAINABILITY_DOT, type RecentScanPreview } from '@/data/scans/mock-data';
+import { deleteScan, getAllScans, setScanFavorite } from '@/db/scans';
 import { useAuth } from '@/features/auth/context/auth-provider';
+
+const HISTORY_PAGE_SIZE = 10;
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -23,19 +25,15 @@ export default function HistoryScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(HISTORY_PAGE_SIZE);
 
   const { session } = useAuth();
   const [previews, setPreviews] = useState<RecentScanPreview[]>([]);
-  const [scanResults, setScanResults] = useState<ScanResult[]>([]);
 
   const reload = useCallback(async () => {
     const userId = session?.userId ?? null;
-    const [previewList, resultList] = await Promise.all([
-      getAllScans({ userId }),
-      getAllScanResults({ userId }),
-    ]);
+    const previewList = await getAllScans({ userId });
     setPreviews(previewList);
-    setScanResults(resultList);
   }, [session?.userId]);
 
   useFocusEffect(
@@ -44,15 +42,12 @@ export default function HistoryScreen() {
 
       void (async () => {
         const userId = session?.userId ?? null;
-        const [previewList, resultList] = await Promise.all([
-          getAllScans({ userId }),
-          getAllScanResults({ userId }),
-        ]);
+        const previewList = await getAllScans({ userId });
         if (!active) {
           return;
         }
         setPreviews(previewList);
-        setScanResults(resultList);
+        setVisibleCount(HISTORY_PAGE_SIZE);
       })();
 
       return () => {
@@ -66,26 +61,43 @@ export default function HistoryScreen() {
     setSelectedIds(new Set());
   }, []);
 
-  const totalScans = scanResults.length;
+  const totalScans = previews.length;
 
   const mislabelingCount = useMemo(
-    () => scanResults.filter((scan) => scan.mislabeling.detected).length,
-    [scanResults],
+    () => previews.filter((scan) => scan.mislabeling).length,
+    [previews],
   );
 
   const sustainableCount = useMemo(
     () =>
-      scanResults.filter(
-        (scan) =>
-          scan.sustainability.rating === 'green' || scan.sustainability.rating === 'yellow',
+      previews.filter(
+        (scan) => scan.sustainability === 'green' || scan.sustainability === 'yellow',
       ).length,
-    [scanResults],
+    [previews],
   );
 
   const filteredScans = useMemo(
     () => filterScansByDate(previews, dateFilter, customDate),
     [previews, dateFilter, customDate],
   );
+
+  useEffect(() => {
+    setVisibleCount(HISTORY_PAGE_SIZE);
+  }, [dateFilter, customDate]);
+
+  const visibleScans = useMemo(
+    () => filteredScans.slice(0, visibleCount),
+    [filteredScans, visibleCount],
+  );
+
+  const hasMore = visibleCount < filteredScans.length;
+
+  const loadMore = useCallback(() => {
+    if (!hasMore) {
+      return;
+    }
+    setVisibleCount((prev) => Math.min(prev + HISTORY_PAGE_SIZE, filteredScans.length));
+  }, [filteredScans.length, hasMore]);
 
   const selectedScans = useMemo(
     () => filteredScans.filter((scan) => selectedIds.has(scan.id)),
@@ -188,6 +200,37 @@ export default function HistoryScreen() {
     );
   };
 
+  const listHeader = (
+    <View>
+      <View style={styles.statsRow}>
+        <View style={[styles.statCard, faintCardShadow()]}>
+          <ScanLine size={18} color={BrandColors.primary} strokeWidth={2} />
+          <Text style={[styles.statValue, styles.statValuePrimary]}>{totalScans}</Text>
+          <Text style={styles.statLabel}>TOTAL SCANS</Text>
+        </View>
+        <View style={[styles.statCard, faintCardShadow()]}>
+          <TriangleAlert size={18} color={SUSTAINABILITY_DOT.red} strokeWidth={2} />
+          <Text style={[styles.statValue, styles.statValueAlert]}>{mislabelingCount}</Text>
+          <Text style={styles.statLabel}>MISLABEL</Text>
+        </View>
+        <View style={[styles.statCard, faintCardShadow()]}>
+          <Leaf size={18} color={SUSTAINABILITY_DOT.green} strokeWidth={2} />
+          <Text style={[styles.statValue, styles.statValueSustainable]}>{sustainableCount}</Text>
+          <Text style={styles.statLabel}>SUSTAINABLE</Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionLabel}>ALL SCANS</Text>
+
+      <ScanHistoryFilters
+        selected={dateFilter}
+        customDate={customDate}
+        onSelect={handleFilterSelect}
+        onCustomDateChange={handleCustomDateChange}
+      />
+    </View>
+  );
+
   return (
     <View style={styles.root}>
       <LinearGradient
@@ -220,58 +263,52 @@ export default function HistoryScreen() {
         </View>
 
         <View style={styles.sheet}>
-          <ScrollView
+          <FlatList
+            data={visibleScans}
+            keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               styles.sheetContent,
               selectionMode && selectedIds.size > 0 ? styles.sheetContentWithBar : null,
-            ]}>
-            <View style={styles.statsRow}>
-              <View style={[styles.statCard, faintCardShadow()]}>
-                <ScanLine size={18} color={BrandColors.primary} strokeWidth={2} />
-                <Text style={[styles.statValue, styles.statValuePrimary]}>{totalScans}</Text>
-                <Text style={styles.statLabel}>TOTAL SCANS</Text>
-              </View>
-              <View style={[styles.statCard, faintCardShadow()]}>
-                <TriangleAlert size={18} color={SUSTAINABILITY_DOT.red} strokeWidth={2} />
-                <Text style={[styles.statValue, styles.statValueAlert]}>{mislabelingCount}</Text>
-                <Text style={styles.statLabel}>MISLABEL</Text>
-              </View>
-              <View style={[styles.statCard, faintCardShadow()]}>
-                <Leaf size={18} color={SUSTAINABILITY_DOT.green} strokeWidth={2} />
-                <Text style={[styles.statValue, styles.statValueSustainable]}>{sustainableCount}</Text>
-                <Text style={styles.statLabel}>SUSTAINABLE</Text>
-              </View>
-            </View>
-
-            <Text style={styles.sectionLabel}>ALL SCANS</Text>
-
-            <ScanHistoryFilters
-              selected={dateFilter}
-              customDate={customDate}
-              onSelect={handleFilterSelect}
-              onCustomDateChange={handleCustomDateChange}
-            />
-
-            <View style={styles.list}>
-              {filteredScans.length > 0 ? (
-                filteredScans.map((scan) => (
-                  <ScanHistoryCard
-                    key={scan.id}
-                    scan={scan}
-                    selectionMode={selectionMode}
-                    selected={selectedIds.has(scan.id)}
-                    onPress={() => handlePress(scan)}
-                    onLongPress={() => handleLongPress(scan)}
-                  />
-                ))
-              ) : (
-                <Text style={styles.emptyText}>
-                  No scans yet. Analyze a fabric to start your history.
-                </Text>
-              )}
-            </View>
-          </ScrollView>
+            ]}
+            ListHeaderComponent={listHeader}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            renderItem={({ item: scan }) => (
+              <ScanHistoryCard
+                scan={scan}
+                selectionMode={selectionMode}
+                selected={selectedIds.has(scan.id)}
+                onPress={() => handlePress(scan)}
+                onLongPress={() => handleLongPress(scan)}
+              />
+            )}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                No scans yet. Analyze a fabric to start your history.
+              </Text>
+            }
+            ListFooterComponent={
+              hasMore ? (
+                <Pressable
+                  onPress={loadMore}
+                  style={({ pressed }) => [styles.loadMoreButton, pressed && styles.loadMorePressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Load more scans">
+                  <Text style={styles.loadMoreText}>
+                    Load more ({filteredScans.length - visibleCount} left)
+                  </Text>
+                </Pressable>
+              ) : filteredScans.length > HISTORY_PAGE_SIZE ? (
+                <Text style={styles.endText}>All {filteredScans.length} scans shown</Text>
+              ) : null
+            }
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.4}
+            initialNumToRender={HISTORY_PAGE_SIZE}
+            windowSize={7}
+            maxToRenderPerBatch={HISTORY_PAGE_SIZE}
+            removeClippedSubviews
+          />
 
           {selectionMode && selectedIds.size > 0 ? (
             <View style={styles.actionBar}>
@@ -417,11 +454,8 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
     marginBottom: 12,
   },
-  list: {
-    gap: 10,
-    marginTop: 12,
-    paddingTop: 8,
-    overflow: 'visible',
+  separator: {
+    height: 12,
   },
   emptyText: {
     fontFamily: Fonts.regular,
@@ -430,6 +464,33 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
     textAlign: 'center',
     paddingVertical: 24,
+    marginTop: 12,
+  },
+  loadMoreButton: {
+    alignSelf: 'center',
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: BrandColors.lavender,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+  },
+  loadMorePressed: {
+    opacity: 0.85,
+  },
+  loadMoreText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: BrandColors.primaryDark,
+  },
+  endText: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: BrandColors.textMuted,
+    textAlign: 'center',
+    marginTop: 16,
+    paddingBottom: 4,
   },
   actionBar: {
     flexDirection: 'row',

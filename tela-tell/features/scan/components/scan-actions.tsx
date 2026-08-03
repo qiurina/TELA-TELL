@@ -469,19 +469,6 @@ export function ScanDetailsPanel({
   );
 }
 
-/** @deprecated Prefer FloatingCaptureBar + ScanDetailsPanel */
-export function ScanActions(
-  props: FloatingCaptureBarProps & Omit<ScanDetailsPanelProps, 'expanded' | 'onExpandedChange'>,
-) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <View style={{ gap: 12 }}>
-      <FloatingCaptureBar {...props} />
-      <ScanDetailsPanel {...props} expanded={expanded} onExpandedChange={setExpanded} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: 'row',

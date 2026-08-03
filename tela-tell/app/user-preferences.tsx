@@ -16,11 +16,16 @@ import { X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
+import { useAuth } from '@/features/auth/context/auth-provider';
 import { resetScanSession } from '@/features/scan/lib/scan-session';
-import { clearUserPreferences } from '@/features/profile/lib/user-preferences';
+import {
+  clearUserPreferences,
+  persistUserPreferences,
+} from '@/features/profile/lib/user-preferences';
 
 export default function UserPreferencesScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.92, 780);
@@ -44,6 +49,7 @@ export default function UserPreferencesScreen() {
   const handleClear = () => {
     clearUserPreferences();
     resetScanSession();
+    void persistUserPreferences(session?.userId);
     setFormKey((current) => current + 1);
   };
 

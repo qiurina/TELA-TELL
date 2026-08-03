@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS tblScan (
   confidence            INTEGER NOT NULL,
   scannedAt             TEXT NOT NULL,
   scannedAtDate         TEXT NOT NULL,
+  createdAt             TEXT,
   sellerLabel           TEXT,
   garmentCondition      TEXT NOT NULL DEFAULT 'New',
   imageUri              TEXT,

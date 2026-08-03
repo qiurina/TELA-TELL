@@ -512,17 +512,11 @@ export function getScanResult(id: string): ScanResult | undefined {
 
 export function resolveScanId(rawId: string | string[] | undefined): string {
   if (Array.isArray(rawId)) {
-    return rawId[0] ?? '1';
+    return rawId[0] ?? '';
   }
 
-  return rawId ?? '1';
+  return rawId ?? '';
 }
-
-export function formatDetectedCompositions(compositions: FabricComposition[]): string {
-  return compositions.map((item) => `${item.material} (${item.percentage}%)`).join(', ');
-}
-
-const SCAN_THUMBNAIL = require('@/assets/images/testfabric.jpg') as ImageSourcePropType;
 
 export type RecentScanPreview = {
   id: string;
@@ -541,19 +535,6 @@ export type RecentScanPreview = {
   /** Whole days remaining before auto-purge (deleted gallery). */
   daysRemaining?: number;
 };
-
-export const RECENT_SCANS_PREVIEW: RecentScanPreview[] = SCAN_RESULTS.map((scan) => ({
-  id: scan.id,
-  primaryFabric: scan.dominantFabric.replace(' dominant', ' Blend'),
-  composition: scan.compositions.map((c) => `${c.material} ${c.percentage}%`).join(' · '),
-  scannedAt: scan.scannedAt,
-  scannedAtDate: scan.scannedAtDate,
-  sustainability: scan.sustainability.rating,
-  sustainabilityLabel: scan.sustainability.label,
-  mislabeling: scan.mislabeling.detected,
-  sellerLabel: scan.sellerLabel,
-  image: SCAN_THUMBNAIL,
-}));
 
 export const SUSTAINABILITY_DOT: Record<SustainabilityRating, string> = {
   green: '#16a34a',

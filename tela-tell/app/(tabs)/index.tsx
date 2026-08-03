@@ -10,7 +10,7 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { heroCardShadow, primaryButtonShadow } from '@/constants/shadows';
 import { type RecentScanPreview } from '@/data/scans/mock-data';
-import { getAllScans } from '@/db/scans';
+import { getRecentScans } from '@/db/scans';
 import { useAuth } from '@/features/auth/context/auth-provider';
 import { useCallback, useState } from 'react';
 
@@ -25,9 +25,9 @@ export default function HomeScreen() {
     useCallback(() => {
       let active = true;
       void (async () => {
-        const list = await getAllScans({ userId: session?.userId ?? null });
+        const list = await getRecentScans(5, { userId: session?.userId ?? null });
         if (!active) return;
-        setRecentScans(list.slice(0, 5));
+        setRecentScans(list);
       })();
       return () => {
         active = false;

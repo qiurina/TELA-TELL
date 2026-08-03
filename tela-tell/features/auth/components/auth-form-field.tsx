@@ -34,14 +34,13 @@ export function AuthFieldLabel({ label, required }: AuthFieldLabelProps) {
 }
 
 export function AuthFieldError({ message }: { message?: string | null }) {
-  if (!message) {
+  if (!message?.trim()) {
     return null;
   }
 
   return <Text style={styles.errorText}>{message}</Text>;
 }
 
-/** Compact banner for form-level auth failures (invalid credentials, etc.). */
 export function AuthFormBanner({ message }: { message?: string | null }) {
   if (!message) {
     return null;

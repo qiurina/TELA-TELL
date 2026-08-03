@@ -22,7 +22,7 @@ import {
 
 import { ScanGuideFloat } from '@/features/scan/components/scan-guide-float';
 import { ScanLineAnimation } from '@/features/scan/components/scan-line-animation';
-import { ChevronLeft, ScanLine } from '@/components/ui/lucide-icons';
+import { ChevronLeft, ScanLine, Zap, ZapOff } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import {
@@ -83,6 +83,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   const [permission, requestPermission] = useCameraPermissions();
   const [viewSize, setViewSize] = useState<Size>({ width: 0, height: 0 });
   const [isCapturing, setIsCapturing] = useState(false);
+  const [fillLightOn, setFillLightOn] = useState(false);
   const hasPreview = Boolean(previewUri);
   const canUseLiveCamera =
     Platform.OS !== 'web' && Boolean(permission?.granted) && !hasPreview && isFocused;
@@ -95,6 +96,12 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
       void requestPermission();
     }
   }, [isFocused, permission, requestPermission]);
+
+  useEffect(() => {
+    if (!canUseLiveCamera) {
+      setFillLightOn(false);
+    }
+  }, [canUseLiveCamera]);
 
   const guide =
     viewSize.width > 0
@@ -203,6 +210,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           style={styles.feed}
           facing="back"
           mode="picture"
+          enableTorch={fillLightOn}
           animateShutter={false}
         />
       ) : permission && !permission.granted ? (
@@ -280,6 +288,26 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
         </Pressable>
       ) : null}
 
+      {!hasPreview ? (
+        <Pressable
+          style={[
+            styles.flashButton,
+            { top: contentTopInset },
+            fillLightOn && styles.flashButtonActive,
+          ]}
+          onPress={() => setFillLightOn((prev) => !prev)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            fillLightOn ? 'Fill light on. Tap to turn off' : 'Fill light off. Tap to turn on'
+          }>
+          {fillLightOn ? (
+            <Zap size={18} color="#FFE566" strokeWidth={2.25} fill="#FFE566" />
+          ) : (
+            <ZapOff size={18} color={BrandColors.white} strokeWidth={2.25} />
+          )}
+        </Pressable>
+      ) : null}
+
       <View style={[styles.titleWrap, { top: contentTopInset }]} pointerEvents="none">
         <View style={styles.titlePill}>
           <Text style={styles.titleText}>Scan Fabric</Text>
@@ -322,7 +350,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           visible={guideVisible}
           onDismiss={onDismissGuide}
           onShow={onShowGuide}
-          topOffset={contentTopInset}
+          topOffset={contentTopInset + 48}
         />
       ) : null}
     </View>
@@ -403,6 +431,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
+  },
+  flashButton: {
+    position: 'absolute',
+    right: 14,
+    zIndex: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  flashButtonActive: {
+    backgroundColor: 'rgba(74, 143, 168, 0.75)',
+    borderColor: 'rgba(255,255,255,0.28)',
   },
   titleWrap: {
     position: 'absolute',

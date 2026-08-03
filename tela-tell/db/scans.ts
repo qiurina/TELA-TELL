@@ -11,8 +11,12 @@ import type {
   SustainabilityRating,
 } from '@/data/scans/mock-data';
 import { buildMislabeling } from '@/features/scan/lib/create-scan-record';
+import {
+  formatScanDisplayTime,
+  formatScannedAtDate,
+  resolveScanDate,
+} from '@/features/scan/lib/scan-timestamp';
 
-/** Fallback thumbnail when a scan has no saved photo. */
 const SCAN_THUMBNAIL = require('@/assets/images/testfabric.jpg') as ImageSourcePropType;
 
 export type SaveScanOptions = {
@@ -27,6 +31,7 @@ type ScanRow = {
   confidence: number;
   scannedAt: string;
   scannedAtDate: string;
+  createdAt?: string | null;
   sellerLabel: string | null;
   imageUri: string | null;
   sustainabilityRating: string;
@@ -39,7 +44,8 @@ type ScanRow = {
 
 const ACTIVE_SCAN_FILTER = `(deletedAt IS NULL OR deletedAt = '')`;
 const DELETED_SCAN_FILTER = `(deletedAt IS NOT NULL AND deletedAt != '')`;
-const SCAN_PREVIEW_COLUMNS = `scan_ID, dominantFabric, confidence, scannedAt, scannedAtDate,
+const SCAN_LIST_ORDER = `ORDER BY createdAt DESC, scannedAtDate DESC, scan_ID DESC`;
+const SCAN_PREVIEW_COLUMNS = `scan_ID, dominantFabric, confidence, scannedAt, scannedAtDate, createdAt,
                 sellerLabel, imageUri, sustainabilityRating, sustainabilityLabel,
                 mislabelDetected, resultJson, isFavorite, deletedAt`;
 
@@ -51,11 +57,6 @@ function daysRemainingUntilPurge(deletedAt: string, retentionDays: number): numb
   const expiresAt = deletedMs + retentionDays * 24 * 60 * 60 * 1000;
   return Math.max(0, Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000)));
 }
-
-/**
- * Saves one scan to tblScan + tblScanComposition.
- * Uses INSERT OR REPLACE so re-saving the same scan_ID updates it.
- */
 export async function saveScan(
   result: ScanResult,
   options?: SaveScanOptions,
@@ -73,11 +74,11 @@ export async function saveScan(
     await db.runAsync(
       `INSERT OR REPLACE INTO tblScan (
         scan_ID, user_id, dominantFabric, confidence,
-        scannedAt, scannedAtDate, sellerLabel, garmentCondition, imageUri,
+        scannedAt, scannedAtDate, createdAt, sellerLabel, garmentCondition, imageUri,
         sustainabilityRating, sustainabilityLabel, sustainabilityScore,
         mislabelDetected, mislabelTitle, mislabelMessage,
         resultJson, syncStatus
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local')`,
       [
         result.id,
         userId,
@@ -85,6 +86,7 @@ export async function saveScan(
         result.confidence,
         result.scannedAt,
         result.scannedAtDate,
+        new Date().toISOString(),
         result.sellerLabel ?? null,
         garmentCondition,
         imageUri,
@@ -110,8 +112,6 @@ export async function saveScan(
     }
   });
 }
-
-/** Loads one full scan (used by Results / profile / recommendations screens). */
 export async function getScanById(scanId: string): Promise<ScanResult | undefined> {
   if (!isDatabaseAvailable()) {
     return undefined;
@@ -139,8 +139,6 @@ export async function getScanById(scanId: string): Promise<ScanResult | undefine
     return undefined;
   }
 }
-
-/** Loads the scan list for History / Home, newest first (excludes trash). */
 export async function getAllScans(
   options?: { userId?: string | null },
 ): Promise<RecentScanPreview[]> {
@@ -156,20 +154,50 @@ export async function getAllScans(
         `SELECT ${SCAN_PREVIEW_COLUMNS}
          FROM tblScan
          WHERE user_id = ? AND ${ACTIVE_SCAN_FILTER}
-         ORDER BY scannedAt DESC`,
+         ${SCAN_LIST_ORDER}`,
         [userId],
       )
     : await db.getAllAsync<ScanRow>(
         `SELECT ${SCAN_PREVIEW_COLUMNS}
          FROM tblScan
          WHERE ${ACTIVE_SCAN_FILTER}
-         ORDER BY scannedAt DESC`,
+         ${SCAN_LIST_ORDER}`,
       );
 
   return rows.map((row) => rowToPreview(row));
 }
+export async function getRecentScans(
+  limit = 5,
+  options?: { userId?: string | null },
+): Promise<RecentScanPreview[]> {
+  if (!isDatabaseAvailable()) {
+    return [];
+  }
 
-/** Favorite scans still in the active library. */
+  const safeLimit = Math.max(1, Math.min(limit, 50));
+  const db = await getDatabase();
+  const userId = options?.userId ?? null;
+
+  const rows = userId
+    ? await db.getAllAsync<ScanRow>(
+        `SELECT ${SCAN_PREVIEW_COLUMNS}
+         FROM tblScan
+         WHERE user_id = ? AND ${ACTIVE_SCAN_FILTER}
+         ${SCAN_LIST_ORDER}
+         LIMIT ?`,
+        [userId, safeLimit],
+      )
+    : await db.getAllAsync<ScanRow>(
+        `SELECT ${SCAN_PREVIEW_COLUMNS}
+         FROM tblScan
+         WHERE ${ACTIVE_SCAN_FILTER}
+         ${SCAN_LIST_ORDER}
+         LIMIT ?`,
+        [safeLimit],
+      );
+
+  return rows.map((row) => rowToPreview(row));
+}
 export async function getFavoriteScans(
   options?: { userId?: string | null },
 ): Promise<RecentScanPreview[]> {
@@ -185,20 +213,18 @@ export async function getFavoriteScans(
         `SELECT ${SCAN_PREVIEW_COLUMNS}
          FROM tblScan
          WHERE user_id = ? AND isFavorite = 1 AND ${ACTIVE_SCAN_FILTER}
-         ORDER BY scannedAt DESC`,
+         ${SCAN_LIST_ORDER}`,
         [userId],
       )
     : await db.getAllAsync<ScanRow>(
         `SELECT ${SCAN_PREVIEW_COLUMNS}
          FROM tblScan
          WHERE isFavorite = 1 AND ${ACTIVE_SCAN_FILTER}
-         ORDER BY scannedAt DESC`,
+         ${SCAN_LIST_ORDER}`,
       );
 
   return rows.map((row) => rowToPreview(row));
 }
-
-/** Soft-deleted scans still within the retention window. */
 export async function getDeletedScans(
   options?: { userId?: string | null; retentionDays?: number },
 ): Promise<RecentScanPreview[]> {
@@ -230,54 +256,6 @@ export async function getDeletedScans(
   return rows.map((row) => rowToPreview(row, retentionDays));
 }
 
-/** Full scan objects — used for History stats and fabric distribution. */
-export async function getAllScanResults(
-  options?: { userId?: string | null },
-): Promise<ScanResult[]> {
-  if (!isDatabaseAvailable()) {
-    return [];
-  }
-
-  const db = await getDatabase();
-  const userId = options?.userId ?? null;
-
-  const rows = userId
-    ? await db.getAllAsync<{ resultJson: string | null }>(
-        `SELECT resultJson FROM tblScan
-         WHERE user_id = ? AND ${ACTIVE_SCAN_FILTER}
-         ORDER BY scannedAt DESC`,
-        [userId],
-      )
-    : await db.getAllAsync<{ resultJson: string | null }>(
-        `SELECT resultJson FROM tblScan
-         WHERE ${ACTIVE_SCAN_FILTER}
-         ORDER BY scannedAt DESC`,
-      );
-
-  const results: ScanResult[] = [];
-  for (const row of rows) {
-    if (!row.resultJson) {
-      continue;
-    }
-    try {
-      const parsed = JSON.parse(row.resultJson) as ScanResult;
-      const mislabeling = buildMislabeling(
-        parsed.dominantFabric,
-        parsed.sellerLabel ?? null,
-        parsed.compositions ?? [],
-      );
-      results.push({
-        ...parsed,
-        mislabeling,
-      });
-    } catch {
-      // Skip unreadable rows instead of breaking the whole list.
-    }
-  }
-  return results;
-}
-
-/** Turns a database row into the shape History/Home already render. */
 function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
   let compositionText = '';
   let liveMislabel = row.mislabelDetected === 1;
@@ -299,13 +277,19 @@ function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
   }
 
   const deletedAt = row.deletedAt ?? null;
+  const resolvedDate = resolveScanDate(
+    row.createdAt,
+    row.scannedAtDate,
+    row.scannedAt,
+    row.scan_ID,
+  );
 
   return {
     id: row.scan_ID,
     primaryFabric: row.dominantFabric.replace(' dominant', ' Blend'),
     composition: compositionText,
-    scannedAt: row.scannedAt,
-    scannedAtDate: row.scannedAtDate,
+    scannedAt: resolvedDate ? formatScanDisplayTime(resolvedDate) : row.scannedAt,
+    scannedAtDate: resolvedDate ? formatScannedAtDate(resolvedDate) : row.scannedAtDate,
     sustainability: row.sustainabilityRating as SustainabilityRating,
     sustainabilityLabel: row.sustainabilityLabel,
     mislabeling: liveMislabel,
@@ -316,11 +300,6 @@ function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
     daysRemaining: deletedAt ? daysRemainingUntilPurge(deletedAt, retentionDays) : undefined,
   };
 }
-
-/**
- * Updates the seller-declared label on an existing scan and recomputes mislabeling.
- * Keeps both the sellerLabel column and resultJson in sync.
- */
 export async function updateScanSellerLabel(
   scanId: string,
   sellerLabel: string | null,
@@ -380,8 +359,6 @@ export async function updateScanSellerLabel(
 
   return true;
 }
-
-/** Whether a scan is marked favorite in SQLite. */
 export async function isScanFavorite(scanId: string): Promise<boolean> {
   if (!isDatabaseAvailable() || !scanId) {
     return false;
@@ -400,8 +377,6 @@ export async function isScanFavorite(scanId: string): Promise<boolean> {
     return false;
   }
 }
-
-/** Toggle or set favorite flag for a scan. Returns the new value. */
 export async function setScanFavorite(scanId: string, favorite: boolean): Promise<boolean> {
   if (!isDatabaseAvailable() || !scanId) {
     return favorite;
@@ -414,8 +389,6 @@ export async function setScanFavorite(scanId: string, favorite: boolean): Promis
   );
   return favorite;
 }
-
-/** Soft-deletes a scan into Recently Deleted (kept for retentionDays). */
 export async function deleteScan(scanId: string): Promise<boolean> {
   if (!isDatabaseAvailable() || !scanId) {
     return false;
@@ -428,8 +401,6 @@ export async function deleteScan(scanId: string): Promise<boolean> {
   );
   return (result.changes ?? 0) > 0;
 }
-
-/** Restores one or more soft-deleted scans. */
 export async function restoreScans(scanIds: string[]): Promise<number> {
   if (!isDatabaseAvailable() || scanIds.length === 0) {
     return 0;
@@ -455,8 +426,6 @@ async function hardDeleteScanIds(db: Awaited<ReturnType<typeof getDatabase>>, sc
     await db.runAsync('DELETE FROM tblScan WHERE scan_ID = ?', [scanId]);
   }
 }
-
-/** Permanently deletes soft-deleted (or any) scans. */
 export async function permanentlyDeleteScans(scanIds: string[]): Promise<number> {
   if (!isDatabaseAvailable() || scanIds.length === 0) {
     return 0;
@@ -468,8 +437,6 @@ export async function permanentlyDeleteScans(scanIds: string[]): Promise<number>
   });
   return scanIds.length;
 }
-
-/** Permanently deletes every soft-deleted scan for the user (or all). */
 export async function permanentlyDeleteAllDeletedScans(
   options?: { userId?: string | null },
 ): Promise<number> {
@@ -496,8 +463,6 @@ export async function permanentlyDeleteAllDeletedScans(
   await permanentlyDeleteScans(ids);
   return ids.length;
 }
-
-/** Removes soft-deleted scans older than retentionDays. */
 export async function purgeExpiredDeletedScans(retentionDays = 30): Promise<number> {
   if (!isDatabaseAvailable()) {
     return 0;

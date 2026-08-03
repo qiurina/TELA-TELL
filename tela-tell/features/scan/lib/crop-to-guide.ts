@@ -23,6 +23,9 @@ export type Size = {
 /** Centered square guide aspect (width / height). */
 export const GUIDE_ASPECT = 1;
 
+const SCAN_IMAGE_MAX_EDGE = 1920;
+const SCAN_JPEG_QUALITY = 0.88;
+
 /**
  * Centered capture guide inside the live viewfinder, clear of top chrome and
  * bottom controls. Live camera stays full-bleed underneath.
@@ -43,11 +46,6 @@ export function computeCenteredGuideRect(
     width: Math.round(side),
     height: Math.round(side),
   };
-}
-
-/** @deprecated Use computeCenteredGuideRect — kept for any older call sites. */
-export function computePreviewGuideRect(view: Size, bottomReserve: number): ViewRect {
-  return computeCenteredGuideRect(view, 0, bottomReserve);
 }
 
 /**
@@ -144,24 +142,57 @@ export async function cropImageToRect(uri: string, crop: PixelCrop): Promise<str
     return uri;
   }
 
-  const result = await ImageManipulator.manipulateAsync(
-    uri,
-    [
-      {
-        crop: {
-          originX: crop.originX,
-          originY: crop.originY,
-          width: crop.width,
-          height: crop.height,
-        },
-      },
-    ],
+  const MAX_EDGE = SCAN_IMAGE_MAX_EDGE;
+  const actions: ImageManipulator.Action[] = [
     {
-      compress: 0.9,
-      format: ImageManipulator.SaveFormat.JPEG,
+      crop: {
+        originX: crop.originX,
+        originY: crop.originY,
+        width: crop.width,
+        height: crop.height,
+      },
     },
-  );
+  ];
+
+  const longest = Math.max(crop.width, crop.height);
+  if (longest > MAX_EDGE) {
+    if (crop.width >= crop.height) {
+      actions.push({ resize: { width: MAX_EDGE } });
+    } else {
+      actions.push({ resize: { height: MAX_EDGE } });
+    }
+  }
+
+  const result = await ImageManipulator.manipulateAsync(uri, actions, {
+    compress: SCAN_JPEG_QUALITY,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
   return result.uri;
+}
+
+export async function optimizeScanImage(uri: string): Promise<string> {
+  try {
+    const image = await getImageSize(uri);
+    const longest = Math.max(image.width, image.height);
+    const MAX_EDGE = SCAN_IMAGE_MAX_EDGE;
+    const actions: ImageManipulator.Action[] = [];
+
+    if (longest > MAX_EDGE) {
+      if (image.width >= image.height) {
+        actions.push({ resize: { width: MAX_EDGE } });
+      } else {
+        actions.push({ resize: { height: MAX_EDGE } });
+      }
+    }
+
+    const result = await ImageManipulator.manipulateAsync(uri, actions, {
+      compress: SCAN_JPEG_QUALITY,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+    return result.uri;
+  } catch {
+    return uri;
+  }
 }
 
 /**
@@ -184,15 +215,6 @@ export async function cropUriToGuideWithSize(
   } catch {
     return uri;
   }
-}
-
-export async function cropUriToGuide(
-  uri: string,
-  view: Size,
-  guideInView: ViewRect,
-): Promise<string> {
-  const image = await getImageSize(uri);
-  return cropUriToGuideWithSize(uri, image, view, guideInView);
 }
 
 export async function cropUriToCenteredGuideAspect(

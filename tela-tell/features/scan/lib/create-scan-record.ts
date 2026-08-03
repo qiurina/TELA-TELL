@@ -5,37 +5,15 @@ import {
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
 import { getSignificantFibers } from '@/data/scans/analysis';
+import { formatScanDisplayTime, formatScannedAtDate } from '@/features/scan/lib/scan-timestamp';
 
 export type CreateScanRecordInput = {
-  /** Optional seller-declared label from the Seller Label modal. */
   sellerLabel?: string | null;
-  /**
-   * Which mock template to clone.
-   * Omit to rotate through templates so demos aren't always the same cotton scan.
-   */
   templateId?: string;
 };
 
-/** Simple unique id for offline scans. */
 function createScanId(): string {
   return `scan_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-/** Human-readable time for History cards, e.g. "Today, 8:30 PM". */
-function formatScannedAt(date: Date): string {
-  const time = date.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-  return `Today, ${time}`;
-}
-
-/** ISO date for filtering, e.g. "2026-07-26". */
-function formatScannedAtDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
 
 function pickTemplate(templateId?: string): ScanResult {
@@ -83,10 +61,6 @@ function formatFoundLabel(fibers: SupportedFabric[], dominantFabric: string): st
   return dominantFabric.replace(/\s*dominant\s*/i, '').trim() || 'a different fabric';
 }
 
-/**
- * Rule-based mislabel check for the saved record.
- * Seller-claimed fibers (including blends) must all appear in the scan mix.
- */
 export function buildMislabeling(
   dominantFabric: string,
   sellerLabel: string | null,
@@ -139,16 +113,11 @@ export function buildMislabeling(
   };
 }
 
-/**
- * Builds a new ScanResult ready to save.
- * Classification content still comes from mock templates. Only the record is new.
- */
 export function createScanRecord(input: CreateScanRecordInput = {}): ScanResult {
   const template = pickTemplate(input.templateId);
   const now = new Date();
   const sellerLabel = input.sellerLabel?.trim() || null;
 
-  // Deep-ish clone so we never mutate the shared SCAN_RESULTS templates.
   const cloned: ScanResult = {
     ...template,
     compositions: template.compositions.map((item) => ({ ...item })),
@@ -168,7 +137,7 @@ export function createScanRecord(input: CreateScanRecordInput = {}): ScanResult 
       reuse: { ...template.recommendations.reuse },
     },
     id: createScanId(),
-    scannedAt: formatScannedAt(now),
+    scannedAt: formatScanDisplayTime(now),
     scannedAtDate: formatScannedAtDate(now),
     sellerLabel: sellerLabel ?? undefined,
     mislabeling: buildMislabeling(template.dominantFabric, sellerLabel, template.compositions),

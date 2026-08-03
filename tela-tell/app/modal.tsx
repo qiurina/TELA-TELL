@@ -31,14 +31,6 @@ import {
 
 const FIBER_CHIPS = [...SUPPORTED_FABRICS];
 
-const BLEND_PRESETS = [
-  'Cotton / Polyester blend',
-  'Linen / Cotton blend',
-  'Cotton / Spandex blend',
-  'Rayon / Polyester blend',
-  'Wool / Acrylic blend',
-] as const;
-
 function formatBlendLabel(fibers: SupportedFabric[]): string {
   if (fibers.length === 0) {
     return '';
@@ -185,34 +177,6 @@ export default function SellerLabelModal() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>COMMON BLENDS</Text>
-              <View style={styles.presetRow}>
-                {BLEND_PRESETS.map((preset) => {
-                  const selected = sellerLabel.trim() === preset;
-                  return (
-                    <Pressable
-                      key={preset}
-                      style={({ pressed }) => [
-                        styles.presetChip,
-                        selected && styles.chipSelected,
-                        pressed && styles.chipPressed,
-                      ]}
-                      onPress={() => commitLabel(selected ? '' : preset)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      accessibilityLabel={selected ? `Deselect ${preset}` : `Select ${preset}`}>
-                      <Text
-                        style={[styles.presetText, selected && styles.chipTextSelected]}
-                        numberOfLines={2}>
-                        {preset}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.section}>
               <Text style={styles.sectionLabel}>QUICK SELECT (TAP MORE FOR A BLEND)</Text>
               <View style={styles.chipGrid}>
                 {FIBER_CHIPS.map((fiber) => {
@@ -236,9 +200,6 @@ export default function SellerLabelModal() {
                       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
                         {fiber}
                       </Text>
-                      {selected ? (
-                        <X size={14} color={BrandColors.primary} strokeWidth={2.5} />
-                      ) : null}
                     </Pressable>
                   );
                 })}
@@ -330,25 +291,6 @@ const styles = StyleSheet.create({
   },
   blendHint: {
     fontFamily: Fonts.medium,
-    fontSize: 12,
-    color: BrandColors.primaryDark,
-  },
-  presetRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  presetChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-    backgroundColor: BrandColors.lavender,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    maxWidth: '100%',
-  },
-  presetText: {
-    fontFamily: Fonts.semiBold,
     fontSize: 12,
     color: BrandColors.primaryDark,
   },

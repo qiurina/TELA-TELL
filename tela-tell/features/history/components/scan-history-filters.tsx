@@ -123,6 +123,7 @@ export function ScanHistoryFilters({
 const styles = StyleSheet.create({
   wrapper: {
     gap: 8,
+    marginBottom: 12,
   },
   filterScroll: {
     flexGrow: 0,
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingBottom: 4,
+    paddingBottom: 2,
   },
   filterPill: {
     borderRadius: 999,

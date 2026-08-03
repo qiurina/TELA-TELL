@@ -3,13 +3,12 @@ import { SCHEMA_SQL } from '@/db/schema';
 
 let migrationPromise: Promise<void> | null = null;
 
-/**
- * Creates local SQLite tables on first launch (iOS/Android).
- * Prototype scope: schema only — scan/history still use mock data.
- */
 export function migrateDatabase(): Promise<void> {
   if (!migrationPromise) {
-    migrationPromise = runMigration();
+    migrationPromise = runMigration().catch((error) => {
+      migrationPromise = null;
+      throw error;
+    });
   }
 
   return migrationPromise;
@@ -20,14 +19,40 @@ async function runMigration(): Promise<void> {
   await db.execAsync(SCHEMA_SQL);
   await ensureScanColumn(db, 'isFavorite', 'INTEGER NOT NULL DEFAULT 0');
   await ensureScanColumn(db, 'deletedAt', 'TEXT');
+  await ensureScanColumn(db, 'createdAt', 'TEXT');
   await ensureProfileColumn(db, 'colorSeason', 'TEXT');
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)',
+  );
+  await backfillScanCreatedAt(db);
 
-  // Purge soft-deleted scans older than 30 days on launch.
   try {
     const { purgeExpiredDeletedScans } = await import('@/db/scans');
     await purgeExpiredDeletedScans(30);
   } catch {
-    // Ignore purge failures during migration bootstrap.
+  }
+}
+
+function createdAtFromScanId(scanId: string): string {
+  const parts = scanId.split('_');
+  if (parts[0] === 'scan' && parts[1]) {
+    const ms = Number.parseInt(parts[1], 36);
+    if (Number.isFinite(ms) && ms > 1_000_000_000_000) {
+      return new Date(ms).toISOString();
+    }
+  }
+  return new Date(0).toISOString();
+}
+
+async function backfillScanCreatedAt(db: Awaited<ReturnType<typeof getDatabase>>) {
+  const rows = await db.getAllAsync<{ scan_ID: string }>(
+    `SELECT scan_ID FROM tblScan WHERE createdAt IS NULL OR createdAt = ''`,
+  );
+  for (const row of rows) {
+    await db.runAsync('UPDATE tblScan SET createdAt = ? WHERE scan_ID = ?', [
+      createdAtFromScanId(row.scan_ID),
+      row.scan_ID,
+    ]);
   }
 }
 
