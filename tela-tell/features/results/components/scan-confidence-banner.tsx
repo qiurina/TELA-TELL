@@ -14,7 +14,7 @@ import { faintCardShadow } from '@/constants/shadows';
 type ScanConfidenceBannerProps = {
   confidence: number;
   dominantFabric: string;
-  /** When true, dominant fabric is shown on the photo preview — banner shows notes only. */
+  /** dominant fabric is shown on the photo preview, banner shows notes only. */
   compact?: boolean;
 };
 

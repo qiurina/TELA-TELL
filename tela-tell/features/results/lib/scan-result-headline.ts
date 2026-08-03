@@ -41,10 +41,6 @@ function blendTitle(fibers: SupportedFabric[]): string {
   return 'Fiber blend';
 }
 
-/**
- * Clean headline for Scan Results photo footer and summary.
- * Blends get a mix title + percentage line; singles get "Mostly X".
- */
 export function getScanResultHeadline(
   dominantFabric: string,
   compositions: CompositionInput[] = [],

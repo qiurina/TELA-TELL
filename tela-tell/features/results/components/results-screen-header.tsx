@@ -13,14 +13,11 @@ const BOOKMARK_IDLE = BrandColors.primary;
 type ResultsScreenHeaderProps = {
   title: string;
   onBack: () => void;
-  /** When set, shows favorite + delete actions on the top right. */
   onToggleFavorite?: () => void;
   onDelete?: () => void;
   isFavorite?: boolean;
   actionsDisabled?: boolean;
-  /** Custom trailing content (e.g. gallery actions). */
   rightSlot?: ReactNode;
-  /** Tighter padding for gallery-style screens. */
   compact?: boolean;
 };
 

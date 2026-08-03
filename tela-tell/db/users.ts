@@ -5,7 +5,6 @@ import {
   verifyPassword,
 } from '@/features/auth/lib/password-crypto';
 
-/** What register/login return to the app (never includes password or hash). */
 export type AuthUser = {
   userId: string;
   email: string;
@@ -27,7 +26,6 @@ export type LoginUserInput = {
   password: string;
 };
 
-/** Thrown when register/login fails for a known reason. */
 export class AuthError extends Error {
   constructor(message: string) {
     super(message);
@@ -60,14 +58,10 @@ function rowToAuthUser(row: UserRow): AuthUser {
 }
 
 function createUserId(): string {
-  // Simple unique id for offline use (timestamp + random).
   return `user_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/**
- * Creates a new account in tblUser.
- * Hashes the password before saving. Never stores the plain password.
- */
+
 export async function registerUser(input: RegisterUserInput): Promise<AuthUser> {
   if (!isDatabaseAvailable()) {
     throw new AuthError('Local database is not available on this platform.');
@@ -91,7 +85,6 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthUser> 
 
   const db = await getDatabase();
 
-  // Reject duplicate email before insert (clearer error than SQLite UNIQUE alone).
   const existing = await db.getFirstAsync<{ user_ID: string }>(
     'SELECT user_ID FROM tblUser WHERE email = ? LIMIT 1',
     [email],
@@ -124,7 +117,6 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthUser> 
       ],
     );
   } catch {
-    // Race: another insert with same email between SELECT and INSERT.
     throw new AuthError('An account with this email already exists.');
   }
 
@@ -137,10 +129,6 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthUser> 
   };
 }
 
-/**
- * Verifies email + password against tblUser.
- * Returns the user on success. Same error message for wrong email or password.
- */
 export async function loginUser(input: LoginUserInput): Promise<AuthUser> {
   if (!isDatabaseAvailable()) {
     throw new AuthError('Local database is not available on this platform.');
@@ -175,7 +163,6 @@ export async function loginUser(input: LoginUserInput): Promise<AuthUser> {
   return rowToAuthUser(row);
 }
 
-/** Optional helper for profile / session restore checks. */
 export async function getUserById(userId: string): Promise<AuthUser | null> {
   if (!isDatabaseAvailable()) {
     return null;

@@ -14,7 +14,6 @@ export type AllergyAlert = {
   conflictDetected: boolean;
   message: string;
   alternatives: HypoallergenicAlternative[];
-  /** Significant fibers that conflict with the user's sensitivity list. */
   conflictFibers?: { fabric: SupportedFabric; percentage?: number }[];
 };
 

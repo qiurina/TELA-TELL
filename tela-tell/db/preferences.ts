@@ -72,10 +72,6 @@ export async function getPreferences(userId: string | null | undefined): Promise
   };
 }
 
-/**
- * Upserts the device profile and replaces fiber/context rows.
- * Avoids relying on lastInsertRowId inside transactions.
- */
 export async function savePreferences(userId: string, prefs: UserPreferences): Promise<void> {
   if (!isDatabaseAvailable()) {
     return;

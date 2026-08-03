@@ -1,8 +1,6 @@
 /**
  * Rule-based synthetic fiber health risk lookup.
  * Levels are advisory, mapped per fiber type from published research
- * (e.g. 2024 University of Birmingham study in Environment International on
- * skin absorption of chemical additives from synthetic microplastics).
  * The app does NOT detect microplastic particles or chemical additives in the image.
  */
 
@@ -14,11 +12,8 @@ export type HealthRiskLevel = 'low' | 'moderate' | 'high';
 export type SyntheticHealthRisk = {
   level: HealthRiskLevel;
   label: string;
-  /** One-line advisory summary for compact alerts. */
   summary: string;
-  /** Synthetic fibers found in the estimated composition, highest share first. */
   fibers: SupportedFabric[];
-  /** Practical actions for Eco Tips. */
   tips: string[];
   disclaimer: string;
 };
@@ -103,7 +98,6 @@ export function getSyntheticHealthRisk(
     }
   }
 
-  // Fall back to the dominant label when compositions are missing.
   if (syntheticFibers.length === 0) {
     const dominant = resolveFabricAlias(dominantFabric);
     if (dominant && isSyntheticFiber(dominant)) {

@@ -19,7 +19,6 @@ export type EcoGuidance = {
 export type EcoGuidanceContext = {
   kind: 'blend' | 'mostly' | 'mixed';
   title: string;
-  /** Optional mix / detail line (e.g. fiber %). */
   detail?: string;
 };
 

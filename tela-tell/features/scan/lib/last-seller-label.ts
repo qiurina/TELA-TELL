@@ -1,12 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-/** Draft seller label for the next scan (and until a scan is saved with it). */
 const STORAGE_KEY = 'tela_tell_last_seller_label';
 
 let lastSellerLabel: string | null = null;
 let hydrated = false;
 
-/** Load any previously saved draft label into memory (call once on app start). */
 export async function hydrateLastSellerLabel(): Promise<void> {
   if (hydrated) {
     return;

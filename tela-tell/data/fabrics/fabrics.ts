@@ -1,4 +1,4 @@
-/** Twelve supported fiber / material types — aligned with capstone study taxonomy. */
+/** Twelve supported fiber / material types */
 
 export type FabricCategory =
   | 'Natural'

@@ -20,7 +20,6 @@ type SyntheticHealthRiskCardProps = {
   risk: SyntheticHealthRisk;
 };
 
-/** Compact health-risk alert for Scan Results. Detail stays in Eco Tips. */
 export function SyntheticHealthRiskCard({ risk }: SyntheticHealthRiskCardProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const levelStyle = LEVEL_STYLES[risk.level];

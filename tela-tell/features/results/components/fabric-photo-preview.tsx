@@ -23,16 +23,12 @@ const SLIDE_HEIGHT = 320;
 
 type FabricPhotoPreviewProps = {
   imageUri?: string | null;
-  /** Main detection title shown in the photo footer. */
   detectedFabric?: string;
-  /** Optional secondary line under the title (e.g. blend percentages). */
   detectedSubtitle?: string;
   confidence?: number;
   markedRegions?: NormalizedRect[];
-  /** When set, enables swipe between the scan photo and this reference image. */
   referenceImage?: ImageSourcePropType | null;
   referenceTitle?: string;
-  /** Optional top-line caption in the photo footer (e.g. "Your scan"). */
   scanCaption?: string;
 };
 

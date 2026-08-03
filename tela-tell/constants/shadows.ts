@@ -18,7 +18,6 @@ function webOrNative(boxShadow: string, native: NativeShadow): ViewStyle {
   return native;
 }
 
-/** Faint card shadow for list items and property boxes */
 export function faintCardShadow(color: string = BrandColors.shadow): ViewStyle {
   return webOrNative(`0px 2px 10px ${color}`, {
     shadowColor: color,
@@ -29,7 +28,6 @@ export function faintCardShadow(color: string = BrandColors.shadow): ViewStyle {
   });
 }
 
-/** Hero / stats card shadow */
 export function heroCardShadow(): ViewStyle {
   return webOrNative(`0px 4px 12px ${BrandColors.shadow}`, {
     shadowColor: BrandColors.shadow,
@@ -40,7 +38,6 @@ export function heroCardShadow(): ViewStyle {
   });
 }
 
-/** Primary button shadow */
 export function primaryButtonShadow(): ViewStyle {
   const color = 'rgba(74, 143, 168, 0.3)';
 
@@ -53,7 +50,6 @@ export function primaryButtonShadow(): ViewStyle {
   });
 }
 
-/** Center FAB shadow */
 export function fabShadow(): ViewStyle {
   const color = 'rgba(74, 143, 168, 0.35)';
 

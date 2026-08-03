@@ -38,10 +38,6 @@ async function cropToAspect(uri: string, aspect: number): Promise<string> {
 }
 
 export function useFabricCapture() {
-  /**
-   * Opens the system camera (fallback for web / when live preview is unavailable).
-   * Crops to the scan guide aspect so review matches framing.
-   */
   const captureFromCamera = async (aspect: number = GUIDE_ASPECT): Promise<string | null> => {
     if (Platform.OS === 'web') {
       const libraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();

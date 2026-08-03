@@ -7,9 +7,7 @@ import { Fonts } from '@/constants/fonts';
 
 type AllergyAlertCardProps = {
   alert: AllergyAlert;
-  /** Slimmer layout for insights. */
   compact?: boolean;
-  /** Vertical stack for side-by-side columns. */
   stacked?: boolean;
 };
 

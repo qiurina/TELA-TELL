@@ -37,9 +37,7 @@ export type GarmentPurposeItem = {
 
 export type EcoAlternative = {
   name: string;
-  /** Functional similarity line — used by eco-alternatives lookup. */
   similarity?: string;
-  /** Legacy mock scan entries — fallback when `similarity` is absent. */
   description?: string;
 };
 
@@ -530,9 +528,7 @@ export type RecentScanPreview = {
   sellerLabel?: string;
   image: ImageSourcePropType;
   isFavorite?: boolean;
-  /** ISO timestamp when soft-deleted; only set for trash items. */
   deletedAt?: string | null;
-  /** Whole days remaining before auto-purge (deleted gallery). */
   daysRemaining?: number;
 };
 

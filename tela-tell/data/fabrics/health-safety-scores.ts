@@ -1,9 +1,3 @@
-/**
- * Advisory Health & Safety scores for Eco Tips.
- * Separate from synthetic Health Risk (microplastic / chemical alert).
- * Scores are rule-based from estimated composition + scan traits — not lab results.
- */
-
 import { getSignificantFibers, type CompositionInput } from '@/data/scans/analysis';
 import { getFabricCategory, resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 import type { SustainabilityRating } from '@/data/scans/mock-data';
@@ -129,9 +123,6 @@ function sustainabilityToScore(
   return 7.0;
 }
 
-/**
- * Builds four Health & Safety metric cards from scan composition + eco traits.
- */
 export function getHealthSafetyMetrics(
   dominantFabric: string,
   compositions: CompositionInput[] = [],

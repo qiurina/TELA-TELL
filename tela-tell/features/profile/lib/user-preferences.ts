@@ -12,7 +12,6 @@ export type SkinTone =
 
 export type SkinUndertone = 'Cool' | 'Warm' | 'Neutral' | 'Olive';
 
-/** The 12-season color system. Optional — users can set this instead of (or in addition to) tone + undertone. */
 export type ColorSeason =
   | 'Light Spring'
   | 'True Spring'
@@ -71,7 +70,6 @@ function notifyPreferencesListeners(): void {
   listeners.forEach((listener) => listener());
 }
 
-/** Subscribe to preference changes (for Profile / panels via useSyncExternalStore). */
 export function subscribeUserPreferences(listener: PreferencesListener): () => void {
   listeners.add(listener);
   return () => {
@@ -172,7 +170,7 @@ export function clearUserPreferences(): void {
   notifyPreferencesListeners();
 }
 
-/** In-flight save so hydrate never reads DB before the latest write finishes. */
+
 let pendingPreferencesSave: Promise<void> = Promise.resolve();
 
 async function waitForPreferencesSave(): Promise<void> {
@@ -200,7 +198,6 @@ export async function hydrateUserPreferences(
         loaded.dressingContexts.length > 0,
     );
 
-    // Keep fresher in-memory edits if SQLite still returns empty (save lag/failure).
     if (localHasData && !loadedHasData) {
       return getUserPreferences();
     }

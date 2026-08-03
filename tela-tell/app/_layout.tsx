@@ -23,8 +23,6 @@ import { hydrateLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
 SplashScreen.preventAutoHideAsync();
 
-// App UI is light-only; without this, OS dark mode paints native stack cards black during transitions.
-// Web/react-native-web does not always implement setColorScheme — guard before calling.
 if (typeof Appearance.setColorScheme === 'function') {
   Appearance.setColorScheme('light');
 }

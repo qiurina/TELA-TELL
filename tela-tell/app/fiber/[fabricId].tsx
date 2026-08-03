@@ -7,10 +7,6 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getFiberProfile, resolveFiberFromSlug } from '@/data/fabrics/fiber-profiles';
 
-/**
- * Root-stack fiber profile so scan / blend flows can open a detail
- * without jumping into the Fibers tab (which breaks back navigation).
- */
 export default function FiberProfileStackScreen() {
   const { fabricId } = useLocalSearchParams<{ fabricId: string | string[] }>();
   const router = useRouter();

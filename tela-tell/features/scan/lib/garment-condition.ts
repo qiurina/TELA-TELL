@@ -3,7 +3,6 @@ import {
   type GarmentCondition,
 } from '@/data/scans/garment-condition';
 
-/** Garment condition for the current scan session (maps to tblScan.garmentCondition). */
 let lastGarmentCondition: GarmentCondition = DEFAULT_GARMENT_CONDITION;
 
 export function getLastGarmentCondition(): GarmentCondition {

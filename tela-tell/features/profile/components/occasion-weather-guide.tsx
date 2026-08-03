@@ -15,7 +15,6 @@ type OccasionWeatherGuideProps = {
   onToggle: (context: DressingContext) => void;
   disabled?: boolean;
   compact?: boolean;
-  /** Show weather only, occasion only, or both sections. */
   category?: 'weather' | 'occasion' | 'both';
 };
 

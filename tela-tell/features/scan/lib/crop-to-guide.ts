@@ -20,16 +20,11 @@ export type Size = {
   height: number;
 };
 
-/** Centered square guide aspect (width / height). */
 export const GUIDE_ASPECT = 1;
 
 const SCAN_IMAGE_MAX_EDGE = 1920;
 const SCAN_JPEG_QUALITY = 0.88;
 
-/**
- * Centered capture guide inside the live viewfinder, clear of top chrome and
- * bottom controls. Live camera stays full-bleed underneath.
- */
 export function computeCenteredGuideRect(
   view: Size,
   topInset: number,
@@ -48,10 +43,6 @@ export function computeCenteredGuideRect(
   };
 }
 
-/**
- * Maps a rectangle drawn over a cover-fitted preview into source-image pixel crop coords.
- * Prefer passing bitmap size from takePictureAsync (width/height), not Image.getSize.
- */
 export function mapCoverCrop(view: Size, image: Size, guideInView: ViewRect): PixelCrop {
   if (view.width <= 0 || view.height <= 0 || image.width <= 0 || image.height <= 0) {
     return {
@@ -70,11 +61,9 @@ export function mapCoverCrop(view: Size, image: Size, guideInView: ViewRect): Pi
   let offsetY = 0;
 
   if (imageAspect > viewAspect) {
-    // Image wider than view — height fills, sides overflow.
     scale = view.height / image.height;
     offsetX = (image.width * scale - view.width) / 2;
   } else {
-    // Image taller than view — width fills, top/bottom overflow.
     scale = view.width / image.width;
     offsetY = (image.height * scale - view.height) / 2;
   }
@@ -89,7 +78,6 @@ export function mapCoverCrop(view: Size, image: Size, guideInView: ViewRect): Pi
   width = Math.min(width, image.width - originX);
   height = Math.min(height, image.height - originY);
 
-  // Even dims help some Android image pipelines.
   const evenWidth = Math.max(2, Math.floor(width / 2) * 2);
   const evenHeight = Math.max(2, Math.floor(height / 2) * 2);
 
@@ -101,7 +89,6 @@ export function mapCoverCrop(view: Size, image: Size, guideInView: ViewRect): Pi
   };
 }
 
-/** Center-crop an image to the given aspect ratio (width / height). */
 export function centerCropForAspect(image: Size, aspect: number): PixelCrop {
   const safeAspect = aspect > 0 ? aspect : 1;
   const imageAspect = image.width / image.height;
@@ -195,11 +182,6 @@ export async function optimizeScanImage(uri: string): Promise<string> {
   }
 }
 
-/**
- * Crop using known bitmap size from the camera capture.
- * When the live preview fills only the guide, pass view = guide size and
- * guideInView = { x:0, y:0, width, height }.
- */
 export async function cropUriToGuideWithSize(
   uri: string,
   image: Size,

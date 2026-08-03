@@ -3,7 +3,6 @@ import type { ImageSourcePropType } from 'react-native';
 import type { FabricComposition } from '@/data/scans/mock-data';
 import { resolveFabricAlias, SUPPORTED_FABRICS, type SupportedFabric } from '@/data/fabrics/fabrics';
 
-/** Reference swatches in assets/images/reference/ — lowercase fabric name, .jpg or .png */
 const FABRIC_REFERENCE_IMAGES: Record<SupportedFabric, ImageSourcePropType> = {
   Cotton: require('@/assets/images/reference/cotton.jpg'),
   Wool: require('@/assets/images/reference/wool.jpg'),

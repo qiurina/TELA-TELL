@@ -1,5 +1,3 @@
-/** Panel-aligned analysis rules — shared by UI and future ML backend. */
-
 export {
   FABRIC_CATEGORY_COLORS,
   FABRIC_REGISTRY,
@@ -50,7 +48,6 @@ export const MODERATE_CONFIDENCE_NOTE =
 export const COMPOSITION_DISCLAIMER =
   "These fiber percentages represent the model's visual confidence scores, not laboratory-verified composition.";
 
-/** Fibers at or above this share count as "significant" for blend detection (Revision 12). */
 export const BLEND_SIGNIFICANT_MIN_PERCENT = 15;
 
 export type CompositionInput = {

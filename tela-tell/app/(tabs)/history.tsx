@@ -15,7 +15,7 @@ import { SUSTAINABILITY_DOT, type RecentScanPreview } from '@/data/scans/mock-da
 import { deleteScan, getAllScans, setScanFavorite } from '@/db/scans';
 import { useAuth } from '@/features/auth/context/auth-provider';
 
-const HISTORY_PAGE_SIZE = 10;
+const HISTORY_PAGE_SIZE = 5;
 
 export default function HistoryScreen() {
   const router = useRouter();

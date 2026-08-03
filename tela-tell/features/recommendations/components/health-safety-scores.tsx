@@ -12,7 +12,6 @@ import {
   type HealthSafetyTone,
 } from '@/data/fabrics/health-safety-scores';
 
-/** Only score text + bar fill are risk-colored. */
 const TONE_COLORS: Record<
   HealthSafetyTone,
   {

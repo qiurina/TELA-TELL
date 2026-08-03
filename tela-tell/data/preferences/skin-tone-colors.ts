@@ -17,11 +17,6 @@ export type SkinToneColorGuidance = {
   fabricNote: string | null;
 };
 
-// ---------------------------------------------------------------------------
-// 12-SEASON PALETTES
-// Based on the Caygill / 12-season system (Spring / Summer / Autumn / Winter × 3)
-// ---------------------------------------------------------------------------
-
 const SEASON_GUIDANCE: Record<
   ColorSeason,
   { recommended: ColorRecommendationGroup[]; avoid: string[] }
@@ -263,10 +258,6 @@ const FABRIC_COLOR_NOTES: Partial<Record<string, string>> = {
   Suede: 'Camel, tan, and muted jewels suit matte suede.',
   Abaca: 'Cream, gold, and earth tones suit abaca and sinamay.',
 };
-
-// ---------------------------------------------------------------------------
-// MAIN EXPORT
-// ---------------------------------------------------------------------------
 
 export function getSkinToneColorGuidance(
   skinTone: SkinTone | null,

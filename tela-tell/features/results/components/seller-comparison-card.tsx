@@ -7,10 +7,8 @@ import { faintCardShadow } from '@/constants/shadows';
 
 type SellerComparisonCardProps = {
   sellerLabel: string | null;
-  /** Clean detected headline (e.g. Mostly Cotton / Cotton-Polyester blend). */
   detectedLabel: string;
   mislabelingDetected: boolean;
-  /** Optional explanation when a mismatch is detected. */
   mislabelMessage?: string;
   onAddLabel?: () => void;
 };
