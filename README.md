@@ -1,6 +1,6 @@
 # TELA-TELL
 
-Fabric verification and personalized fiber insights.
+Fabric verification
 
 ## Run the app
 
