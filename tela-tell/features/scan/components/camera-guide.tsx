@@ -19,6 +19,8 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS, useSharedValue } from 'react-native-reanimated';
 
 import { ScanGuideFloat } from '@/features/scan/components/scan-guide-float';
 import { ScanLineAnimation } from '@/features/scan/components/scan-line-animation';
@@ -84,6 +86,9 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   const [viewSize, setViewSize] = useState<Size>({ width: 0, height: 0 });
   const [isCapturing, setIsCapturing] = useState(false);
   const [fillLightOn, setFillLightOn] = useState(false);
+  const [zoom, setZoom] = useState(0);
+  const zoomShared = useSharedValue(0);
+  const baseZoom = useSharedValue(0);
   const hasPreview = Boolean(previewUri);
   const canUseLiveCamera =
     Platform.OS !== 'web' && Boolean(permission?.granted) && !hasPreview && isFocused;
@@ -100,8 +105,21 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   useEffect(() => {
     if (!canUseLiveCamera) {
       setFillLightOn(false);
+      setZoom(0);
+      zoomShared.value = 0;
     }
-  }, [canUseLiveCamera]);
+  }, [canUseLiveCamera, zoomShared]);
+
+  const pinchGesture = Gesture.Pinch()
+    .enabled(canUseLiveCamera)
+    .onStart(() => {
+      baseZoom.value = zoomShared.value;
+    })
+    .onUpdate((event) => {
+      const next = Math.min(1, Math.max(0, baseZoom.value + (event.scale - 1) * 0.6));
+      zoomShared.value = next;
+      runOnJS(setZoom)(next);
+    });
 
   const guide =
     viewSize.width > 0
@@ -205,14 +223,17 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           <ScanLineAnimation active={isAnalyzing} />
         </View>
       ) : canUseLiveCamera ? (
-        <CameraView
-          ref={cameraRef}
-          style={styles.feed}
-          facing="back"
-          mode="picture"
-          enableTorch={fillLightOn}
-          animateShutter={false}
-        />
+        <GestureDetector gesture={pinchGesture}>
+          <CameraView
+            ref={cameraRef}
+            style={styles.feed}
+            facing="back"
+            mode="picture"
+            enableTorch={fillLightOn}
+            animateShutter={false}
+            zoom={zoom}
+          />
+        </GestureDetector>
       ) : permission && !permission.granted ? (
         <View style={[styles.placeholder, { paddingTop: contentTopInset }]}>
           <ScanLine size={48} color="rgba(255,255,255,0.85)" strokeWidth={1.75} />
