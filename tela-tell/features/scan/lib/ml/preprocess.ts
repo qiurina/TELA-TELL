@@ -27,10 +27,6 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
-/**
- * Resizes the captured photo to the model's input size and decodes it into a
- * normalized RGB tensor (MobileNetV2 preprocessing: pixel values in [-1, 1]).
- */
 export async function imageToInputTensor(uri: string): Promise<Float32Array> {
   const resized = await ImageManipulator.manipulateAsync(
     uri,

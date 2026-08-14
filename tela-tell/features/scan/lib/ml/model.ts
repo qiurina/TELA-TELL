@@ -19,22 +19,18 @@ type TFLiteModel = { runSync(inputs: Float32Array[]): Float32Array[] };
 
 let modelPromise: Promise<TFLiteModel> | null = null;
 
-// react-native-fast-tflite is only installed once the app moves to a custom dev
-// client (see ml-training/README.md); require() is deferred so the app still
-// bundles and falls back to mock results before that dependency exists.
+
 async function loadModel(): Promise<TFLiteModel> {
   if (!modelPromise) {
     modelPromise = (async () => {
       let loadTensorflowModel: (asset: number) => Promise<TFLiteModel>;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         ({ loadTensorflowModel } = require('react-native-fast-tflite'));
       } catch {
         throw new ModelUnavailableError('react-native-fast-tflite is not installed.');
       }
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const asset = require('@/assets/models/fabric_classifier.tflite');
         return await loadTensorflowModel(asset);
       } catch {

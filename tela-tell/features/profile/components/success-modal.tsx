@@ -14,7 +14,6 @@ type SuccessModalProps = {
   onDone: () => void;
 };
 
-/** Centered "done" confirmation — matches the checkmark stage in delete-account-sheet.tsx. */
 export function SuccessModal({ visible, message, onDone }: SuccessModalProps) {
   useEffect(() => {
     if (!visible) {

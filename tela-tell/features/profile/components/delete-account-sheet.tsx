@@ -12,7 +12,6 @@ import { AuthPasswordField } from '@/features/auth/components/auth-form-field';
 
 const dangerGradient = ['#F87171', '#EF4444', '#DC2626'] as const;
 
-/** Minimum time each processing stage stays on screen, so it reads as real work happening. */
 const STAGE_MIN_MS = 900;
 
 type Stage = 'form' | 'verifying' | 'deleting' | 'done';

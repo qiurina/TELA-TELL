@@ -89,10 +89,6 @@ function buildGarmentPurposes(fiber: FiberProfile): GarmentPurposeItem[] {
   return purposes;
 }
 
-/**
- * Assembles a full profile/sustainability/recommendations block for the classified
- * primary fiber, replacing the old approach of cloning a random pre-written template.
- */
 export function buildScanProfile(
   primaryFiber: SupportedFabric,
   dominantFabric: string,

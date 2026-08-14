@@ -77,7 +77,6 @@ export default function ScanScreen() {
   );
 
   const commitPreviewUri = (photoUri: string) => {
-    // Same URI is used on review + results (via last-capture + saveScan imageUri).
     setLastCaptureUri(photoUri);
     setPreviewUri(photoUri);
     setDetailsExpanded(true);

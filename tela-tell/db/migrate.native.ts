@@ -97,7 +97,6 @@ async function ensureUserColumn(
 async function ensureUsernameColumn(db: Awaited<ReturnType<typeof getDatabase>>) {
   const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(tblUser)');
   if (columns.length === 0) {
-    // Fresh install: SCHEMA_SQL creates tblUser with `username` directly.
     return;
   }
 
