@@ -4,12 +4,16 @@ import {
   resolveFabricAlias,
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
-import { getSignificantFibers } from '@/data/scans/analysis';
+import { getSignificantFibers, isBlendDetected } from '@/data/scans/analysis';
 import { formatScanDisplayTime, formatScannedAtDate } from '@/features/scan/lib/scan-timestamp';
+import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
+import { classifyFabric, type ClassificationResult } from '@/features/scan/lib/ml/model';
 
 export type CreateScanRecordInput = {
   sellerLabel?: string | null;
   templateId?: string;
+  /** Captured photo to run real on-device classification against. */
+  imageUri?: string | null;
 };
 
 function createScanId(): string {
@@ -113,12 +117,8 @@ export function buildMislabeling(
   };
 }
 
-export function createScanRecord(input: CreateScanRecordInput = {}): ScanResult {
-  const template = pickTemplate(input.templateId);
-  const now = new Date();
-  const sellerLabel = input.sellerLabel?.trim() || null;
-
-  const cloned: ScanResult = {
+function cloneTemplate(template: ScanResult): ScanResult {
+  return {
     ...template,
     compositions: template.compositions.map((item) => ({ ...item })),
     sustainability: {
@@ -136,12 +136,57 @@ export function createScanRecord(input: CreateScanRecordInput = {}): ScanResult 
       ecoAlternatives: template.recommendations.ecoAlternatives.map((item) => ({ ...item })),
       reuse: { ...template.recommendations.reuse },
     },
+  };
+}
+
+function buildResultFromClassification(classification: ClassificationResult): ScanResult {
+  const primary = (resolveFabricAlias(classification.dominantFabric) ??
+    classification.dominantFabric) as SupportedFabric;
+  const blend = isBlendDetected(classification.compositions);
+  const { profile, sustainability, recommendations } = buildScanProfile(
+    primary,
+    classification.dominantFabric,
+    classification.compositions,
+    blend,
+  );
+
+  return {
+    id: '',
+    dominantFabric: classification.dominantFabric,
+    compositions: classification.compositions,
+    confidence: classification.confidence,
+    scannedAt: '',
+    scannedAtDate: '',
+    sustainability,
+    mislabeling: { detected: false, title: '', message: '' },
+    profile,
+    recommendations,
+  };
+}
+
+async function classifyFromImage(imageUri: string): Promise<ClassificationResult | null> {
+  try {
+    return await classifyFabric(imageUri);
+  } catch {
+    return null;
+  }
+}
+
+export async function createScanRecord(input: CreateScanRecordInput = {}): Promise<ScanResult> {
+  const now = new Date();
+  const sellerLabel = input.sellerLabel?.trim() || null;
+
+  const classification = input.imageUri ? await classifyFromImage(input.imageUri) : null;
+  const base = classification
+    ? buildResultFromClassification(classification)
+    : cloneTemplate(pickTemplate(input.templateId));
+
+  return {
+    ...base,
     id: createScanId(),
     scannedAt: formatScanDisplayTime(now),
     scannedAtDate: formatScannedAtDate(now),
     sellerLabel: sellerLabel ?? undefined,
-    mislabeling: buildMislabeling(template.dominantFabric, sellerLabel, template.compositions),
+    mislabeling: buildMislabeling(base.dominantFabric, sellerLabel, base.compositions),
   };
-
-  return cloned;
 }

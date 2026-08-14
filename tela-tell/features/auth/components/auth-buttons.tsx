@@ -9,10 +9,12 @@ export function AuthPrimaryButton({
   label,
   onPress,
   disabled,
+  compact,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  compact?: boolean;
 }) {
   return (
     <Pressable
@@ -29,8 +31,8 @@ export function AuthPrimaryButton({
         colors={[BrandColors.primaryLight, BrandColors.primary, BrandColors.primaryDark]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
-        style={[styles.primaryButton, primaryButtonShadow()]}>
-        <Text style={styles.primaryText}>{label}</Text>
+        style={[styles.primaryButton, compact && styles.primaryButtonCompact, primaryButtonShadow()]}>
+        <Text style={[styles.primaryText, compact && styles.primaryTextCompact]}>{label}</Text>
       </LinearGradient>
     </Pressable>
   );
@@ -39,17 +41,27 @@ export function AuthPrimaryButton({
 export function AuthSecondaryButton({
   label,
   onPress,
+  disabled,
+  compact,
 }: {
   label: string;
   onPress: () => void;
+  disabled?: boolean;
+  compact?: boolean;
 }) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.secondaryButton,
+        compact && styles.secondaryButtonCompact,
+        pressed && styles.pressed,
+        disabled && styles.disabled,
+      ]}
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}>
-      <Text style={styles.secondaryText}>{label}</Text>
+      <Text style={[styles.secondaryText, compact && styles.secondaryTextCompact]}>{label}</Text>
     </Pressable>
   );
 }
@@ -119,10 +131,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
   },
+  primaryButtonCompact: {
+    paddingVertical: 13,
+    borderRadius: 14,
+  },
   primaryText: {
     fontFamily: Fonts.semiBold,
     fontSize: 16,
     color: BrandColors.white,
+  },
+  primaryTextCompact: {
+    fontSize: 15,
   },
   secondaryButton: {
     paddingVertical: 16,
@@ -131,6 +150,13 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.lavenderCard,
     borderWidth: 1,
     borderColor: BrandColors.border,
+  },
+  secondaryButtonCompact: {
+    paddingVertical: 13,
+    borderRadius: 14,
+  },
+  secondaryTextCompact: {
+    fontSize: 15,
   },
   secondaryText: {
     fontFamily: Fonts.semiBold,

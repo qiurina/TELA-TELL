@@ -49,13 +49,19 @@ export default function RegionSelectScreen() {
     setMarkedRegions(regions);
     setIsAnalyzing(true);
 
-    setTimeout(() => {
-      const results = analyzeMarkedRegions(regions);
+    const startedAt = Date.now();
+    const MIN_ANALYSIS_MS = 1200;
+
+    void (async () => {
+      const results = await analyzeMarkedRegions(imageUri, regions);
+      const remaining = Math.max(0, MIN_ANALYSIS_MS - (Date.now() - startedAt));
+      await new Promise((resolve) => setTimeout(resolve, remaining));
+
       setRegionAnalysisResults(results);
       setLastCaptureUri(imageUri);
       setIsAnalyzing(false);
       router.replace('/results/dual' as Href);
-    }, 1200);
+    })();
   };
 
   if (!imageUri) {

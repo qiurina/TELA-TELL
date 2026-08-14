@@ -27,21 +27,22 @@ export type ProfileScanStats = {
   mislabeledCount: number;
 };
 
-/** Prefers registered name; falls back to email local-part. */
+/** Prefers registered name; falls back to a formatted username. */
 export function formatProfileDisplayName(
-  emailOrSession: string | Pick<AuthSession, 'email' | 'firstName' | 'lastName' | 'middleInitial'>,
+  usernameOrSession:
+    | string
+    | Pick<AuthSession, 'username' | 'firstName' | 'lastName' | 'middleInitial'>,
 ): string {
-  if (typeof emailOrSession !== 'string') {
-    const { firstName, lastName, middleInitial, email } = emailOrSession;
+  if (typeof usernameOrSession !== 'string') {
+    const { firstName, lastName, middleInitial, username } = usernameOrSession;
     const parts = [firstName, middleInitial?.trim(), lastName].filter(Boolean);
     if (parts.length > 0) {
       return parts.join(' ');
     }
-    return formatProfileDisplayName(email);
+    return formatProfileDisplayName(username);
   }
 
-  const local = emailOrSession.split('@')[0] ?? emailOrSession;
-  return local
+  return usernameOrSession
     .split(/[._-]+/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -49,12 +50,14 @@ export function formatProfileDisplayName(
 }
 
 export function getProfileInitial(
-  emailOrSession: string | Pick<AuthSession, 'email' | 'firstName' | 'lastName' | 'middleInitial'>,
+  usernameOrSession:
+    | string
+    | Pick<AuthSession, 'username' | 'firstName' | 'lastName' | 'middleInitial'>,
 ): string {
-  if (typeof emailOrSession !== 'string' && emailOrSession.firstName) {
-    return emailOrSession.firstName.charAt(0).toUpperCase() || '?';
+  if (typeof usernameOrSession !== 'string' && usernameOrSession.firstName) {
+    return usernameOrSession.firstName.charAt(0).toUpperCase() || '?';
   }
-  const name = formatProfileDisplayName(emailOrSession);
+  const name = formatProfileDisplayName(usernameOrSession);
   return name.charAt(0).toUpperCase() || '?';
 }
 

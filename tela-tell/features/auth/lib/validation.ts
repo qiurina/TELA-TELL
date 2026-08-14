@@ -1,3 +1,3 @@
-export function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+export function isValidUsername(value: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9_.]{2,19}$/.test(value.trim());
 }

@@ -164,6 +164,14 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="edit-profile"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
                 name="fiber/[fabricId]"
                 options={{
                   headerShown: false,

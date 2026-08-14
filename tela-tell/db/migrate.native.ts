@@ -16,11 +16,13 @@ export function migrateDatabase(): Promise<void> {
 
 async function runMigration(): Promise<void> {
   const db = await getDatabase();
+  await ensureUsernameColumn(db);
   await db.execAsync(SCHEMA_SQL);
   await ensureScanColumn(db, 'isFavorite', 'INTEGER NOT NULL DEFAULT 0');
   await ensureScanColumn(db, 'deletedAt', 'TEXT');
   await ensureScanColumn(db, 'createdAt', 'TEXT');
   await ensureProfileColumn(db, 'colorSeason', 'TEXT');
+  await ensureUserColumn(db, 'avatarUri', 'TEXT');
   await db.execAsync(
     'CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)',
   );
@@ -77,5 +79,32 @@ async function ensureProfileColumn(
   const exists = columns.some((column) => column.name === name);
   if (!exists) {
     await db.execAsync(`ALTER TABLE tblDeviceProfile ADD COLUMN ${name} ${definition}`);
+  }
+}
+
+async function ensureUserColumn(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+  name: string,
+  definition: string,
+) {
+  const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(tblUser)');
+  const exists = columns.some((column) => column.name === name);
+  if (!exists) {
+    await db.execAsync(`ALTER TABLE tblUser ADD COLUMN ${name} ${definition}`);
+  }
+}
+
+async function ensureUsernameColumn(db: Awaited<ReturnType<typeof getDatabase>>) {
+  const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(tblUser)');
+  if (columns.length === 0) {
+    // Fresh install: SCHEMA_SQL creates tblUser with `username` directly.
+    return;
+  }
+
+  const hasUsername = columns.some((column) => column.name === 'username');
+  const hasEmail = columns.some((column) => column.name === 'email');
+  if (!hasUsername && hasEmail) {
+    await db.execAsync('ALTER TABLE tblUser RENAME COLUMN email TO username');
+    await db.execAsync('DROP INDEX IF EXISTS idx_user_email');
   }
 }

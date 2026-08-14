@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import type { FC } from 'react';
 
-import { Check, Eye, EyeOff, Lock, Mail, Square, User } from '@/components/ui/lucide-icons';
+import { Check, Eye, EyeOff, Lock, Square, User } from '@/components/ui/lucide-icons';
 import type { IconProps } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -97,50 +97,12 @@ export function AuthTextField({
   );
 }
 
-type AuthEmailFieldProps = Omit<TextInputProps, 'placeholder'> & {
-  label?: string;
-  required?: boolean;
-  placeholder?: string;
-  error?: string | null;
-};
-
-export function AuthEmailField({
-  label = 'Email Address',
-  required = true,
-  placeholder = 'Email Address',
-  error,
-  style,
-  ...props
-}: AuthEmailFieldProps) {
-  const hasError = Boolean(error);
-
-  return (
-    <View style={styles.fieldGroup}>
-      <AuthFieldLabel label={label} required={required} />
-      <View style={[styles.field, hasError && styles.fieldError]}>
-        <Mail size={18} color={hasError ? ERROR_COLOR : ICON_COLOR} strokeWidth={2} />
-        <TextInput
-          style={[styles.input, style]}
-          placeholder={placeholder}
-          placeholderTextColor={BrandColors.textMuted}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          textContentType="emailAddress"
-          autoComplete="email"
-          {...props}
-        />
-      </View>
-      <AuthFieldError message={error} />
-    </View>
-  );
-}
-
 type AuthPasswordFieldProps = Omit<TextInputProps, 'placeholder' | 'secureTextEntry'> & {
   label?: string;
   required?: boolean;
   placeholder?: string;
   error?: string | null;
+  fieldStyle?: StyleProp<ViewStyle>;
 };
 
 export function AuthPasswordField({
@@ -149,6 +111,7 @@ export function AuthPasswordField({
   placeholder = 'Password',
   error,
   style,
+  fieldStyle,
   ...props
 }: AuthPasswordFieldProps) {
   const [visible, setVisible] = useState(false);
@@ -157,7 +120,7 @@ export function AuthPasswordField({
   return (
     <View style={styles.fieldGroup}>
       <AuthFieldLabel label={label} required={required} />
-      <View style={[styles.field, hasError && styles.fieldError]}>
+      <View style={[styles.field, hasError && styles.fieldError, fieldStyle]}>
         <Lock size={18} color={hasError ? ERROR_COLOR : ICON_COLOR} strokeWidth={2} />
         <TextInput
           style={[styles.input, style]}

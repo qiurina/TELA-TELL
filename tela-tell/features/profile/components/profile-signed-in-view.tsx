@@ -1,22 +1,24 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useSyncExternalStore } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState, useSyncExternalStore } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Bookmark,
   Calendar,
+  Camera,
   Heart,
   Info,
   LogOut,
   Sun,
   Trash2,
   TriangleAlert,
+  User,
 } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
-import { SUSTAINABILITY_DOT } from '@/data/scans/mock-data';
 import { useAuth } from '@/features/auth/context/auth-provider';
+import { DeleteAccountSheet } from '@/features/profile/components/delete-account-sheet';
 import { ProfileSectionLabel } from '@/features/profile/components/profile-section-label';
 import {
   ProfileGroupedCard,
@@ -44,17 +46,19 @@ const PROFILE_PREFERRED_HREF = '/preferred-fabrics' as Href;
 const PROFILE_WEATHER_HREF = '/weather' as Href;
 const PROFILE_OCCASION_HREF = '/occasion' as Href;
 const PROFILE_ABOUT_HREF = '/about' as Href;
+const PROFILE_EDIT_HREF = '/edit-profile' as Href;
 const PROFILE_FAVORITES_HREF = '/favorite-scans' as Href;
 const PROFILE_DELETED_HREF = '/deleted-scans' as Href;
 
 export function ProfileSignedInView() {
   const router = useRouter();
   const { session, signOut } = useAuth();
-  const email = session?.email ?? '';
+  const [isDeleteSheetVisible, setIsDeleteSheetVisible] = useState(false);
+  const username = session?.username ?? '';
   const displayName = session
     ? formatProfileDisplayName(session)
-    : formatProfileDisplayName(email);
-  const initial = session ? getProfileInitial(session) : getProfileInitial(email);
+    : formatProfileDisplayName(username);
+  const initial = session ? getProfileInitial(session) : getProfileInitial(username);
 
   const prefs = useSyncExternalStore(
     subscribeUserPreferences,
@@ -83,6 +87,11 @@ export function ProfileSignedInView() {
     router.push(href);
   };
 
+  const endSession = async () => {
+    await signOut();
+    router.replace('/welcome' as Href);
+  };
+
   const skinTone = getSkinToneDisplay(prefs);
   const allergies = getSensitiveFabricsDisplay(prefs);
   const preferred = getPreferredFabricsDisplay(prefs);
@@ -91,12 +100,37 @@ export function ProfileSignedInView() {
 
   return (
     <>
-      <View style={styles.identity}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
+      <Pressable
+        style={styles.identity}
+        onPress={() => openNested(PROFILE_EDIT_HREF)}
+        accessibilityRole="button"
+        accessibilityLabel="Edit Profile">
+        <View style={styles.avatarWrap}>
+          <View style={styles.avatar}>
+            {session?.avatarUri ? (
+              <Image source={{ uri: session.avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
+          </View>
+          <View style={styles.avatarBadge}>
+            <Camera size={12} color={BrandColors.white} strokeWidth={2.5} />
+          </View>
         </View>
         <Text style={styles.name}>{displayName}</Text>
-        <Text style={styles.email}>{email}</Text>
+        <Text style={styles.email}>@{username}</Text>
+      </Pressable>
+
+      <View style={styles.section}>
+        <ProfileSectionLabel title="Profile" />
+        <ProfileGroupedCard>
+          <ProfilePreferenceRow
+            title="Edit Profile"
+            icon={<User size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
+            onPress={() => openNested(PROFILE_EDIT_HREF)}
+            isLast
+          />
+        </ProfileGroupedCard>
       </View>
 
       <View style={styles.section}>
@@ -154,7 +188,7 @@ export function ProfileSignedInView() {
           <ProfilePreferenceRow
             title="Recently deleted"
             value="Restore within 30 days"
-            icon={<Trash2 size={18} color="#DC2626" strokeWidth={2.25} />}
+            icon={<Trash2 size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
             onPress={() => openNested(PROFILE_DELETED_HREF)}
             isLast
           />
@@ -168,6 +202,12 @@ export function ProfileSignedInView() {
             title="About TELA-TELL"
             icon={<Info size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
             onPress={() => openNested(PROFILE_ABOUT_HREF)}
+          />
+          <ProfilePreferenceRow
+            title="Delete Account"
+            icon={<Trash2 size={18} color="#DC2626" strokeWidth={2.25} />}
+            titleColor="#DC2626"
+            onPress={() => setIsDeleteSheetVisible(true)}
             isLast
           />
         </ProfileGroupedCard>
@@ -175,17 +215,20 @@ export function ProfileSignedInView() {
 
       <Pressable
         style={({ pressed }) => [styles.logoutButton, faintCardShadow(), pressed && styles.pressed]}
-        onPress={() => {
-          void (async () => {
-            await signOut();
-            router.replace('/welcome' as Href);
-          })();
-        }}
+        onPress={() => void endSession()}
         accessibilityRole="button"
         accessibilityLabel="Log out">
-        <LogOut size={18} color={SUSTAINABILITY_DOT.red} strokeWidth={2.25} />
+        <LogOut size={18} color={BrandColors.textMuted} strokeWidth={2.25} />
         <Text style={styles.logoutText}>Log out</Text>
       </Pressable>
+
+      <DeleteAccountSheet
+        visible={isDeleteSheetVisible}
+        username={username}
+        userId={session?.userId ?? ''}
+        onCancel={() => setIsDeleteSheetVisible(false)}
+        onDeleted={() => void endSession()}
+      />
     </>
   );
 }
@@ -197,6 +240,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 4,
   },
+  avatarWrap: {
+    width: 72,
+    height: 72,
+  },
   avatar: {
     width: 72,
     height: 72,
@@ -206,6 +253,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: BrandColors.border,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: BrandColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: BrandColors.white,
   },
   avatarText: {
     fontFamily: Fonts.bold,
@@ -250,12 +315,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: BrandColors.white,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: BrandColors.border,
   },
   logoutText: {
     fontFamily: Fonts.semiBold,
     fontSize: 14,
-    color: SUSTAINABILITY_DOT.red,
+    color: BrandColors.textMuted,
   },
   pressed: {
     opacity: 0.9,

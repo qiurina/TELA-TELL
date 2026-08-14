@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import {
-  clearRememberedEmail,
+  clearRememberedUsername,
   clearStoredSession,
   getStoredSession,
-  setRememberedEmail,
+  setRememberedUsername,
   setStoredSession,
   type AuthSession,
 } from '@/features/auth/lib/auth-session';
@@ -22,9 +22,10 @@ type AuthContextValue = {
   isLoading: boolean;
   session: AuthSession | null;
   isSignedIn: boolean;
-  signIn: (email: string, password: string, options?: SignInOptions) => Promise<void>;
+  signIn: (username: string, password: string, options?: SignInOptions) => Promise<void>;
   signUp: (input: RegisterUserInput) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshSession: (user: AuthSession) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -63,15 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(
-    async (email: string, password: string, options?: SignInOptions) => {
+    async (username: string, password: string, options?: SignInOptions) => {
       const rememberMe = options?.rememberMe ?? false;
-      const user = await loginUser({ email, password });
+      const user = await loginUser({ username, password });
       await startSession(user);
 
       if (rememberMe) {
-        await setRememberedEmail(user.email);
+        await setRememberedUsername(user.username);
       } else {
-        await clearRememberedEmail();
+        await clearRememberedUsername();
       }
     },
     [startSession],
@@ -81,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (input: RegisterUserInput) => {
       const user = await registerUser(input);
       await startSession(user);
-      await setRememberedEmail(user.email);
+      await setRememberedUsername(user.username);
     },
     [startSession],
   );
@@ -100,8 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
+      refreshSession: startSession,
     }),
-    [isLoading, session, signIn, signUp, signOut],
+    [isLoading, session, signIn, signUp, signOut, startSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

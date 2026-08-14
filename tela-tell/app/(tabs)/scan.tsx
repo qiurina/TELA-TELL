@@ -106,14 +106,15 @@ export default function ScanScreen() {
     void (async () => {
       const startedAt = Date.now();
       try {
-        const result = createScanRecord({
-          sellerLabel: getLastSellerLabel(),
-        });
-
         const optimizedUri = photoUri ? await optimizeScanImage(photoUri) : null;
         if (optimizedUri) {
           setLastCaptureUri(optimizedUri);
         }
+
+        const result = await createScanRecord({
+          sellerLabel: getLastSellerLabel(),
+          imageUri: optimizedUri,
+        });
 
         await saveScan(result, {
           userId: session?.userId ?? null,

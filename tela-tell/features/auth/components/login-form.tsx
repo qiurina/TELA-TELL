@@ -8,31 +8,31 @@ import {
   AuthSwitchPrompt,
 } from '@/features/auth/components/auth-buttons';
 import {
-  AuthEmailField,
   AuthPasswordField,
   AuthRememberRow,
+  AuthTextField,
 } from '@/features/auth/components/auth-form-field';
 import {
   AuthFormActions,
   AuthFormFields,
 } from '@/features/auth/components/auth-form-layout-shared';
 import { useAuth } from '@/features/auth/context/auth-provider';
-import { getRememberedEmail } from '@/features/auth/lib/auth-session';
-import { isValidEmail } from '@/features/auth/lib/validation';
+import { getRememberedUsername } from '@/features/auth/lib/auth-session';
+import { isValidUsername } from '@/features/auth/lib/validation';
 
 type LoginFormProps = {
   onSwitchToRegister: () => void;
 };
 
 type FieldErrors = {
-  email?: string;
+  username?: string;
   password?: string;
 };
 
 export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   const router = useRouter();
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,11 +42,11 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
     let active = true;
 
     void (async () => {
-      const remembered = await getRememberedEmail();
+      const remembered = await getRememberedUsername();
       if (!active || !remembered) {
         return;
       }
-      setEmail(remembered);
+      setUsername(remembered);
       setRememberMe(true);
     })();
 
@@ -60,11 +60,11 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   };
 
   const handleSignIn = async () => {
-    const trimmedEmail = email.trim();
+    const trimmedUsername = username.trim();
     const nextErrors: FieldErrors = {};
 
-    if (!isValidEmail(trimmedEmail)) {
-      nextErrors.email = 'Enter a valid email address.';
+    if (!isValidUsername(trimmedUsername)) {
+      nextErrors.username = 'Enter a valid username.';
     }
 
     if (!password) {
@@ -80,14 +80,14 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
     setIsSubmitting(true);
 
     try {
-      await signIn(trimmedEmail, password, { rememberMe });
+      await signIn(trimmedUsername, password, { rememberMe });
       router.replace('/(tabs)' as Href);
     } catch (error) {
       const message =
         error instanceof AuthError
           ? error.message
           : 'Could not sign in. Please try again.';
-      setFieldErrors({ email: ' ', password: message });
+      setFieldErrors({ username: ' ', password: message });
     } finally {
       setIsSubmitting(false);
     }
@@ -96,14 +96,20 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   return (
     <>
       <AuthFormFields>
-        <AuthEmailField
-          value={email}
+        <AuthTextField
+          label="Username"
+          required
+          value={username}
           onChangeText={(value) => {
-            setEmail(value);
+            setUsername(value);
             clearErrors();
           }}
-          placeholder="Email Address"
-          error={fieldErrors.email}
+          placeholder="Username"
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="username"
+          autoComplete="username"
+          error={fieldErrors.username}
         />
         <AuthPasswordField
           value={password}

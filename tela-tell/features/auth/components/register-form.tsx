@@ -8,7 +8,6 @@ import {
   AuthSwitchPrompt,
 } from '@/features/auth/components/auth-buttons';
 import {
-  AuthEmailField,
   AuthFormBanner,
   AuthPasswordField,
   AuthTextField,
@@ -20,7 +19,7 @@ import {
 import { PasswordRequirements } from '@/features/auth/components/password-requirements';
 import { useAuth } from '@/features/auth/context/auth-provider';
 import { isPasswordValid } from '@/features/auth/lib/password';
-import { isValidEmail } from '@/features/auth/lib/validation';
+import { isValidUsername } from '@/features/auth/lib/validation';
 
 type RegisterFormProps = {
   onSwitchToLogin: () => void;
@@ -29,7 +28,7 @@ type RegisterFormProps = {
 type FieldErrors = {
   firstName?: string;
   lastName?: string;
-  email?: string;
+  username?: string;
   password?: string;
   confirmPassword?: string;
 };
@@ -40,7 +39,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [firstName, setFirstName] = useState('');
   const [middleInitial, setMiddleInitial] = useState('');
   const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,7 +54,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const handleRegister = async () => {
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
-    const trimmedEmail = email.trim();
+    const trimmedUsername = username.trim();
     const nextErrors: FieldErrors = {};
 
     if (!trimmedFirstName) {
@@ -66,8 +65,9 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       nextErrors.lastName = 'Enter your last name.';
     }
 
-    if (!isValidEmail(trimmedEmail)) {
-      nextErrors.email = 'Enter a valid email address.';
+    if (!isValidUsername(trimmedUsername)) {
+      nextErrors.username =
+        'Username must be 3-20 characters, start with a letter, and use only letters, numbers, underscores, or periods.';
     }
 
     if (!isPasswordValid(password)) {
@@ -93,7 +93,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
         middleInitial: middleInitial.trim() || null,
-        email: trimmedEmail,
+        username: trimmedUsername,
         password,
       });
       router.replace('/(tabs)' as Href);
@@ -104,7 +104,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           : 'Could not create your account. Please try again.';
 
       if (/already exists/i.test(message)) {
-        setFieldErrors({ email: message });
+        setFieldErrors({ username: message });
         setFormError(null);
       } else {
         setFormError(message);
@@ -162,13 +162,19 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           textContentType="familyName"
           error={fieldErrors.lastName}
         />
-        <AuthEmailField
-          value={email}
+        <AuthTextField
+          label="Username"
+          required
+          value={username}
           onChangeText={(value) => {
-            setEmail(value);
+            setUsername(value);
             clearErrors();
           }}
-          error={fieldErrors.email}
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="username"
+          autoComplete="username"
+          error={fieldErrors.username}
         />
         <View>
           <AuthPasswordField

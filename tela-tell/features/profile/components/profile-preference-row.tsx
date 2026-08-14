@@ -13,6 +13,7 @@ type ProfilePreferenceRowProps = {
   onPress?: () => void;
   showChevron?: boolean;
   isLast?: boolean;
+  titleColor?: string;
 };
 
 export function ProfilePreferenceRow({
@@ -22,12 +23,13 @@ export function ProfilePreferenceRow({
   onPress,
   showChevron = true,
   isLast = false,
+  titleColor,
 }: ProfilePreferenceRowProps) {
   const content = (
     <>
       <View style={styles.iconWrap}>{icon}</View>
       <View style={styles.copy}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, titleColor ? { color: titleColor } : null]}>{title}</Text>
         {value ? (
           <Text style={styles.value} numberOfLines={2}>
             {value}
