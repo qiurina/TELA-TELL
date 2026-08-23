@@ -24,6 +24,7 @@ import {
   type FabricComposition,
   type SustainabilityRating,
 } from '@/data/scans/mock-data';
+import type { GarmentCondition } from '@/data/scans/garment-condition';
 
 function SectionLabel({ title }: { title: string }) {
   return <Text style={styles.sectionLabel}>{title}</Text>;
@@ -119,6 +120,7 @@ type RecommendationsContentProps = {
   detectedCompositions?: FabricComposition[];
   sustainabilityScore?: number;
   sustainabilityRating?: SustainabilityRating;
+  garmentCondition?: GarmentCondition;
 };
 
 export function RecommendationsContent({
@@ -126,10 +128,11 @@ export function RecommendationsContent({
   detectedCompositions,
   sustainabilityScore,
   sustainabilityRating,
+  garmentCondition,
 }: RecommendationsContentProps) {
   const compositions = detectedCompositions ?? [];
   const ecoGuidance = getEcoGuidance(dominantFabric, compositions);
-  const healthRisk = getSyntheticHealthRisk(dominantFabric, compositions);
+  const healthRisk = getSyntheticHealthRisk(dominantFabric, compositions, garmentCondition);
   const healthMetrics = getHealthSafetyMetrics(dominantFabric, compositions, {
     sustainabilityScore,
     sustainabilityRating,

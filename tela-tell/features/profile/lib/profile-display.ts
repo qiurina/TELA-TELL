@@ -4,7 +4,6 @@ import {
   WEATHER_CONTEXT_OPTIONS,
   type DressingContext,
 } from '@/data/preferences/occasion-weather';
-import type { ScanResult } from '@/data/scans/mock-data';
 import type { AuthSession } from '@/features/auth/lib/auth-session';
 import {
   getUserPreferences,
@@ -19,12 +18,6 @@ export const SKIN_TONE_SWATCHES: Record<SkinTone, string> = {
   Medium: '#C99B6E',
   Tan: '#A67B4E',
   'Deep Dark': '#4A3228',
-};
-
-export type ProfileScanStats = {
-  totalScans: number;
-  sustainableCount: number;
-  mislabeledCount: number;
 };
 
 /** Prefers registered name; falls back to a formatted username. */
@@ -59,17 +52,6 @@ export function getProfileInitial(
   }
   const name = formatProfileDisplayName(usernameOrSession);
   return name.charAt(0).toUpperCase() || '?';
-}
-
-export function getScanStats(scans: ScanResult[]): ProfileScanStats {
-  const totalScans = scans.length;
-  const sustainableCount = scans.filter(
-    (scan) =>
-      scan.sustainability.rating === 'green' ||
-      scan.sustainability.rating === 'yellow',
-  ).length;
-  const mislabeledCount = scans.filter((scan) => scan.mislabeling.detected).length;
-  return { totalScans, sustainableCount, mislabeledCount };
 }
 
 function formatContextList(contexts: DressingContext[], category: 'weather' | 'occasion'): string {

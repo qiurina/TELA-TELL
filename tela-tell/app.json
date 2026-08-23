@@ -21,8 +21,6 @@
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ],
       "package": "com.anonymous.telatell"
@@ -68,6 +66,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a4b32c8e-2a4b-4f57-b9d4-76c2f96b4e64"
+      }
     }
   }
 }

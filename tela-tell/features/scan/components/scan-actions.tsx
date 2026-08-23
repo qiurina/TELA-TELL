@@ -282,7 +282,7 @@ export function ScanDetailsPanel({
                   <Text style={styles.optionalPillText}>Optional</Text>
                 </View>
               </View>
-              <Text style={styles.accordionHint}>Condition, seller label, preferences</Text>
+              <Text style={styles.accordionHint}>Condition, stated label, preferences</Text>
             </View>
           </View>
 
@@ -299,15 +299,15 @@ export function ScanDetailsPanel({
 
             <DetailActionRow
               icon={<Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />}
-              label="Seller label"
+              label="Stated label"
               value={hasSellerLabel ? trimmedLabel : 'Not set'}
               isSet={hasSellerLabel}
               onPress={onAddLabel}
               disabled={isAnalyzing}
               accessibilityLabel={
                 hasSellerLabel
-                  ? `Seller label, ${trimmedLabel}. Update`
-                  : 'Seller label, not set. Add'
+                  ? `Stated label, ${trimmedLabel}. Update`
+                  : 'Stated label, not set. Add'
               }
             />
 
@@ -372,10 +372,10 @@ export function ScanDetailsPanel({
               </View>
               <Text style={styles.accordionHint} numberOfLines={1}>
                 {expanded
-                  ? 'Condition, seller label, preferences'
+                  ? 'Condition, stated label, preferences'
                   : hasAnyDetails
                     ? summaryParts.join(' · ')
-                    : 'Condition, seller label, preferences'}
+                    : 'Condition, stated label, preferences'}
               </Text>
             </View>
           </Pressable>
@@ -394,15 +394,15 @@ export function ScanDetailsPanel({
 
               <DetailActionRow
                 icon={<Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />}
-                label="Seller label"
+                label="Stated label"
                 value={hasSellerLabel ? trimmedLabel : 'Not set'}
                 isSet={hasSellerLabel}
                 onPress={onAddLabel}
                 disabled={isAnalyzing}
                 accessibilityLabel={
                   hasSellerLabel
-                    ? `Seller label, ${trimmedLabel}. Update`
-                    : 'Seller label, not set. Add'
+                    ? `Stated label, ${trimmedLabel}. Update`
+                    : 'Stated label, not set. Add'
                 }
               />
 

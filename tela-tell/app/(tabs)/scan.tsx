@@ -114,6 +114,7 @@ export default function ScanScreen() {
           sellerLabel: getLastSellerLabel(),
           imageUri: optimizedUri,
         });
+        result.garmentCondition = garmentCondition;
 
         await saveScan(result, {
           userId: session?.userId ?? null,

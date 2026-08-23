@@ -125,7 +125,7 @@ export default function SellerLabelModal() {
         style={styles.backdrop}
         onPress={handleDismiss}
         accessibilityRole="button"
-        accessibilityLabel="Close seller label"
+        accessibilityLabel="Close stated label"
       />
 
       <KeyboardAvoidingView
@@ -137,7 +137,7 @@ export default function SellerLabelModal() {
           <View style={styles.handle} />
 
           <View style={styles.headerRow}>
-            <Text style={styles.title}>Seller Label</Text>
+            <Text style={styles.title}>Stated Label</Text>
             <Pressable
               onPress={handleDismiss}
               hitSlop={8}

@@ -12,7 +12,7 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 
-import { ScanLine } from '@/components/ui/lucide-icons';
+import { Leaf, ScanLine, ShieldAlert } from '@/components/ui/lucide-icons';
 import { RegionBoxOverlay } from '@/features/results/components/region-box-overlay';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -20,6 +20,11 @@ import { getConfidenceLabel } from '@/data/scans/analysis';
 import type { NormalizedRect } from '@/features/scan/lib/region-selection';
 
 const SLIDE_HEIGHT = 320;
+
+type FiberBadge = {
+  label: string;
+  tone: 'synthetic' | 'clear';
+};
 
 type FabricPhotoPreviewProps = {
   imageUri?: string | null;
@@ -30,6 +35,7 @@ type FabricPhotoPreviewProps = {
   referenceImage?: ImageSourcePropType | null;
   referenceTitle?: string;
   scanCaption?: string;
+  fiberBadge?: FiberBadge | null;
 };
 
 export function FabricPhotoPreview({
@@ -41,6 +47,7 @@ export function FabricPhotoPreview({
   referenceImage,
   referenceTitle,
   scanCaption,
+  fiberBadge,
 }: FabricPhotoPreviewProps) {
   const [slideWidth, setSlideWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -96,6 +103,28 @@ export function FabricPhotoPreview({
           {showDetection ? <Text style={styles.detectedLabel}>{detectedLabel}</Text> : null}
           {showDetection && subtitle ? (
             <Text style={styles.detectedSubtitle}>{subtitle}</Text>
+          ) : null}
+          {fiberBadge ? (
+            <View
+              style={[
+                styles.fiberBadge,
+                fiberBadge.tone === 'synthetic' ? styles.fiberBadgeSynthetic : styles.fiberBadgeClear,
+              ]}>
+              {fiberBadge.tone === 'synthetic' ? (
+                <ShieldAlert size={12} color="#FCA5A5" strokeWidth={2.5} />
+              ) : (
+                <Leaf size={12} color="#86EFAC" strokeWidth={2.5} />
+              )}
+              <Text
+                style={[
+                  styles.fiberBadgeText,
+                  fiberBadge.tone === 'synthetic'
+                    ? styles.fiberBadgeTextSynthetic
+                    : styles.fiberBadgeTextClear,
+                ]}>
+                {fiberBadge.label}
+              </Text>
+            </View>
           ) : null}
         </LinearGradient>
       ) : null}
@@ -258,6 +287,35 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.88)',
     lineHeight: 18,
     marginTop: 3,
+  },
+  fiberBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    marginTop: 8,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  fiberBadgeSynthetic: {
+    backgroundColor: 'rgba(127, 29, 29, 0.55)',
+    borderColor: 'rgba(252, 165, 165, 0.5)',
+  },
+  fiberBadgeClear: {
+    backgroundColor: 'rgba(20, 83, 45, 0.5)',
+    borderColor: 'rgba(134, 239, 172, 0.5)',
+  },
+  fiberBadgeText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 11,
+  },
+  fiberBadgeTextSynthetic: {
+    color: '#FCA5A5',
+  },
+  fiberBadgeTextClear: {
+    color: '#86EFAC',
   },
   dots: {
     position: 'absolute',

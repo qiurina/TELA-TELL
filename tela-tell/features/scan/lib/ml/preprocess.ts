@@ -1,6 +1,8 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import jpeg from 'jpeg-js';
 import { IMAGE_SIZE } from '@/features/scan/lib/ml/constants';
+import { applyClaheLuminance } from '@/features/scan/lib/ml/color/clahe';
+import { applyGrayWorldWhiteBalance } from '@/features/scan/lib/ml/color/white-balance';
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
@@ -41,12 +43,19 @@ export async function imageToInputTensor(uri: string): Promise<Float32Array> {
   const jpegBytes = base64ToUint8Array(resized.base64);
   const decoded = jpeg.decode(jpegBytes, { useTArray: true });
 
+  applyGrayWorldWhiteBalance(decoded.data, decoded.width, decoded.height);
+  applyClaheLuminance(decoded.data, decoded.width, decoded.height, {
+    clipLimit: 2.0,
+    tilesX: 8,
+    tilesY: 8,
+  });
+
   const tensor = new Float32Array(IMAGE_SIZE * IMAGE_SIZE * 3);
   let tensorIndex = 0;
   for (let i = 0; i < decoded.data.length; i += 4) {
-    tensor[tensorIndex++] = decoded.data[i] / 127.5 - 1;
-    tensor[tensorIndex++] = decoded.data[i + 1] / 127.5 - 1;
-    tensor[tensorIndex++] = decoded.data[i + 2] / 127.5 - 1;
+    tensor[tensorIndex++] = (decoded.data[i] - 127.0) / 128.0;
+    tensor[tensorIndex++] = (decoded.data[i + 1] - 127.0) / 128.0;
+    tensor[tensorIndex++] = (decoded.data[i + 2] - 127.0) / 128.0;
   }
 
   return tensor;

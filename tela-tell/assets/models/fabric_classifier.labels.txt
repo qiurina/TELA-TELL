@@ -1,0 +1,12 @@
+Cotton
+Wool
+Silk
+Linen
+Polyester
+Nylon
+Acrylic
+Spandex
+Rayon
+Leather
+Suede
+Abaca

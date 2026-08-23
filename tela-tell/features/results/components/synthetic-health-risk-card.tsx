@@ -47,17 +47,31 @@ export function SyntheticHealthRiskCard({ risk }: SyntheticHealthRiskCardProps) 
           <Text style={[styles.cardLabel, { color: levelStyle.accent }]}>HEALTH RISK</Text>
           <Text style={[styles.levelValue, { color: levelStyle.accent }]}>{risk.label}</Text>
         </View>
-        <Pressable
-          style={[
-            styles.infoButton,
-            { backgroundColor: levelStyle.background, borderColor: levelStyle.border },
-          ]}
-          onPress={() => setShowDisclaimer(true)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="About synthetic fiber health risk">
-          <Info size={14} color={levelStyle.accent} strokeWidth={2.25} />
-        </Pressable>
+        <View style={styles.headerRight}>
+          <View
+            style={[
+              styles.percentPill,
+              { backgroundColor: levelStyle.background, borderColor: levelStyle.border },
+            ]}>
+            <Text style={[styles.percentValue, { color: levelStyle.accent }]}>
+              {risk.syntheticPercent}%
+            </Text>
+            <Text style={[styles.percentCaption, { color: levelStyle.accent }]}>
+              est. synthetic
+            </Text>
+          </View>
+          <Pressable
+            style={[
+              styles.infoButton,
+              { backgroundColor: levelStyle.background, borderColor: levelStyle.border },
+            ]}
+            onPress={() => setShowDisclaimer(true)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="About synthetic fiber health risk">
+            <Info size={14} color={levelStyle.accent} strokeWidth={2.25} />
+          </Pressable>
+        </View>
       </View>
 
       <Text style={styles.summary}>{risk.summary}</Text>
@@ -94,6 +108,30 @@ const styles = StyleSheet.create({
   levelValue: {
     fontFamily: Fonts.bold,
     fontSize: 14,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  percentPill: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  percentValue: {
+    fontFamily: Fonts.bold,
+    fontSize: 13,
+    lineHeight: 15,
+  },
+  percentCaption: {
+    fontFamily: Fonts.medium,
+    fontSize: 8,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    lineHeight: 10,
   },
   infoButton: {
     width: 22,

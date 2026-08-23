@@ -169,7 +169,17 @@ export default function ResultsScreen() {
     : null;
 
   const healthRisk = !isDualDemo
-    ? getSyntheticHealthRisk(result.dominantFabric, result.compositions ?? [])
+    ? getSyntheticHealthRisk(result.dominantFabric, result.compositions ?? [], result.garmentCondition)
+    : null;
+
+  const fiberBadge = !isDualDemo
+    ? healthRisk
+      ? {
+          label:
+            healthRisk.fibers.length > 1 ? 'Synthetic Blend Detected' : 'Synthetic Fiber Detected',
+          tone: 'synthetic' as const,
+        }
+      : { label: 'No Synthetic Detected', tone: 'clear' as const }
     : null;
 
   const headline = !isDualDemo
@@ -240,6 +250,7 @@ export default function ResultsScreen() {
           }
           referenceImage={primaryReference?.image}
           referenceTitle={primaryReference?.title}
+          fiberBadge={fiberBadge}
         />
 
         {isDualDemo ? (
@@ -252,13 +263,13 @@ export default function ResultsScreen() {
               compact
             />
 
+            {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
+
             <CompositionCard compositions={result.compositions ?? []} />
           </>
         )}
 
         <StatusBadges sustainability={result.sustainability} />
-
-        {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
 
         {!isDualDemo ? (
           <SellerComparisonCard

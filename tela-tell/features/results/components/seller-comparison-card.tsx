@@ -30,12 +30,12 @@ export function SellerComparisonCard({
         onPress={onAddLabel}
         disabled={!onAddLabel}
         accessibilityRole="button"
-        accessibilityLabel="Add seller label to compare">
+        accessibilityLabel="Add stated label to compare">
         <View style={styles.ctaIcon}>
           <Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />
         </View>
         <View style={styles.ctaText}>
-          <Text style={styles.ctaTitle}>Compare seller label</Text>
+          <Text style={styles.ctaTitle}>Compare stated label</Text>
           <Text style={styles.ctaBody}>Add what the seller claimed to check for mislabeling</Text>
         </View>
       </Pressable>

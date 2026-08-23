@@ -44,6 +44,7 @@ export default function RecommendationsScreen() {
           detectedCompositions={result.compositions ?? []}
           sustainabilityScore={result.sustainability.score}
           sustainabilityRating={result.sustainability.rating}
+          garmentCondition={result.garmentCondition}
         />
       </ScrollView>
     </View>

@@ -1,5 +1,7 @@
 import type { ImageSourcePropType } from 'react-native';
 
+import type { GarmentCondition } from '@/data/scans/garment-condition';
+
 export type SustainabilityRating = 'green' | 'yellow' | 'red';
 
 export type SustainabilityFactor = {
@@ -62,6 +64,8 @@ export type ScanResult = {
   sellerLabel?: string;
   /** Local capture URI when saved from Scan (same image as review preview). */
   imageUri?: string | null;
+  /** Physical condition at scan time; informs shedding guidance (worn/damaged sheds more). */
+  garmentCondition?: GarmentCondition;
   sustainability: {
     rating: SustainabilityRating;
     label: string;
