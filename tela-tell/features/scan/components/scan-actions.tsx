@@ -37,7 +37,6 @@ import { getScanMode, setScanMode, type ScanMode } from '@/features/scan/lib/sca
 
 const primaryGradient = [BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark] as const;
 
-/** Dual-swatch scan mode is kept in code but hidden from the UI for now. */
 const SHOW_SCAN_MODE_SELECTOR = false;
 
 type FloatingCaptureBarProps = {
@@ -48,7 +47,6 @@ type FloatingCaptureBarProps = {
   isAnalyzing?: boolean;
 };
 
-/** Icon-only Gallery / shutter / Clear row (camera-app style). */
 export function FloatingCaptureBar({
   hasPreview = false,
   onTakePhoto,
@@ -119,7 +117,6 @@ type ScanDetailsPanelProps = {
   isAnalyzing?: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
-  /** White accordion card (post-capture sheet). */
   variant?: 'chip' | 'sheet';
 };
 
@@ -181,7 +178,6 @@ function DetailActionRow({
   );
 }
 
-/** Compact details chip that expands into the full optional rows. */
 export function ScanDetailsPanel({
   savedSellerLabel,
   garmentCondition,

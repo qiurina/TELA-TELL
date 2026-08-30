@@ -1,6 +1,5 @@
 /**
  * Executable schema for expo-sqlite migrations.
- * Keep in sync with db/schema.sql (paper / documentation source).
  */
 export const SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;

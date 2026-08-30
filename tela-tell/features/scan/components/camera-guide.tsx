@@ -1,5 +1,4 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 import { useIsFocused } from '@react-navigation/native';
 import {
@@ -7,20 +6,29 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
   type LayoutChangeEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS, useSharedValue } from 'react-native-reanimated';
+import { runOnJS, useDerivedValue, useSharedValue } from 'react-native-reanimated';
+import {
+  Camera,
+  useCameraDevice,
+  useCameraPermission,
+  useFrameOutput,
+  usePhotoOutput,
+  type CameraRef,
+} from 'react-native-vision-camera';
 
 import { ScanGuideFloat } from '@/features/scan/components/scan-guide-float';
 import { ScanLineAnimation } from '@/features/scan/components/scan-line-animation';
@@ -32,9 +40,43 @@ import {
   computeCenteredGuideRect,
   cropUriToCenteredGuideAspect,
   cropUriToGuideWithSize,
+  getImageSize,
   type Size,
   type ViewRect,
 } from '@/features/scan/lib/crop-to-guide';
+import {
+  computeGuideRegionInFrame,
+  computeSharpnessSignals,
+  getChannelLayout,
+} from '@/features/scan/lib/ml/live/frame-signals';
+
+/**
+ * Live-guidance readiness derived from the frame signals. Deliberately collapsed
+ * into one generalized state rather than surfacing "too far" vs "too blurry"
+ * separately — with both signals derived independently, the specific reason
+ * could flip back and forth between throttled reads even while framing was
+ * consistently not-quite-right, reading as confusing flicker between two
+ * different pieces of text. A single "good" vs "adjust" state doesn't have
+ * that problem: even if the underlying cause toggles, the displayed color
+ * only changes when framing actually crosses from good to bad or back.
+ */
+type LiveReadiness = 'unknown' | 'good' | 'adjust';
+
+// Calibrated from real on-device readings against the guide-box-restricted
+// signal (2026-08-24). Important scope limitation, not just a number: a plain
+// textured floor at normal distance read texturedFraction up to 0.88 (higher
+// than genuine fabric close-ups, ~0.58-0.74) — this heuristic detects "is
+// there texture," not "is this fabric specifically," so it can't reliably
+// flag "wrong subject, but still textured." What it CAN reliably catch is the
+// extreme case: genuinely blank/flat or badly out-of-focus framing, which
+// read texturedFraction 0.00-0.096 and variance 1.8-17 — clearly separated
+// from every reasonably-textured reading (fabric or otherwise), which stayed
+// above ~245 variance / ~0.58 fraction. Thresholds sit in that gap.
+const FILL_FRACTION_THRESHOLD = 0.18;
+const BLUR_VARIANCE_THRESHOLD = 60;
+/** Consecutive throttled reads that must agree before the hint actually changes,
+ * so one noisy frame doesn't flicker the UI. */
+const HINT_DEBOUNCE_READS = 3;
 
 export type CameraGuideHandle = {
   captureAndCrop: () => Promise<string | null>;
@@ -42,6 +84,12 @@ export type CameraGuideHandle = {
   getGuideAspect: () => number;
   hasLiveCamera: () => boolean;
 };
+
+// Module-level, not inline in the hook call — useFrameOutput() memoizes internally
+// keyed on this object's identity; a fresh literal every render defeats that
+// memoization entirely, making the frame output (and anything derived from it)
+// churn on every render, up to and including mid-capture session reconfiguration.
+const LIVE_FRAME_TARGET_RESOLUTION = { width: 480, height: 480 };
 
 type CameraGuideProps = {
   previewUri?: string | null;
@@ -54,13 +102,19 @@ type CameraGuideProps = {
   onBack?: () => void;
 };
 
-function ViewfinderFrame() {
+function ViewfinderFrame({ readiness }: { readiness: LiveReadiness }) {
+  const colorStyle =
+    readiness === 'good'
+      ? styles.cornerGood
+      : readiness === 'adjust'
+        ? styles.cornerAdjust
+        : null;
   return (
     <>
-      <View style={[styles.corner, styles.topLeft]} />
-      <View style={[styles.corner, styles.topRight]} />
-      <View style={[styles.corner, styles.bottomLeft]} />
-      <View style={[styles.corner, styles.bottomRight]} />
+      <View style={[styles.corner, styles.topLeft, colorStyle]} />
+      <View style={[styles.corner, styles.topRight, colorStyle]} />
+      <View style={[styles.corner, styles.bottomLeft, colorStyle]} />
+      <View style={[styles.corner, styles.bottomRight, colorStyle]} />
     </>
   );
 }
@@ -79,34 +133,172 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   ref,
 ) {
   const isFocused = useIsFocused();
-  const cameraRef = useRef<CameraView>(null);
+  const cameraRef = useRef<CameraRef>(null);
   const viewSizeRef = useRef<Size>({ width: 0, height: 0 });
   const guideRef = useRef<ViewRect | null>(null);
-  const [permission, requestPermission] = useCameraPermissions();
+  const { hasPermission, canRequestPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('back');
   const [viewSize, setViewSize] = useState<Size>({ width: 0, height: 0 });
+  // Computed here (not further down, where it used to live) so the onFrame
+  // worklet below can close over it — needed to restrict live analysis to the
+  // guide-box region instead of the camera's whole field of view.
+  const guide =
+    viewSize.width > 0
+      ? computeCenteredGuideRect(viewSize, contentTopInset + 48, bottomReserve)
+      : null;
+  // The crop math (mapCoverCrop) assumes the captured photo represents the exact
+  // same field of view as the live preview, just at a different resolution — that
+  // only holds if the photo output's aspect ratio matches the view's aspect ratio.
+  // Left at usePhotoOutput()'s 4:3 default, this broke once the frame output (1:1,
+  // 480x480) became stably bound alongside it — CameraX negotiates a shared FOV
+  // across all simultaneously-bound outputs, shifting what the photo actually sees
+  // away from what's shown live. Request the view's own aspect instead.
+  //
+  // Deliberately using the window's dimensions here, not the measured `viewSize`
+  // (from onLayout): `viewSize` can update a couple of times as layout settles
+  // right after mount, and each change makes usePhotoOutput() create a brand-new
+  // native photo output that needs a moment to attach to the session — capturing
+  // right as that happens throws "Photo Output is not yet attached to the
+  // CameraSession!". Window dimensions are known immediately and only change on
+  // an actual rotation/split-screen event, which this portrait-only screen
+  // doesn't need to handle, so this stays stable for the component's lifetime.
+  const window = useWindowDimensions();
+  const photoTargetResolution = useMemo(() => {
+    const aspect = window.width / window.height;
+    const height = 1600;
+    return { width: Math.round(height * aspect), height };
+  }, [window.width, window.height]);
+  const photoOutput = usePhotoOutput({ targetResolution: photoTargetResolution });
   const [isCapturing, setIsCapturing] = useState(false);
   const [fillLightOn, setFillLightOn] = useState(false);
-  const [zoom, setZoom] = useState(0);
+  // CameraX throws "Camera is not active" if zoom/torch are pushed before the
+  // session finishes starting — only apply them once onStarted has fired.
+  const [sessionStarted, setSessionStarted] = useState(false);
   const zoomShared = useSharedValue(0);
   const baseZoom = useSharedValue(0);
+  // Live frame analysis (fill-ratio + blur, §5/§7 of the plan) runs in the
+  // onFrame worklet below. Requesting a small, non-planar RGB buffer directly
+  // from the camera pipeline avoids needing a hand-written YUV conversion —
+  // frame.getPixelBuffer() gives a ready contiguous ArrayBuffer; the exact
+  // channel order (BGRA vs RGBA) varies by negotiated format, handled by
+  // getChannelLayout() per-frame rather than assumed fixed.
+  const lastAnalysisAt = useSharedValue(0);
+  const [readiness, setReadiness] = useState<LiveReadiness>('unknown');
+  const consecutiveReadinessRef = useRef<{ state: LiveReadiness; count: number }>({
+    state: 'unknown',
+    count: 0,
+  });
+  const handleSignalUpdate = useCallback((variance: number, texturedFraction: number) => {
+    const isReady = texturedFraction >= FILL_FRACTION_THRESHOLD && variance >= BLUR_VARIANCE_THRESHOLD;
+    const nextState: LiveReadiness = isReady ? 'good' : 'adjust';
+
+    if (consecutiveReadinessRef.current.state === nextState) {
+      consecutiveReadinessRef.current.count += 1;
+    } else {
+      consecutiveReadinessRef.current = { state: nextState, count: 1 };
+    }
+
+    if (consecutiveReadinessRef.current.count >= HINT_DEBOUNCE_READS) {
+      setReadiness((prev) => (prev === nextState ? prev : nextState));
+    }
+  }, []);
+  const frameOutput = useFrameOutput({
+    targetResolution: LIVE_FRAME_TARGET_RESOLUTION,
+    pixelFormat: 'rgb',
+    enablePreviewSizedOutputBuffers: true,
+    onFrame: (frame) => {
+      'worklet';
+      // Throttle to ~1-2/sec — plenty for "live-feeling" guidance, far cheaper
+      // than running this on every camera frame.
+      if (frame.timestamp - lastAnalysisAt.value <= 0.7) {
+        frame.dispose();
+        return;
+      }
+      lastAnalysisAt.value = frame.timestamp;
+
+      if (!frame.hasPixelBuffer || frame.isPlanar) {
+        frame.dispose();
+        return;
+      }
+      const layout = getChannelLayout(frame.pixelFormat);
+      if (!layout || !guide) {
+        frame.dispose();
+        return;
+      }
+
+      // Restrict analysis to the on-screen guide box, not the whole camera
+      // field of view — otherwise ordinary backgrounds read as "textured
+      // enough" and "too far" never gets flagged. Same cover-crop math the
+      // real photo capture already uses, ported for worklet use.
+      const region = computeGuideRegionInFrame(
+        viewSize.width,
+        viewSize.height,
+        frame.width,
+        frame.height,
+        guide.x,
+        guide.y,
+        guide.width,
+        guide.height,
+      );
+
+      const buffer = frame.getPixelBuffer();
+      const signals = computeSharpnessSignals(buffer, frame.bytesPerRow, layout, region);
+      frame.dispose();
+
+      runOnJS(handleSignalUpdate)(signals.variance, signals.texturedFraction);
+    },
+  });
+  // Passing a new array literal as `outputs` on every render made the Camera
+  // session think its output configuration changed, causing needless session
+  // reconfiguration (observed as torch/zoom "cancelled, a new one is being
+  // set" errors even with no user interaction) — memoize so the reference is
+  // stable unless the outputs themselves actually change.
+  const cameraOutputs = useMemo(() => [photoOutput, frameOutput], [photoOutput, frameOutput]);
+  // VisionCamera's default onError just console.errors everything, which makes LogBox
+  // show a red screen even for benign, expected races (a newer torch/zoom value
+  // cancelling one still in flight — normal CameraX behavior, not a real failure).
+  // Only warn quietly for those; anything else still surfaces normally.
+  const handleCameraError = useCallback((error: Error) => {
+    if (error.message.includes('OperationCanceledException')) {
+      console.warn('[live-camera] benign cancellation (newer value superseded it):', error.message);
+      return;
+    }
+    console.error(error);
+  }, []);
   const hasPreview = Boolean(previewUri);
+  // VisionCamera's own `zoom` prop defaults to 1 (neutral) regardless of the device's
+  // raw minZoom — minZoom can be below 1 on phones with an ultra-wide lens, which is
+  // NOT the same as "no zoom". Mapping the pinch gesture's rest state (0) to minZoom
+  // caused an unwanted zoom-in effect before the user ever pinched; map to 1 instead.
+  const neutralZoom = 1;
+  const maxZoom = device?.maxZoom ?? 1;
+  // Drive zoom via a worklet-derived SharedValue (not React state) — CameraX cancels
+  // any in-flight zoom change the instant a newer one arrives, so pushing a new value
+  // through JS state on every pinch frame throws "Cancelled due to another zoom value
+  // being set" repeatedly. A SharedValue lets VisionCamera apply updates natively
+  // without a JS round-trip per frame.
+  const deviceZoom = useDerivedValue(() => {
+    return neutralZoom + zoomShared.value * (maxZoom - neutralZoom);
+  }, [maxZoom]);
   const canUseLiveCamera =
-    Platform.OS !== 'web' && Boolean(permission?.granted) && !hasPreview && isFocused;
+    Platform.OS !== 'web' && hasPermission && device != null && !hasPreview && isFocused;
 
   useEffect(() => {
     if (!isFocused || Platform.OS === 'web') {
       return;
     }
-    if (permission && !permission.granted && permission.canAskAgain) {
+    if (!hasPermission && canRequestPermission) {
       void requestPermission();
     }
-  }, [isFocused, permission, requestPermission]);
+  }, [isFocused, hasPermission, canRequestPermission, requestPermission]);
 
   useEffect(() => {
     if (!canUseLiveCamera) {
       setFillLightOn(false);
-      setZoom(0);
       zoomShared.value = 0;
+      setSessionStarted(false);
+      consecutiveReadinessRef.current = { state: 'unknown', count: 0 };
+      setReadiness('unknown');
     }
   }, [canUseLiveCamera, zoomShared]);
 
@@ -118,13 +310,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
     .onUpdate((event) => {
       const next = Math.min(1, Math.max(0, baseZoom.value + (event.scale - 1) * 0.6));
       zoomShared.value = next;
-      runOnJS(setZoom)(next);
     });
-
-  const guide =
-    viewSize.width > 0
-      ? computeCenteredGuideRect(viewSize, contentTopInset + 48, bottomReserve)
-      : null;
 
   guideRef.current = guide;
   viewSizeRef.current = viewSize;
@@ -164,30 +350,25 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
 
         setIsCapturing(true);
         try {
-          const photo = await cameraRef.current.takePictureAsync({
-            quality: 0.9,
-            skipProcessing: false,
-            exif: false,
-            shutterSound: false,
-          });
-          if (!photo?.uri) {
-            return null;
-          }
+          const photoFile = await photoOutput.capturePhotoToFile(
+            { flashMode: 'off', enableShutterSound: false },
+            {},
+          );
+          const uri = photoFile.filePath.startsWith('file://')
+            ? photoFile.filePath
+            : `file://${photoFile.filePath}`;
 
-          const bitmap: Size = {
-            width: photo.width || 0,
-            height: photo.height || 0,
-          };
+          const bitmap = await getImageSize(uri);
           const currentView = viewSizeRef.current;
           const currentGuide = guideRef.current;
 
           // Crop exactly the guide rect (same region as post-capture preview).
           if (bitmap.width > 0 && bitmap.height > 0 && currentView.width > 0 && currentGuide) {
-            return await cropUriToGuideWithSize(photo.uri, bitmap, currentView, currentGuide);
+            return await cropUriToGuideWithSize(uri, bitmap, currentView, currentGuide);
           }
 
           return await cropUriToCenteredGuideAspect(
-            photo.uri,
+            uri,
             GUIDE_ASPECT,
             bitmap.width > 0 ? bitmap : undefined,
           );
@@ -207,7 +388,15 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
       ? 'Capturing...'
       : hasPreview
         ? 'Photo ready'
-        : 'Position fabric inside the frame';
+        : readiness === 'adjust'
+          ? 'Adjust framing'
+          : readiness === 'good'
+            ? 'Looking good — ready to scan'
+            : 'Position fabric inside the frame';
+  const showsAdjustHint =
+    !hasPreview && readiness === 'adjust' && !isAnalyzing && !isCapturing;
+  const showsGoodReadiness =
+    !hasPreview && readiness === 'good' && !isAnalyzing && !isCapturing;
 
   return (
     <View style={styles.viewfinder} onLayout={handleViewLayout}>
@@ -222,19 +411,21 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           <Image source={{ uri: previewUri }} style={styles.previewImage} contentFit="cover" />
           <ScanLineAnimation active={isAnalyzing} />
         </View>
-      ) : canUseLiveCamera ? (
+      ) : canUseLiveCamera && device ? (
         <GestureDetector gesture={pinchGesture}>
-          <CameraView
+          <Camera
             ref={cameraRef}
             style={styles.feed}
-            facing="back"
-            mode="picture"
-            enableTorch={fillLightOn}
-            animateShutter={false}
-            zoom={zoom}
+            device={device}
+            isActive={canUseLiveCamera}
+            outputs={cameraOutputs}
+            onStarted={() => setSessionStarted(true)}
+            onError={handleCameraError}
+            torchMode={sessionStarted ? (fillLightOn ? 'on' : 'off') : undefined}
+            zoom={sessionStarted ? deviceZoom : undefined}
           />
         </GestureDetector>
-      ) : permission && !permission.granted ? (
+      ) : !hasPermission ? (
         <View style={[styles.placeholder, { paddingTop: contentTopInset }]}>
           <ScanLine size={48} color="rgba(255,255,255,0.85)" strokeWidth={1.75} />
           <Text style={styles.placeholderTitle}>Camera access needed</Text>
@@ -244,10 +435,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           <Pressable onPress={() => void requestPermission()}>
             <Text style={styles.permissionHint}>Allow camera</Text>
           </Pressable>
-        </View>
-      ) : !permission ? (
-        <View style={styles.placeholder}>
-          <ActivityIndicator color={BrandColors.white} />
         </View>
       ) : (
         <View style={[styles.placeholder, { paddingTop: contentTopInset }]}>
@@ -348,7 +535,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
             },
           ]}
           pointerEvents="none">
-          <ViewfinderFrame />
+          <ViewfinderFrame readiness={readiness} />
         </View>
       ) : null}
 
@@ -358,6 +545,8 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
             style={[
               styles.instructionBar,
               (isAnalyzing || isCapturing) && styles.instructionBarActive,
+              showsAdjustHint && styles.instructionBarHint,
+              showsGoodReadiness && styles.instructionBarGood,
             ]}>
             <Text style={styles.instruction} numberOfLines={1}>
               {instructionText}
@@ -543,6 +732,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(74, 143, 168, 0.85)',
     borderColor: 'rgba(255,255,255,0.2)',
   },
+  instructionBarHint: {
+    backgroundColor: 'rgba(202, 138, 4, 0.85)',
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  instructionBarGood: {
+    backgroundColor: 'rgba(22, 163, 74, 0.85)',
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
   instruction: {
     fontFamily: Fonts.medium,
     fontSize: 12,
@@ -555,6 +752,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderColor: 'rgba(255,255,255,0.95)',
+  },
+  cornerGood: {
+    borderColor: '#4ADE80',
+  },
+  cornerAdjust: {
+    borderColor: '#FBBF24',
   },
   topLeft: {
     top: 0,

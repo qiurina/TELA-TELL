@@ -62,9 +62,7 @@ export type ScanResult = {
   scannedAt: string;
   scannedAtDate: string;
   sellerLabel?: string;
-  /** Local capture URI when saved from Scan (same image as review preview). */
   imageUri?: string | null;
-  /** Physical condition at scan time; informs shedding guidance (worn/damaged sheds more). */
   garmentCondition?: GarmentCondition;
   sustainability: {
     rating: SustainabilityRating;
