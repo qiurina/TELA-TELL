@@ -7,7 +7,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/poppins';
 import { DefaultTheme, ThemeProvider, type Theme } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -15,6 +15,7 @@ import { Animated, Appearance, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import { AppErrorFallback } from '@/components/app-error-boundary';
 import { AppSplash } from '@/components/splash/app-splash';
 import { BrandColors } from '@/constants/brand';
 import { migrateDatabase } from '@/db/migrate';
@@ -44,6 +45,10 @@ const AppNavigationTheme: Theme = {
 export const unstable_settings = {
   anchor: 'index',
 };
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <AppErrorFallback error={error} retry={retry} />;
+}
 
 export default function RootLayout() {
   const [showSplashOverlay, setShowSplashOverlay] = useState(true);

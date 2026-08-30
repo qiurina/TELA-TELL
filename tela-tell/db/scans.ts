@@ -112,6 +112,50 @@ export async function saveScan(
     }
   });
 }
+export type ScanExportEntry = {
+  scan: ScanResult;
+  isFavorite: boolean;
+};
+
+export async function getAllScansForExport(
+  options?: { userId?: string | null },
+): Promise<ScanExportEntry[]> {
+  if (!isDatabaseAvailable()) {
+    return [];
+  }
+
+  const db = await getDatabase();
+  const userId = options?.userId ?? null;
+
+  const rows = userId
+    ? await db.getAllAsync<{ resultJson: string | null; isFavorite: number | null }>(
+        `SELECT resultJson, isFavorite FROM tblScan
+         WHERE user_id = ? AND ${ACTIVE_SCAN_FILTER}
+         ${SCAN_LIST_ORDER}`,
+        [userId],
+      )
+    : await db.getAllAsync<{ resultJson: string | null; isFavorite: number | null }>(
+        `SELECT resultJson, isFavorite FROM tblScan
+         WHERE ${ACTIVE_SCAN_FILTER}
+         ${SCAN_LIST_ORDER}`,
+      );
+
+  const results: ScanExportEntry[] = [];
+  for (const row of rows) {
+    if (!row.resultJson) {
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(row.resultJson) as ScanResult;
+      const { imageUri: _imageUri, ...withoutImage } = parsed;
+      results.push({ scan: withoutImage, isFavorite: row.isFavorite === 1 });
+    } catch {
+      continue;
+    }
+  }
+
+  return results;
+}
 export async function getScanById(scanId: string): Promise<ScanResult | undefined> {
   if (!isDatabaseAvailable()) {
     return undefined;

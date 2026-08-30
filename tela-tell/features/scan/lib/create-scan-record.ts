@@ -12,8 +12,8 @@ import { classifyFabric, type ClassificationResult } from '@/features/scan/lib/m
 export type CreateScanRecordInput = {
   sellerLabel?: string | null;
   templateId?: string;
-  /** Captured photo to run real on-device classification against. */
-  imageUri?: string | null;
+  /** Burst of captured photos to run real on-device classification against; scores are averaged across them. */
+  imageUris?: string[] | null;
 };
 
 function createScanId(): string {
@@ -164,9 +164,9 @@ function buildResultFromClassification(classification: ClassificationResult): Sc
   };
 }
 
-async function classifyFromImage(imageUri: string): Promise<ClassificationResult | null> {
+async function classifyFromImages(imageUris: string[]): Promise<ClassificationResult | null> {
   try {
-    return await classifyFabric(imageUri);
+    return await classifyFabric(imageUris);
   } catch {
     return null;
   }
@@ -176,7 +176,8 @@ export async function createScanRecord(input: CreateScanRecordInput = {}): Promi
   const now = new Date();
   const sellerLabel = input.sellerLabel?.trim() || null;
 
-  const classification = input.imageUri ? await classifyFromImage(input.imageUri) : null;
+  const imageUris = input.imageUris?.filter(Boolean) ?? [];
+  const classification = imageUris.length > 0 ? await classifyFromImages(imageUris) : null;
   const base = classification
     ? buildResultFromClassification(classification)
     : cloneTemplate(pickTemplate(input.templateId));

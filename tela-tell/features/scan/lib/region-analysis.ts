@@ -65,7 +65,7 @@ async function classifyRegion(
       height: Math.round(rect.height * imageSize.height),
     };
     const croppedUri = await cropImageToRect(imageUri, pixelCrop);
-    return await classifyFabric(croppedUri);
+    return await classifyFabric([croppedUri]);
   } catch {
     return null;
   }

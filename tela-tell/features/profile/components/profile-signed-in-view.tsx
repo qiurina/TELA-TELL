@@ -1,14 +1,16 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Bookmark,
   Calendar,
   Camera,
+  Download,
   Heart,
   Info,
   LogOut,
+  Share2,
   Sun,
   Trash2,
   TriangleAlert,
@@ -25,6 +27,11 @@ import {
   ProfilePreferenceRow,
 } from '@/features/profile/components/profile-preference-row';
 import {
+  exportUserData,
+  importScans,
+  pickAndParseExportFile,
+} from '@/features/profile/lib/data-export';
+import {
   formatProfileDisplayName,
   getOccasionDisplay,
   getPreferredFabricsDisplay,
@@ -36,8 +43,12 @@ import {
 import {
   getUserPreferencesSnapshot,
   hydrateUserPreferences,
+  persistUserPreferences,
+  setUserPreferences,
   subscribeUserPreferences,
+  type UserPreferences,
 } from '@/features/profile/lib/user-preferences';
+import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 
 /** Root-stack routes (siblings of tabs) — tab bar stays under the push, no mid-anim hide. */
 const PROFILE_SKIN_TONE_HREF = '/skin-tone' as Href;
@@ -54,6 +65,12 @@ export function ProfileSignedInView() {
   const router = useRouter();
   const { session, signOut } = useAuth();
   const [isDeleteSheetVisible, setIsDeleteSheetVisible] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{
+    count: number;
+    preferences: UserPreferences;
+  } | null>(null);
   const username = session?.username ?? '';
   const displayName = session
     ? formatProfileDisplayName(session)
@@ -90,6 +107,66 @@ export function ProfileSignedInView() {
   const endSession = async () => {
     await signOut();
     router.replace('/welcome' as Href);
+  };
+
+  const handleExportData = async () => {
+    if (isExporting) {
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      await exportUserData({ userId: session?.userId ?? null, username });
+    } catch (error) {
+      Alert.alert(
+        'Could not export data',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportData = async () => {
+    if (isImporting) {
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const payload = await pickAndParseExportFile();
+      if (!payload) {
+        return;
+      }
+
+      const count = await importScans(
+        payload.scans,
+        payload.favoriteScanIds,
+        session?.userId ?? null,
+      );
+
+      if (payload.preferences) {
+        setPendingImport({ count, preferences: payload.preferences });
+      } else {
+        Alert.alert('Import complete', `Imported ${count} scan${count === 1 ? '' : 's'}.`);
+      }
+    } catch (error) {
+      Alert.alert(
+        'Could not import data',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleConfirmImportPreferences = () => {
+    if (!pendingImport) {
+      return;
+    }
+    setUserPreferences(pendingImport.preferences);
+    void persistUserPreferences(session?.userId ?? null);
+    setPendingImport(null);
   };
 
   const skinTone = getSkinToneDisplay(prefs);
@@ -181,7 +258,6 @@ export function ProfileSignedInView() {
         <ProfileGroupedCard>
           <ProfilePreferenceRow
             title="Favorite scans"
-            value="Bookmarked results"
             icon={<Bookmark size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
             onPress={() => openNested(PROFILE_FAVORITES_HREF)}
           />
@@ -202,6 +278,18 @@ export function ProfileSignedInView() {
             title="About TELA-TELL"
             icon={<Info size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
             onPress={() => openNested(PROFILE_ABOUT_HREF)}
+          />
+          <ProfilePreferenceRow
+            title="Export My Data"
+            value={isExporting ? 'Preparing export...' : undefined}
+            icon={<Share2 size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
+            onPress={() => void handleExportData()}
+          />
+          <ProfilePreferenceRow
+            title="Import My Data"
+            value={isImporting ? 'Importing...' : undefined}
+            icon={<Download size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
+            onPress={() => void handleImportData()}
           />
           <ProfilePreferenceRow
             title="Delete Account"
@@ -228,6 +316,20 @@ export function ProfileSignedInView() {
         userId={session?.userId ?? ''}
         onCancel={() => setIsDeleteSheetVisible(false)}
         onDeleted={() => void endSession()}
+      />
+
+      <ScanConfirmSheet
+        visible={pendingImport !== null}
+        title="Replace your preferences?"
+        message={
+          pendingImport
+            ? `Imported ${pendingImport.count} scan${pendingImport.count === 1 ? '' : 's'}. This file also has saved preferences (skin tone, allergies, preferred fabrics, etc). Replace what's on this device with them?`
+            : ''
+        }
+        confirmLabel="Replace"
+        cancelLabel="Keep mine"
+        onConfirm={handleConfirmImportPreferences}
+        onCancel={() => setPendingImport(null)}
       />
     </>
   );

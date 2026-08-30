@@ -51,11 +51,39 @@ function scoresToCompositions(scores: Float32Array): FabricComposition[] {
     .sort((a, b) => b.percentage - a.percentage);
 }
 
-export async function classifyFabric(imageUri: string): Promise<ClassificationResult> {
+function averageScores(scoreSets: Float32Array[]): Float32Array {
+  const length = scoreSets[0]?.length ?? 0;
+  const averaged = new Float32Array(length);
+  for (const scores of scoreSets) {
+    for (let i = 0; i < length; i += 1) {
+      averaged[i] += scores[i];
+    }
+  }
+  for (let i = 0; i < length; i += 1) {
+    averaged[i] /= scoreSets.length;
+  }
+  return averaged;
+}
+
+/**
+ * Classifies a burst of photos of the same fabric and averages their scores.
+ * Averaging over multiple shots reduces the per-shot noise (framing/focus/lighting
+ * micro-variation) that otherwise flips the top-1 result between repeat scans.
+ */
+export async function classifyFabric(imageUris: string[]): Promise<ClassificationResult> {
+  if (imageUris.length === 0) {
+    throw new ModelUnavailableError('No captured images to classify.');
+  }
+
   const model = await loadModel();
-  const input = await imageToInputTensor(imageUri);
-  const outputs = model.runSync([input]);
-  const scores = outputs[0];
+  const scoreSets: Float32Array[] = [];
+  for (const uri of imageUris) {
+    const input = await imageToInputTensor(uri);
+    const outputs = model.runSync([input]);
+    scoreSets.push(outputs[0]);
+  }
+
+  const scores = scoreSets.length > 1 ? averageScores(scoreSets) : scoreSets[0];
 
   const compositions = scoresToCompositions(scores).slice(0, 3);
   const top = compositions[0];

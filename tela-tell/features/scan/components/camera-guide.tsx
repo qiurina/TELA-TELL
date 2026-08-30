@@ -50,46 +50,22 @@ import {
   getChannelLayout,
 } from '@/features/scan/lib/ml/live/frame-signals';
 
-/**
- * Live-guidance readiness derived from the frame signals. Deliberately collapsed
- * into one generalized state rather than surfacing "too far" vs "too blurry"
- * separately — with both signals derived independently, the specific reason
- * could flip back and forth between throttled reads even while framing was
- * consistently not-quite-right, reading as confusing flicker between two
- * different pieces of text. A single "good" vs "adjust" state doesn't have
- * that problem: even if the underlying cause toggles, the displayed color
- * only changes when framing actually crosses from good to bad or back.
- */
 type LiveReadiness = 'unknown' | 'good' | 'adjust';
 
-// Calibrated from real on-device readings against the guide-box-restricted
-// signal (2026-08-24). Important scope limitation, not just a number: a plain
-// textured floor at normal distance read texturedFraction up to 0.88 (higher
-// than genuine fabric close-ups, ~0.58-0.74) — this heuristic detects "is
-// there texture," not "is this fabric specifically," so it can't reliably
-// flag "wrong subject, but still textured." What it CAN reliably catch is the
-// extreme case: genuinely blank/flat or badly out-of-focus framing, which
-// read texturedFraction 0.00-0.096 and variance 1.8-17 — clearly separated
-// from every reasonably-textured reading (fabric or otherwise), which stayed
-// above ~245 variance / ~0.58 fraction. Thresholds sit in that gap.
 const FILL_FRACTION_THRESHOLD = 0.18;
 const BLUR_VARIANCE_THRESHOLD = 60;
-/** Consecutive throttled reads that must agree before the hint actually changes,
- * so one noisy frame doesn't flicker the UI. */
 const HINT_DEBOUNCE_READS = 3;
 
 export type CameraGuideHandle = {
-  captureAndCrop: () => Promise<string | null>;
+  captureAndCrop: () => Promise<string[] | null>;
   getGuideLayout: () => { view: Size; guide: ViewRect } | null;
   getGuideAspect: () => number;
   hasLiveCamera: () => boolean;
 };
 
-// Module-level, not inline in the hook call — useFrameOutput() memoizes internally
-// keyed on this object's identity; a fresh literal every render defeats that
-// memoization entirely, making the frame output (and anything derived from it)
-// churn on every render, up to and including mid-capture session reconfiguration.
 const LIVE_FRAME_TARGET_RESOLUTION = { width: 480, height: 480 };
+
+const BURST_SHOT_COUNT = 3;
 
 type CameraGuideProps = {
   previewUri?: string | null;
@@ -139,29 +115,10 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   const { hasPermission, canRequestPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
   const [viewSize, setViewSize] = useState<Size>({ width: 0, height: 0 });
-  // Computed here (not further down, where it used to live) so the onFrame
-  // worklet below can close over it — needed to restrict live analysis to the
-  // guide-box region instead of the camera's whole field of view.
   const guide =
     viewSize.width > 0
       ? computeCenteredGuideRect(viewSize, contentTopInset + 48, bottomReserve)
       : null;
-  // The crop math (mapCoverCrop) assumes the captured photo represents the exact
-  // same field of view as the live preview, just at a different resolution — that
-  // only holds if the photo output's aspect ratio matches the view's aspect ratio.
-  // Left at usePhotoOutput()'s 4:3 default, this broke once the frame output (1:1,
-  // 480x480) became stably bound alongside it — CameraX negotiates a shared FOV
-  // across all simultaneously-bound outputs, shifting what the photo actually sees
-  // away from what's shown live. Request the view's own aspect instead.
-  //
-  // Deliberately using the window's dimensions here, not the measured `viewSize`
-  // (from onLayout): `viewSize` can update a couple of times as layout settles
-  // right after mount, and each change makes usePhotoOutput() create a brand-new
-  // native photo output that needs a moment to attach to the session — capturing
-  // right as that happens throws "Photo Output is not yet attached to the
-  // CameraSession!". Window dimensions are known immediately and only change on
-  // an actual rotation/split-screen event, which this portrait-only screen
-  // doesn't need to handle, so this stays stable for the component's lifetime.
   const window = useWindowDimensions();
   const photoTargetResolution = useMemo(() => {
     const aspect = window.width / window.height;
@@ -171,17 +128,9 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   const photoOutput = usePhotoOutput({ targetResolution: photoTargetResolution });
   const [isCapturing, setIsCapturing] = useState(false);
   const [fillLightOn, setFillLightOn] = useState(false);
-  // CameraX throws "Camera is not active" if zoom/torch are pushed before the
-  // session finishes starting — only apply them once onStarted has fired.
   const [sessionStarted, setSessionStarted] = useState(false);
   const zoomShared = useSharedValue(0);
   const baseZoom = useSharedValue(0);
-  // Live frame analysis (fill-ratio + blur, §5/§7 of the plan) runs in the
-  // onFrame worklet below. Requesting a small, non-planar RGB buffer directly
-  // from the camera pipeline avoids needing a hand-written YUV conversion —
-  // frame.getPixelBuffer() gives a ready contiguous ArrayBuffer; the exact
-  // channel order (BGRA vs RGBA) varies by negotiated format, handled by
-  // getChannelLayout() per-frame rather than assumed fixed.
   const lastAnalysisAt = useSharedValue(0);
   const [readiness, setReadiness] = useState<LiveReadiness>('unknown');
   const consecutiveReadinessRef = useRef<{ state: LiveReadiness; count: number }>({
@@ -208,8 +157,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
     enablePreviewSizedOutputBuffers: true,
     onFrame: (frame) => {
       'worklet';
-      // Throttle to ~1-2/sec — plenty for "live-feeling" guidance, far cheaper
-      // than running this on every camera frame.
       if (frame.timestamp - lastAnalysisAt.value <= 0.7) {
         frame.dispose();
         return;
@@ -226,10 +173,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
         return;
       }
 
-      // Restrict analysis to the on-screen guide box, not the whole camera
-      // field of view — otherwise ordinary backgrounds read as "textured
-      // enough" and "too far" never gets flagged. Same cover-crop math the
-      // real photo capture already uses, ported for worklet use.
       const region = computeGuideRegionInFrame(
         viewSize.width,
         viewSize.height,
@@ -248,16 +191,8 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
       runOnJS(handleSignalUpdate)(signals.variance, signals.texturedFraction);
     },
   });
-  // Passing a new array literal as `outputs` on every render made the Camera
-  // session think its output configuration changed, causing needless session
-  // reconfiguration (observed as torch/zoom "cancelled, a new one is being
-  // set" errors even with no user interaction) — memoize so the reference is
-  // stable unless the outputs themselves actually change.
+
   const cameraOutputs = useMemo(() => [photoOutput, frameOutput], [photoOutput, frameOutput]);
-  // VisionCamera's default onError just console.errors everything, which makes LogBox
-  // show a red screen even for benign, expected races (a newer torch/zoom value
-  // cancelling one still in flight — normal CameraX behavior, not a real failure).
-  // Only warn quietly for those; anything else still surfaces normally.
   const handleCameraError = useCallback((error: Error) => {
     if (error.message.includes('OperationCanceledException')) {
       console.warn('[live-camera] benign cancellation (newer value superseded it):', error.message);
@@ -266,17 +201,8 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
     console.error(error);
   }, []);
   const hasPreview = Boolean(previewUri);
-  // VisionCamera's own `zoom` prop defaults to 1 (neutral) regardless of the device's
-  // raw minZoom — minZoom can be below 1 on phones with an ultra-wide lens, which is
-  // NOT the same as "no zoom". Mapping the pinch gesture's rest state (0) to minZoom
-  // caused an unwanted zoom-in effect before the user ever pinched; map to 1 instead.
   const neutralZoom = 1;
   const maxZoom = device?.maxZoom ?? 1;
-  // Drive zoom via a worklet-derived SharedValue (not React state) — CameraX cancels
-  // any in-flight zoom change the instant a newer one arrives, so pushing a new value
-  // through JS state on every pinch frame throws "Cancelled due to another zoom value
-  // being set" repeatedly. A SharedValue lets VisionCamera apply updates natively
-  // without a JS round-trip per frame.
   const deviceZoom = useDerivedValue(() => {
     return neutralZoom + zoomShared.value * (maxZoom - neutralZoom);
   }, [maxZoom]);
@@ -350,30 +276,40 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
 
         setIsCapturing(true);
         try {
-          const photoFile = await photoOutput.capturePhotoToFile(
-            { flashMode: 'off', enableShutterSound: false },
-            {},
-          );
-          const uri = photoFile.filePath.startsWith('file://')
-            ? photoFile.filePath
-            : `file://${photoFile.filePath}`;
+          const captured: string[] = [];
 
-          const bitmap = await getImageSize(uri);
-          const currentView = viewSizeRef.current;
-          const currentGuide = guideRef.current;
+          for (let shot = 0; shot < BURST_SHOT_COUNT; shot += 1) {
+            try {
+              const photoFile = await photoOutput.capturePhotoToFile(
+                { flashMode: 'off', enableShutterSound: false },
+                {},
+              );
+              const uri = photoFile.filePath.startsWith('file://')
+                ? photoFile.filePath
+                : `file://${photoFile.filePath}`;
 
-          // Crop exactly the guide rect (same region as post-capture preview).
-          if (bitmap.width > 0 && bitmap.height > 0 && currentView.width > 0 && currentGuide) {
-            return await cropUriToGuideWithSize(uri, bitmap, currentView, currentGuide);
+              const bitmap = await getImageSize(uri);
+              const currentView = viewSizeRef.current;
+              const currentGuide = guideRef.current;
+
+              const cropped =
+                bitmap.width > 0 && bitmap.height > 0 && currentView.width > 0 && currentGuide
+                  ? await cropUriToGuideWithSize(uri, bitmap, currentView, currentGuide)
+                  : await cropUriToCenteredGuideAspect(
+                      uri,
+                      GUIDE_ASPECT,
+                      bitmap.width > 0 ? bitmap : undefined,
+                    );
+
+              if (cropped) {
+                captured.push(cropped);
+              }
+            } catch {
+              // Skip a failed shot in the burst; still return whatever succeeded.
+            }
           }
 
-          return await cropUriToCenteredGuideAspect(
-            uri,
-            GUIDE_ASPECT,
-            bitmap.width > 0 ? bitmap : undefined,
-          );
-        } catch {
-          return null;
+          return captured.length > 0 ? captured : null;
         } finally {
           setIsCapturing(false);
         }
@@ -441,7 +377,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           <ScanLine size={48} color="rgba(255,255,255,0.85)" strokeWidth={1.75} />
           <Text style={styles.placeholderTitle}>Take a close-up photo of the fabric</Text>
           <Text style={styles.placeholderText}>
-            Get close enough to see individual threads — a clip-on macro lens is
+            Get close enough to see individual threads - a clip-on macro lens is
             recommended for accurate results.
           </Text>
         </View>

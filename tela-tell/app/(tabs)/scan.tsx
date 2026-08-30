@@ -49,6 +49,7 @@ export default function ScanScreen() {
   const insets = useSafeAreaInsets();
   const cameraGuideRef = useRef<CameraGuideHandle>(null);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [burstUris, setBurstUris] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
@@ -65,6 +66,7 @@ export default function ScanScreen() {
     useCallback(() => {
       if (consumeFreshScan()) {
         setPreviewUri(null);
+        setBurstUris([]);
         clearLastCaptureUri();
         clearRegionSelection();
         clearLastGarmentCondition();
@@ -76,13 +78,14 @@ export default function ScanScreen() {
     }, []),
   );
 
-  const commitPreviewUri = (photoUri: string) => {
+  const commitPreviewUri = (photoUri: string, allUris: string[] = [photoUri]) => {
     setLastCaptureUri(photoUri);
     setPreviewUri(photoUri);
+    setBurstUris(allUris);
     setDetailsExpanded(true);
   };
 
-  const runAnalysis = (photoUri?: string | null) => {
+  const runAnalysis = (photoUri?: string | null, photoUris: string[] = photoUri ? [photoUri] : []) => {
     if (photoUri) {
       setLastCaptureUri(photoUri);
     } else {
@@ -112,7 +115,7 @@ export default function ScanScreen() {
 
         const result = await createScanRecord({
           sellerLabel: getLastSellerLabel(),
-          imageUri: optimizedUri,
+          imageUris: photoUris,
         });
         result.garmentCondition = garmentCondition;
 
@@ -146,18 +149,19 @@ export default function ScanScreen() {
 
     setIsCapturing(true);
     try {
-      let photoUri: string | null = null;
+      let photoUris: string[] | null = null;
 
       if (cameraGuideRef.current?.hasLiveCamera()) {
-        photoUri = await cameraGuideRef.current.captureAndCrop();
+        photoUris = await cameraGuideRef.current.captureAndCrop();
       }
 
-      if (!photoUri) {
-        photoUri = await captureFromCamera(guideAspect());
+      if (!photoUris || photoUris.length === 0) {
+        const singleUri = await captureFromCamera(guideAspect());
+        photoUris = singleUri ? [singleUri] : null;
       }
 
-      if (photoUri) {
-        commitPreviewUri(photoUri);
+      if (photoUris && photoUris.length > 0) {
+        commitPreviewUri(photoUris[0], photoUris);
       }
     } catch (error) {
       Alert.alert(
@@ -204,7 +208,7 @@ export default function ScanScreen() {
       return;
     }
 
-    runAnalysis(previewUri);
+    runAnalysis(previewUri, burstUris);
   };
 
   const handleTryAnother = () => {
@@ -213,6 +217,7 @@ export default function ScanScreen() {
     }
 
     setPreviewUri(null);
+    setBurstUris([]);
     clearLastCaptureUri();
     setDetailsExpanded(true);
     clearRegionSelection();

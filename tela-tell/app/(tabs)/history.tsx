@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
 import { ScanHistoryFilters } from '@/features/history/components/scan-history-filters';
 import { filterScansByDate, type ScanDateFilter } from '@/features/history/lib/scan-date-filters';
@@ -35,6 +36,7 @@ export default function HistoryScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(1);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { session } = useAuth();
   const [previews, setPreviews] = useState<RecentScanPreview[]>([]);
@@ -194,37 +196,31 @@ export default function HistoryScreen() {
   };
 
   const handleDelete = () => {
+    if (selectedIds.size === 0 || busy) {
+      return;
+    }
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
     const ids = [...selectedIds];
-    if (ids.length === 0 || busy) {
+    setShowDeleteConfirm(false);
+    if (ids.length === 0) {
       return;
     }
 
-    const count = ids.length;
-    Alert.alert(
-      count === 1 ? 'Delete scan?' : `Delete ${count} scans?`,
-      'They’ll move to Recently Deleted and can be restored within 30 days.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            setBusy(true);
-            void (async () => {
-              try {
-                await Promise.all(ids.map((id) => deleteScan(id)));
-                exitSelectionMode();
-                await reload();
-              } catch {
-                Alert.alert('Could not delete', 'Please try again.');
-              } finally {
-                setBusy(false);
-              }
-            })();
-          },
-        },
-      ],
-    );
+    setBusy(true);
+    void (async () => {
+      try {
+        await Promise.all(ids.map((id) => deleteScan(id)));
+        exitSelectionMode();
+        await reload();
+      } catch {
+        Alert.alert('Could not delete', 'Please try again.');
+      } finally {
+        setBusy(false);
+      }
+    })();
   };
 
   const listHeader = (
@@ -260,6 +256,16 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.root}>
+      <ScanConfirmSheet
+        visible={showDeleteConfirm}
+        title={selectedIds.size === 1 ? 'Delete scan?' : `Delete ${selectedIds.size} scans?`}
+        message="They’ll move to Recently Deleted and can be restored within 30 days."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+
       <LinearGradient
         colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
         style={styles.headerGradient}

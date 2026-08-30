@@ -249,6 +249,17 @@ export const Share2: FC<IconProps> = (props) => {
   );
 };
 
+export const Download: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="m7 10 5 5 5-5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 15V3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+};
+
 export const TriangleAlert: FC<IconProps> = (props) => {
   const { color, strokeWidth } = { ...defaults, ...props };
   return (

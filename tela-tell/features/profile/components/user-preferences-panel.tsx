@@ -1,7 +1,8 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import { OccasionWeatherGuide } from '@/features/profile/components/occasion-weather-guide';
 import { Check, CircleCheck, Plus, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
@@ -411,24 +412,15 @@ type UserPreferencesPanelProps = {
   hideAutoSaveHint?: boolean;
 };
 
-function confirmFabricMove(
-  fabric: SupportedFabric,
-  target: 'sensitive' | 'preferred',
-  onConfirm: () => void,
-) {
-  const otherList = target === 'sensitive' ? 'preferred fibers' : 'sensitivities';
+type PendingFabricMove = {
+  fabric: SupportedFabric;
+  target: 'sensitive' | 'preferred';
+};
 
-  Alert.alert(
-    `${fabric} is already selected`,
-    `${fabric} is in your ${otherList}. Move it to ${target === 'sensitive' ? 'sensitivities' : 'preferred fibers'} instead?`,
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Move',
-        onPress: onConfirm,
-      },
-    ],
-  );
+function getFabricMoveMessage(pending: PendingFabricMove): string {
+  const otherList = pending.target === 'sensitive' ? 'preferred fibers' : 'sensitivities';
+  const targetList = pending.target === 'sensitive' ? 'sensitivities' : 'preferred fibers';
+  return `${pending.fabric} is in your ${otherList}. Move it to ${targetList} instead?`;
 }
 
 export function UserPreferencesPanel({
@@ -446,6 +438,7 @@ export function UserPreferencesPanel({
     getUserPreferencesSnapshot,
   );
   const [mode, setMode] = useState(getScanMode);
+  const [pendingMove, setPendingMove] = useState<PendingFabricMove | null>(null);
   const hasEditedRef = useRef(false);
 
   // Load from SQLite once when opening this screen — never overwrite after the user edits.
@@ -503,9 +496,7 @@ export function UserPreferencesPanel({
     }
 
     if (prefs.preferredFabrics.includes(fabric)) {
-      confirmFabricMove(fabric, 'sensitive', () => {
-        applyPrefsUpdate(() => moveFabricToSensitive(fabric));
-      });
+      setPendingMove({ fabric, target: 'sensitive' });
       return;
     }
 
@@ -519,13 +510,24 @@ export function UserPreferencesPanel({
     }
 
     if (prefs.sensitiveFabrics.includes(fabric)) {
-      confirmFabricMove(fabric, 'preferred', () => {
-        applyPrefsUpdate(() => moveFabricToPreferred(fabric));
-      });
+      setPendingMove({ fabric, target: 'preferred' });
       return;
     }
 
     applyPrefsUpdate(() => togglePreferredFabric(fabric));
+  };
+
+  const handleConfirmMove = () => {
+    if (!pendingMove) {
+      return;
+    }
+    const { fabric, target } = pendingMove;
+    setPendingMove(null);
+    if (target === 'sensitive') {
+      applyPrefsUpdate(() => moveFabricToSensitive(fabric));
+    } else {
+      applyPrefsUpdate(() => moveFabricToPreferred(fabric));
+    }
   };
 
   const handleDressingToggle = (context: (typeof prefs.dressingContexts)[number]) => {
@@ -546,6 +548,15 @@ export function UserPreferencesPanel({
 
   return (
     <View style={[styles.panel, embedded && styles.panelEmbedded]}>
+      <ScanConfirmSheet
+        visible={pendingMove !== null}
+        title={pendingMove ? `${pendingMove.fabric} is already selected` : ''}
+        message={pendingMove ? getFabricMoveMessage(pendingMove) : ''}
+        confirmLabel="Move"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmMove}
+        onCancel={() => setPendingMove(null)}
+      />
       {showScan ? (
         <View style={styles.section}>
           <SectionHeader title="Scan mode" />
