@@ -24,14 +24,22 @@ export function getConfidenceLabel(confidence: number): string {
   return 'Low confidence';
 }
 
+// Wording deliberately strengthened, not just "helps"/"can improve": on-device
+// testing confirmed the model is unreliable on ordinary photos regardless of
+// lighting/focus/angle — it needs true macro-level closeness (close enough to
+// see individual threads) to match what it was actually trained on. A model's
+// own confidence score isn't a safeguard against this either: models tend to
+// be overconfident on inputs unlike anything in their training data, not
+// hesitant, so a "moderate" or even "high" score doesn't rule out this being
+// the actual limitation in effect.
 export const LOW_CONFIDENCE_WARNING = {
   title: 'Low confidence result',
   message:
-    'This fabric may be difficult to classify accurately. Consider rescanning under better lighting or try a different angle.',
+    'This result may not be reliable. Get close enough to see individual threads, not just a well-lit, in-focus photo — a clip-on macro lens is recommended for accurate results.',
 } as const;
 
 export const MODERATE_CONFIDENCE_NOTE =
-  'Results may vary with lighting and angle. A clip-on macro lens can improve close-up detail.';
+  'For reliable results, get close enough to see individual threads — a clip-on macro lens is recommended, not just optional.';
 
 export const COMPOSITION_DISCLAIMER =
   "These fiber percentages represent the model's visual confidence scores, not laboratory-verified composition.";

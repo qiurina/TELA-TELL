@@ -441,7 +441,8 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           <ScanLine size={48} color="rgba(255,255,255,0.85)" strokeWidth={1.75} />
           <Text style={styles.placeholderTitle}>Take a close-up photo of the fabric</Text>
           <Text style={styles.placeholderText}>
-            Fill the frame with a flat swatch in even lighting.
+            Get close enough to see individual threads — a clip-on macro lens is
+            recommended for accurate results.
           </Text>
         </View>
       )}
