@@ -59,6 +59,13 @@ export default function EditProfileScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successAction, setSuccessAction] = useState<'back' | 'stay'>('stay');
 
+  const handleSuccessDone = useCallback(() => {
+    setSuccessMessage(null);
+    if (successAction === 'back') {
+      router.back();
+    }
+  }, [successAction, router]);
+
   if (!session) {
     return null;
   }
@@ -69,13 +76,6 @@ export default function EditProfileScreen() {
     setSuccessAction(action);
     setSuccessMessage(message);
   };
-
-  const handleSuccessDone = useCallback(() => {
-    setSuccessMessage(null);
-    if (successAction === 'back') {
-      router.back();
-    }
-  }, [successAction, router]);
 
   const applyAvatarUri = async (uri: string | null) => {
     if (!uri) {
