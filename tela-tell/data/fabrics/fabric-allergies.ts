@@ -1,6 +1,6 @@
 import { resolveSupportedFabric } from '@/data/fabrics/fabric-references';
 import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
-import { getSignificantFibers } from '@/data/scans/analysis';
+import { getSignificantFibers } from '@/data/scans/scan-confidence';
 import type { FabricComposition } from '@/data/scans/mock-data';
 
 export type HypoallergenicAlternative = {

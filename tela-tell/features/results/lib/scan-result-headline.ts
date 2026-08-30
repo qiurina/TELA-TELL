@@ -2,7 +2,7 @@ import {
   getSignificantFibers,
   isBlendDetected,
   type CompositionInput,
-} from '@/data/scans/analysis';
+} from '@/data/scans/scan-confidence';
 import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 
 export type ScanResultHeadline = {

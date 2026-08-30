@@ -1,15 +1,3 @@
-export {
-  FABRIC_CATEGORY_COLORS,
-  FABRIC_REGISTRY,
-  SUPPORTED_FABRICS,
-  resolveFabricAlias,
-  getFabricCategory,
-  isSupportedFabric,
-  type FabricCategory,
-  type FabricDefinition,
-  type SupportedFabric,
-} from '@/data/fabrics/fabrics';
-
 export const CONFIDENCE_HIGH_THRESHOLD = 75;
 export const CONFIDENCE_LOW_THRESHOLD = 60;
 

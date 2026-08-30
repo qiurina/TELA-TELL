@@ -1,6 +1,6 @@
 # TELA-TELL
 
-Fabric verification
+Fabric Identification
 
 ## Run the app
 
@@ -16,12 +16,10 @@ Use `npx expo start -c` to clear the Metro cache if the app behaves oddly after 
 
 ## Project layout
 
-This is a fully on-device app — there is no separate backend/server. The only
-"backend-like" piece is `tela-tell/db/`, a local SQLite database that never
-leaves the phone.
+This is a fully on-device app - there is no separate backend/server.
 
 - `tela-tell/app/` — screens and routing (Expo Router; the folder structure
-  *is* the navigation — each file/folder maps directly to a route)
+  _is_ the navigation — each file/folder maps directly to a route)
 - `tela-tell/features/<area>/` — business logic and components grouped by
   screen area (`scan`, `results`, `profile`, `recommendations`, `history`,
   `auth`, `fabrics`). Deliberately split into many small single-purpose files
@@ -42,12 +40,12 @@ leaves the phone.
 
 ### Where do I find X?
 
-| Looking for... | Go to |
-|---|---|
-| Fabric health-risk logic | `data/fabrics/synthetic-health-risk.ts` |
-| Live camera scanning | `features/scan/components/camera-guide.tsx` |
-| On-device ML model loading/inference | `features/scan/lib/ml/model.ts` |
-| A user's saved scans | `db/scans.ts` |
-| Eco-alternative suggestions | `data/fabrics/eco-alternatives.ts` |
-| Confidence-level / blend-detection thresholds | `data/scans/analysis.ts` (name is a bit misleading — despite "analysis," this is not the ML logic, just confidence-level helpers and a fabric-definitions re-export) |
-| Results screen | `app/results/[scanId].tsx` |
+| Looking for...                                | Go to                                       |
+| --------------------------------------------- | ------------------------------------------- |
+| Fabric health-risk logic                      | `data/fabrics/synthetic-health-risk.ts`     |
+| Live camera scanning                          | `features/scan/components/camera-guide.tsx` |
+| On-device ML model loading/inference          | `features/scan/lib/ml/model.ts`             |
+| A user's saved scans                          | `db/scans.ts`                               |
+| Eco-alternative suggestions                   | `data/fabrics/eco-alternatives.ts`          |
+| Confidence-level / blend-detection thresholds | `data/scans/scan-confidence.ts`             |
+| Results screen                                | `app/results/[scanId].tsx`                  |

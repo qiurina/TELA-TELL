@@ -4,7 +4,7 @@ import {
   resolveFabricAlias,
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
-import { getSignificantFibers, isBlendDetected } from '@/data/scans/analysis';
+import { getSignificantFibers, isBlendDetected } from '@/data/scans/scan-confidence';
 import { formatScanDisplayTime, formatScannedAtDate } from '@/features/scan/lib/scan-timestamp';
 import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
 import { classifyFabric, type ClassificationResult } from '@/features/scan/lib/ml/model';

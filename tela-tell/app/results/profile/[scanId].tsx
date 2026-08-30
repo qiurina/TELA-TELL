@@ -14,7 +14,7 @@ import {
   resolveSupportedFabric,
 } from '@/data/fabrics/fabric-references';
 import { getFiberProfile } from '@/data/fabrics/fiber-profiles';
-import { isBlendDetected } from '@/data/scans/analysis';
+import { isBlendDetected } from '@/data/scans/scan-confidence';
 import { getScanResultHeadline } from '@/features/results/lib/scan-result-headline';
 import { getLastCaptureUri } from '@/features/scan/lib/last-capture';
 

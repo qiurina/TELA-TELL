@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import { Info } from '@/components/ui/lucide-icons';
-import { COMPOSITION_DISCLAIMER } from '@/data/scans/analysis';
+import { COMPOSITION_DISCLAIMER } from '@/data/scans/scan-confidence';
 import { FABRIC_CATEGORY_COLORS, getFabricCategory } from '@/data/fabrics/fabrics';
 import { BrandColors, FabricBarFallback, FabricBarStyles } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';

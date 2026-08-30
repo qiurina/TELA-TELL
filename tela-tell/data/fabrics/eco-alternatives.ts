@@ -4,7 +4,7 @@ import {
   resolveFabricAlias,
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
-import { getSignificantFibers, isBlendDetected } from '@/data/scans/analysis';
+import { getSignificantFibers, isBlendDetected } from '@/data/scans/scan-confidence';
 
 export type EcoGuidance = {
   ecoAlternatives: EcoAlternative[];

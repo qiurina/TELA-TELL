@@ -1,4 +1,4 @@
-import { getSignificantFibers, type CompositionInput } from '@/data/scans/analysis';
+import { getSignificantFibers, type CompositionInput } from '@/data/scans/scan-confidence';
 import { getFabricCategory, resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 import type { SustainabilityRating } from '@/data/scans/mock-data';
 

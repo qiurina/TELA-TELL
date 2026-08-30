@@ -7,7 +7,7 @@ import {
   MODERATE_CONFIDENCE_NOTE,
   getConfidenceLabel,
   getConfidenceLevel,
-} from '@/data/scans/analysis';
+} from '@/data/scans/scan-confidence';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 

@@ -14,7 +14,7 @@ import {
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
 import { getFiberProfile, getFiberSlug } from '@/data/fabrics/fiber-profiles';
-import { getSignificantFibers, type CompositionInput } from '@/data/scans/analysis';
+import { getSignificantFibers, type CompositionInput } from '@/data/scans/scan-confidence';
 import { SUSTAINABILITY_DOT } from '@/data/scans/mock-data';
 import {
   getEnvironmentalSummary,
