@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -5,6 +6,24 @@ import { BrandColors } from '@/constants/brand';
 import type { SkinToneColorGuidance } from '@/data/preferences/skin-tone-colors';
 import { tokenizeColorString, type ColorToken } from '@/data/preferences/color-swatches';
 import { Fonts } from '@/constants/fonts';
+import { faintCardShadow } from '@/constants/shadows';
+
+const FALLBACK_HERO_GRADIENT = [
+  BrandColors.gradientStart,
+  BrandColors.primary,
+  BrandColors.primaryDark,
+] as const;
+
+function getHeroGradient(tokens: ColorToken[]): readonly [string, string, ...string[]] {
+  if (tokens.length >= 3) {
+    const mid = tokens[Math.floor(tokens.length / 2)];
+    return [tokens[0].hex, mid.hex, tokens[tokens.length - 1].hex];
+  }
+  if (tokens.length === 2) {
+    return [tokens[0].hex, tokens[1].hex];
+  }
+  return FALLBACK_HERO_GRADIENT;
+}
 
 type SkinToneColorsSectionProps = {
   guidance: SkinToneColorGuidance;
@@ -73,11 +92,7 @@ function PaletteBlock({
     <View style={styles.paletteBlock}>
       <View style={styles.paletteHeader}>
         <Text style={styles.paletteTitle}>{title}</Text>
-        {subtitle ? (
-          <Text style={styles.paletteSubtitle} numberOfLines={1}>
-            {subtitle}
-          </Text>
-        ) : null}
+        {subtitle ? <Text style={styles.paletteSubtitle}>{subtitle}</Text> : null}
       </View>
       <View style={styles.blobRow}>
         {tokens.map((token, index) => (
@@ -121,50 +136,63 @@ export function SkinToneColorsSection({ guidance }: SkinToneColorsSectionProps) 
     );
   };
 
+  const heroGradient = getHeroGradient(recommendedTokens);
+
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{headerTitle}</Text>
-        {profileMeta.length > 0 ? (
-          <Text style={styles.profileMeta}>{profileMeta.join(' · ')}</Text>
-        ) : null}
-      </View>
-
-      {guidance.fabricNote ? <Text style={styles.fabricNote}>{guidance.fabricNote}</Text> : null}
-
-      <View style={styles.palettes}>
-        <PaletteBlock
-          title="BEST COLOURS"
-          subtitle={recommendedSubtitle}
-          tokens={recommendedTokens}
-          selected={selected}
-          onSelect={handleSelect}
+    <View style={[styles.card, faintCardShadow()]}>
+      <View style={styles.hero}>
+        <LinearGradient
+          colors={heroGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
         />
-
-        <PaletteBlock
-          title="AVOID THESE COLORS"
-          subtitle="COOL OR CLASHING TONES"
-          tokens={avoidTokens}
-          selected={selected}
-          onSelect={handleSelect}
-        />
-      </View>
-
-      {selected ? (
-        <View style={styles.selectedBar}>
-          <View
-            style={[
-              styles.selectedDot,
-              { backgroundColor: selected.hex },
-              isLightHex(selected.hex) && styles.blobLight,
-            ]}
-          />
-          <Text style={styles.selectedName}>{selected.label}</Text>
-          <Text style={styles.selectedHex}>{selected.hex.toUpperCase()}</Text>
+        <View style={styles.heroScrim} />
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{headerTitle}</Text>
+          {profileMeta.length > 0 ? (
+            <Text style={styles.profileMeta}>{profileMeta.join(' · ')}</Text>
+          ) : null}
         </View>
-      ) : (
-        <Text style={styles.hint}>Tap a colour for its name and hex</Text>
-      )}
+      </View>
+
+      <View style={styles.body}>
+        {guidance.fabricNote ? <Text style={styles.fabricNote}>{guidance.fabricNote}</Text> : null}
+
+        <View style={styles.palettes}>
+          <PaletteBlock
+            title="BEST COLOURS"
+            subtitle={recommendedSubtitle}
+            tokens={recommendedTokens}
+            selected={selected}
+            onSelect={handleSelect}
+          />
+
+          <PaletteBlock
+            title="AVOID THESE COLORS"
+            subtitle="COOL OR CLASHING TONES"
+            tokens={avoidTokens}
+            selected={selected}
+            onSelect={handleSelect}
+          />
+        </View>
+
+        {selected ? (
+          <View style={styles.selectedBar}>
+            <View
+              style={[
+                styles.selectedDot,
+                { backgroundColor: selected.hex },
+                isLightHex(selected.hex) && styles.blobLight,
+              ]}
+            />
+            <Text style={styles.selectedName}>{selected.label}</Text>
+            <Text style={styles.selectedHex}>{selected.hex.toUpperCase()}</Text>
+          </View>
+        ) : (
+          <Text style={styles.hint}>Tap a colour for its name and hex</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -173,24 +201,34 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: BrandColors.white,
     borderRadius: 14,
-    padding: 14,
     borderWidth: 1,
     borderColor: BrandColors.borderLight,
+    overflow: 'hidden',
+  },
+  hero: {
+    padding: 16,
+  },
+  heroScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.26)',
+  },
+  body: {
+    padding: 14,
     gap: 12,
   },
   header: {
     gap: 4,
   },
   headerTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.text,
+    fontFamily: Fonts.bold,
+    fontSize: 17,
+    color: BrandColors.white,
   },
   profileMeta: {
     fontFamily: Fonts.medium,
     fontSize: 13,
     lineHeight: 18,
-    color: BrandColors.primaryDark,
+    color: 'rgba(255,255,255,0.88)',
   },
   fabricNote: {
     fontFamily: Fonts.regular,
@@ -205,10 +243,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   paletteHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: 2,
   },
   paletteTitle: {
     fontFamily: Fonts.semiBold,
@@ -217,12 +252,10 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
   },
   paletteSubtitle: {
-    flexShrink: 1,
     fontFamily: Fonts.medium,
     fontSize: 11,
     letterSpacing: 0.4,
-    color: BrandColors.textMuted,
-    textAlign: 'right',
+    color: BrandColors.primaryDark,
   },
   blobRow: {
     flexDirection: 'row',

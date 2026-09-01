@@ -20,6 +20,7 @@ import {
   getEnvironmentalSummary,
   getHealthVerdicts,
   getSheddingColor,
+  getSkinShortLabel,
   getToneColor,
 } from '@/features/fabrics/lib/fiber-profile-insights';
 
@@ -115,37 +116,36 @@ function CompactFiberCard({
         </View>
       </View>
 
-      <View style={styles.snapshotList}>
-        <View style={styles.snapshotRow}>
-          <Heart size={14} color={skinColor} strokeWidth={2.25} />
-          <Text style={styles.snapshotLabel}>Skin</Text>
-          <Text style={[styles.snapshotValue, { color: skinColor }]} numberOfLines={2}>
-            {health.skinFriendliness.label}
+      <View style={styles.statsRow}>
+        <View style={styles.statChip}>
+          <Heart size={15} color={BrandColors.primary} strokeWidth={2.25} />
+          <Text style={styles.statCaption}>Skin</Text>
+          <Text style={[styles.statValue, { color: skinColor }]} numberOfLines={1}>
+            {getSkinShortLabel(health.skinFriendliness.tone)}
           </Text>
         </View>
-        <View style={styles.snapshotRow}>
-          <Droplets size={14} color={sheddingColor ?? BrandColors.textMuted} strokeWidth={2.25} />
-          <Text style={styles.snapshotLabel}>Shedding</Text>
+
+        <View style={styles.statDivider} />
+
+        <View style={styles.statChip}>
+          <Droplets size={15} color={BrandColors.primary} strokeWidth={2.25} />
+          <Text style={styles.statCaption}>Shedding</Text>
           <Text
-            style={[styles.snapshotValue, sheddingColor ? { color: sheddingColor } : null]}
+            style={[styles.statValue, sheddingColor ? { color: sheddingColor } : null]}
             numberOfLines={1}>
             {environment.microplasticShedding}
           </Text>
         </View>
-        <View style={styles.snapshotRow}>
-          <Leaf
-            size={14}
-            color={SUSTAINABILITY_DOT[profile.sustainabilityRating]}
-            strokeWidth={2.25}
-          />
-          <Text style={styles.snapshotLabel}>Eco</Text>
+
+        <View style={styles.statDivider} />
+
+        <View style={styles.statChip}>
+          <Leaf size={15} color={BrandColors.primary} strokeWidth={2.25} />
+          <Text style={styles.statCaption}>Eco</Text>
           <Text
-            style={[
-              styles.snapshotValue,
-              { color: SUSTAINABILITY_DOT[profile.sustainabilityRating] },
-            ]}
+            style={[styles.statValue, { color: SUSTAINABILITY_DOT[profile.sustainabilityRating] }]}
             numberOfLines={1}>
-            {profile.sustainabilityLabel} · {profile.sustainabilityScore.toFixed(1)}/10
+            {profile.sustainabilityScore.toFixed(1)}/10
           </Text>
         </View>
       </View>
@@ -280,26 +280,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: BrandColors.primaryDark,
   },
-  snapshotList: {
-    gap: 8,
-  },
-  snapshotRow: {
+  statsRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
+    alignItems: 'stretch',
+    borderRadius: 12,
+    backgroundColor: BrandColors.white,
+    borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    paddingVertical: 10,
   },
-  snapshotLabel: {
-    width: 62,
-    fontFamily: Fonts.medium,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-    paddingTop: 1,
-  },
-  snapshotValue: {
+  statChip: {
     flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: BrandColors.border,
+  },
+  statCaption: {
+    fontFamily: Fonts.medium,
+    fontSize: 10,
+    letterSpacing: 0.3,
+    color: BrandColors.textMuted,
+  },
+  statValue: {
     fontFamily: Fonts.semiBold,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
     color: BrandColors.text,
   },
   careTip: {

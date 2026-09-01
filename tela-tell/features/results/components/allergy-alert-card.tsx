@@ -27,11 +27,13 @@ export function AllergyAlertCard({
         stacked && styles.cardStacked,
         isConflict ? styles.cardConflict : styles.cardClear,
       ]}>
-      {isConflict ? (
-        <TriangleAlert size={16} color="#B45309" strokeWidth={2.5} />
-      ) : (
-        <CircleCheck size={16} color="#15803D" strokeWidth={2.25} />
-      )}
+      <View style={[styles.iconChip, isConflict ? styles.iconChipConflict : styles.iconChipClear]}>
+        {isConflict ? (
+          <TriangleAlert size={15} color="#B45309" strokeWidth={2.5} />
+        ) : (
+          <CircleCheck size={15} color="#15803D" strokeWidth={2.25} />
+        )}
+      </View>
 
       <View style={styles.body}>
         <Text style={[styles.title, isConflict ? styles.titleConflict : styles.titleClear]}>
@@ -76,10 +78,28 @@ const styles = StyleSheet.create({
   cardConflict: {
     backgroundColor: '#FFFBEB',
     borderColor: '#FDE68A',
+    borderLeftWidth: 3,
+    borderLeftColor: '#D97706',
   },
   cardClear: {
     backgroundColor: BrandColors.white,
     borderColor: BrandColors.borderLight,
+    borderLeftWidth: 3,
+    borderLeftColor: '#16A34A',
+  },
+  iconChip: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  iconChipConflict: {
+    backgroundColor: '#FCEEDD',
+  },
+  iconChipClear: {
+    backgroundColor: '#E3F6EA',
   },
   body: {
     flex: 1,
@@ -111,6 +131,6 @@ const styles = StyleSheet.create({
   },
   altNamesValue: {
     fontFamily: Fonts.medium,
-    color: BrandColors.primaryDark,
+    color: '#8A5A2B',
   },
 });

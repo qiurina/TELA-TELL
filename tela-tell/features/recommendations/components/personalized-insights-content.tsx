@@ -23,6 +23,7 @@ import {
 } from '@/features/recommendations/lib/personalized-insights';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
+import { faintCardShadow } from '@/constants/shadows';
 import { getAllergyAlert } from '@/data/fabrics/fabric-allergies';
 import {
   getDressingContextFits,
@@ -44,23 +45,21 @@ type PersonalizedInsightsContentProps = {
 
 const STATUS_STYLES: Record<
   DressingContextFitStatus,
-  { label: string; text: string; background: string; border: string }
+  { label: string; text: string; background: string }
 > = {
-  great: { label: 'Great', text: '#15803D', background: '#F0FDF4', border: '#BBF7D0' },
-  okay: {
-    label: 'Okay',
-    text: BrandColors.primaryDark,
-    background: BrandColors.lavender,
-    border: BrandColors.border,
-  },
-  poor: { label: 'Less ideal', text: '#B45309', background: '#FFFBEB', border: '#FDE68A' },
+  great: { label: 'Great', text: '#1E7B34', background: '#E4F6E1' },
+  okay: { label: 'Okay', text: '#0C6E9E', background: '#DCEFFB' },
+  poor: { label: 'Less ideal', text: '#A15B12', background: '#FBEAD2' },
 };
 
-const STATUS_ICON: Record<DressingContextFitStatus, { icon: FC<IconProps>; color: string }> = {
-  great: { icon: CircleCheck, color: '#15803D' },
-  okay: { icon: Info, color: BrandColors.primaryDark },
-  poor: { icon: CircleX, color: '#B45309' },
+const STATUS_ICON: Record<DressingContextFitStatus, { icon: FC<IconProps> }> = {
+  great: { icon: CircleCheck },
+  okay: { icon: Info },
+  poor: { icon: CircleX },
 };
+
+const WEATHER_TINT = { background: '#DCEFFB', icon: '#0C6E9E' };
+const OCCASION_TINT = { background: '#F3E6FB', icon: '#7A2FB0' };
 
 function SectionBlock({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -97,7 +96,15 @@ function SetupChecklist({ items }: { items: InsightsSetupItem[] }) {
   );
 }
 
-function ContextFitRow({ fit, isLast }: { fit: DressingContextFit; isLast: boolean }) {
+function ContextFitRow({
+  fit,
+  isLast,
+  tint,
+}: {
+  fit: DressingContextFit;
+  isLast: boolean;
+  tint: { background: string; icon: string };
+}) {
   const Icon = DRESSING_CONTEXT_ICONS[fit.context] ?? Calendar;
   const statusCfg = STATUS_STYLES[fit.status];
   const StatusIcon = STATUS_ICON[fit.status].icon;
@@ -112,18 +119,14 @@ function ContextFitRow({ fit, isLast }: { fit: DressingContextFit; isLast: boole
 
   return (
     <View style={[styles.fitRow, !isLast && styles.fitRowBorder]}>
-      <View style={styles.fitIconWrap}>
-        <Icon size={15} color={BrandColors.primaryDark} strokeWidth={2.25} />
+      <View style={[styles.fitIconWrap, { backgroundColor: tint.background }]}>
+        <Icon size={15} color={tint.icon} strokeWidth={2.25} />
       </View>
 
       <View style={styles.fitBody}>
         <View style={styles.fitHeaderRow}>
           <Text style={styles.fitLabel}>{fit.label}</Text>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: statusCfg.background, borderColor: statusCfg.border },
-            ]}>
+          <View style={[styles.statusBadge, { backgroundColor: statusCfg.background }]}>
             <StatusIcon size={11} color={statusCfg.text} strokeWidth={2.5} />
             <Text style={[styles.statusBadgeText, { color: statusCfg.text }]}>
               {statusCfg.label}
@@ -150,8 +153,8 @@ function ContextFitGroups({ fits }: { fits: DressingContextFit[] }) {
   const occasionFits = fits.filter((fit) => !weatherIds.has(fit.context));
 
   const groups = [
-    { key: 'weather', title: 'Weather', items: weatherFits },
-    { key: 'occasion', title: 'Occasion', items: occasionFits },
+    { key: 'weather', title: 'Weather', items: weatherFits, tint: WEATHER_TINT },
+    { key: 'occasion', title: 'Occasion', items: occasionFits, tint: OCCASION_TINT },
   ].filter((group) => group.items.length > 0);
 
   return (
@@ -159,12 +162,13 @@ function ContextFitGroups({ fits }: { fits: DressingContextFit[] }) {
       {groups.map((group) => (
         <View key={group.key} style={styles.fitGroup}>
           {groups.length > 1 ? <Text style={styles.fitGroupLabel}>{group.title}</Text> : null}
-          <View style={styles.fitCard}>
+          <View style={[styles.fitCard, faintCardShadow()]}>
             {group.items.map((fit, index) => (
               <ContextFitRow
                 key={fit.context}
                 fit={fit}
                 isLast={index === group.items.length - 1}
+                tint={group.tint}
               />
             ))}
           </View>
@@ -183,20 +187,29 @@ function PreferenceMatchRow({ match }: { match: PreferenceMatchResult }) {
     .join(' · ');
 
   return (
-    <View style={styles.preferenceCard}>
-      {hasMatch ? (
-        <CircleCheck size={16} color="#15803D" strokeWidth={2.25} />
-      ) : (
-        <Heart size={16} color={BrandColors.primaryDark} strokeWidth={2.25} />
-      )}
-      <Text style={styles.preferenceTitle} numberOfLines={2}>
-        {hasMatch ? 'Matches your list' : 'Not in your list'}
-      </Text>
-      <Text style={styles.preferenceBody} numberOfLines={3}>
-        {hasMatch
-          ? matchLine
-          : `You usually look for ${match.unmatchedPreferred.slice(0, 3).join(', ')}.`}
-      </Text>
+    <View
+      style={[
+        styles.preferenceCard,
+        faintCardShadow(),
+        hasMatch && styles.preferenceCardMatched,
+      ]}>
+      <View style={[styles.preferenceIconWrap, hasMatch && styles.preferenceIconWrapMatched]}>
+        {hasMatch ? (
+          <CircleCheck size={16} color="#15803D" strokeWidth={2.25} />
+        ) : (
+          <Heart size={16} color="#E11D48" strokeWidth={2.25} />
+        )}
+      </View>
+      <View style={styles.preferenceBody}>
+        <Text style={styles.preferenceTitle}>
+          {hasMatch ? 'Matches your list' : 'Not in your list'}
+        </Text>
+        <Text style={styles.preferenceText}>
+          {hasMatch
+            ? matchLine
+            : `You usually look for ${match.unmatchedPreferred.slice(0, 3).join(', ')}.`}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -252,21 +265,16 @@ export function PersonalizedInsightsContent({
         </SectionBlock>
       ) : null}
 
-      {showSensitivities || showPreference ? (
-        <View style={styles.pairRow}>
-          {showSensitivities ? (
-            <View style={styles.pairCol}>
-              <Text style={styles.sectionLabel}>SENSITIVITIES</Text>
-              <AllergyAlertCard alert={allergyAlert!} compact stacked />
-            </View>
-          ) : null}
-          {showPreference ? (
-            <View style={styles.pairCol}>
-              <Text style={styles.sectionLabel}>PREFERENCE</Text>
-              <PreferenceMatchRow match={preferenceMatch} />
-            </View>
-          ) : null}
-        </View>
+      {showSensitivities ? (
+        <SectionBlock title="SENSITIVITIES">
+          <AllergyAlertCard alert={allergyAlert!} />
+        </SectionBlock>
+      ) : null}
+
+      {showPreference ? (
+        <SectionBlock title="PREFERENCE">
+          <PreferenceMatchRow match={preferenceMatch} />
+        </SectionBlock>
       ) : null}
 
       {showFit ? (
@@ -290,16 +298,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     color: BrandColors.textMuted,
-  },
-  pairRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 10,
-  },
-  pairCol: {
-    flex: 1,
-    gap: 8,
-    minWidth: 0,
   },
   setupBlock: {
     gap: 8,
@@ -366,7 +364,6 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: BrandColors.lavender,
     marginTop: 1,
     flexShrink: 0,
   },
@@ -409,7 +406,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     borderRadius: 999,
-    borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 3,
     flexShrink: 0,
@@ -419,24 +415,46 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   preferenceCard: {
-    flex: 1,
-    gap: 6,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: BrandColors.borderLight,
     backgroundColor: BrandColors.white,
     padding: 12,
-    minHeight: 112,
+    borderLeftWidth: 3,
+    borderLeftColor: '#E11D48',
+  },
+  preferenceCardMatched: {
+    borderLeftColor: '#16A34A',
+  },
+  preferenceIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FCE4EA',
+    flexShrink: 0,
+  },
+  preferenceIconWrapMatched: {
+    backgroundColor: '#E3F6EA',
+  },
+  preferenceBody: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
   },
   preferenceTitle: {
     fontFamily: Fonts.semiBold,
     fontSize: 14,
     color: BrandColors.text,
   },
-  preferenceBody: {
+  preferenceText: {
     fontFamily: Fonts.regular,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     color: BrandColors.textMuted,
   },
   pressed: {

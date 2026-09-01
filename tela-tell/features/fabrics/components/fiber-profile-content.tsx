@@ -1,6 +1,7 @@
 import type { FC } from 'react';
+import { useState } from 'react';
 import { Image } from 'expo-image';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Calendar,
@@ -40,6 +41,46 @@ type FiberProfileContentProps = {
   /** When false, skips the large reference hero (e.g. scan results already show a comparison). */
   showHero?: boolean;
 };
+
+type ProfileTab = 'health' | 'eco' | 'care' | 'wear';
+
+const PROFILE_TABS: { key: ProfileTab; label: string }[] = [
+  { key: 'health', label: 'Health' },
+  { key: 'eco', label: 'Eco' },
+  { key: 'care', label: 'Care' },
+  { key: 'wear', label: 'Wear' },
+];
+
+function ProfileTabs({
+  active,
+  onSelect,
+}: {
+  active: ProfileTab;
+  onSelect: (tab: ProfileTab) => void;
+}) {
+  return (
+    <View style={styles.tabTrack}>
+      {PROFILE_TABS.map((tab) => {
+        const isActive = tab.key === active;
+
+        return (
+          <Pressable
+            key={tab.key}
+            onPress={() => onSelect(tab.key)}
+            style={({ pressed }) => [
+              styles.tabSegment,
+              isActive && styles.tabSegmentActive,
+              pressed && !isActive && styles.tabSegmentPressed,
+            ]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}>
+            <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 const SUSTAINABILITY_BADGE: Record<
   SustainabilityRating,
@@ -205,6 +246,7 @@ function ContextChipGroup({
 }
 
 export function FiberProfileContent({ profile, showHero = true }: FiberProfileContentProps) {
+  const [activeTab, setActiveTab] = useState<ProfileTab>('health');
   const reference = FABRIC_REFERENCES[profile.fabric];
   const category = FABRIC_REGISTRY.find((item) => item.name === profile.fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
@@ -298,83 +340,95 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
         </View>
       </View>
 
-      <View style={styles.section}>
-        <SectionLabel>Skin health</SectionLabel>
-        <View style={[styles.textCard, faintCardShadow()]}>
-          <InsightLine text={health.skinFriendliness.label} tone={health.skinFriendliness.tone} />
-          <InsightLine
-            text={`Heat retention: ${health.heatRetention.label}`}
-            tone={health.heatRetention.tone}
-          />
-          <InsightLine
-            text={`Irritation potential: ${health.irritationPotential.label}`}
-            tone={health.irritationPotential.tone}
-          />
-          <InsightLine text={health.tip.text} tone={health.tip.tone} />
-        </View>
-      </View>
+      <ProfileTabs active={activeTab} onSelect={setActiveTab} />
 
-      <View style={styles.section}>
-        <SectionLabel>Environmental impact</SectionLabel>
-        <View style={[styles.propertiesCard, faintCardShadow()]}>
-          <View style={styles.propertyRow}>
-            <PropertyCell icon={Leaf} label="Renewable" value={environment.renewable} />
-            <PropertyCell icon={Check} label="Biodegradable" value={environment.biodegradable} />
+      {activeTab === 'health' ? (
+        <View style={styles.section}>
+          <SectionLabel>Skin health</SectionLabel>
+          <View style={[styles.textCard, faintCardShadow()]}>
+            <InsightLine text={health.skinFriendliness.label} tone={health.skinFriendliness.tone} />
+            <InsightLine
+              text={`Heat retention: ${health.heatRetention.label}`}
+              tone={health.heatRetention.tone}
+            />
+            <InsightLine
+              text={`Irritation potential: ${health.irritationPotential.label}`}
+              tone={health.irritationPotential.tone}
+            />
+            <InsightLine text={health.tip.text} tone={health.tip.tone} />
           </View>
-          <View style={styles.propertyDivider} />
-          <View style={styles.propertyRow}>
-            <PropertyCell icon={Recycle} label="Recyclable" value={environment.recyclable} />
-            <PropertyCell icon={Wind} label="Carbon impact" value={environment.carbonImpact} />
-          </View>
-          <View style={styles.propertyDivider} />
-          <InfoRow
-            icon={Droplets}
-            label="Microplastic shedding"
-            value={environment.microplasticShedding}
-            valueColor={getSheddingColor(environment.microplasticShedding)}
-          />
         </View>
-      </View>
+      ) : null}
 
-      <View style={styles.section}>
-        <SectionLabel>Care instructions</SectionLabel>
-        <View style={[styles.textCard, faintCardShadow()]}>
-          {profile.careInstructions.map((instruction) => (
-            <View key={instruction.text} style={styles.careRow}>
-              {instruction.recommended ? (
-                <CircleCheck size={18} color="#16a34a" strokeWidth={2.25} />
-              ) : (
-                <CircleX size={18} color="#dc2626" strokeWidth={2.25} />
-              )}
-              <Text style={styles.careText}>{instruction.text}</Text>
+      {activeTab === 'eco' ? (
+        <View style={styles.section}>
+          <SectionLabel>Environmental impact</SectionLabel>
+          <View style={[styles.propertiesCard, faintCardShadow()]}>
+            <View style={styles.propertyRow}>
+              <PropertyCell icon={Leaf} label="Renewable" value={environment.renewable} />
+              <PropertyCell icon={Check} label="Biodegradable" value={environment.biodegradable} />
             </View>
-          ))}
+            <View style={styles.propertyDivider} />
+            <View style={styles.propertyRow}>
+              <PropertyCell icon={Recycle} label="Recyclable" value={environment.recyclable} />
+              <PropertyCell icon={Wind} label="Carbon impact" value={environment.carbonImpact} />
+            </View>
+            <View style={styles.propertyDivider} />
+            <InfoRow
+              icon={Droplets}
+              label="Microplastic shedding"
+              value={environment.microplasticShedding}
+              valueColor={getSheddingColor(environment.microplasticShedding)}
+            />
+          </View>
         </View>
-      </View>
+      ) : null}
 
-      <View style={styles.section}>
-        <SectionLabel>Good for</SectionLabel>
-        <View style={[styles.contextCard, faintCardShadow()]}>
-          <ContextChipGroup
-            title="Weather"
-            icon={Sun}
-            labels={profile.bestWeather.map((id) => getDressingContextLabel(id))}
-          />
-          <ContextChipGroup
-            title="Occasion"
-            icon={Calendar}
-            labels={profile.bestOccasion.map((id) => getDressingContextLabel(id))}
-          />
+      {activeTab === 'care' ? (
+        <View style={styles.section}>
+          <SectionLabel>Care instructions</SectionLabel>
+          <View style={[styles.textCard, faintCardShadow()]}>
+            {profile.careInstructions.map((instruction) => (
+              <View key={instruction.text} style={styles.careRow}>
+                {instruction.recommended ? (
+                  <CircleCheck size={18} color="#16a34a" strokeWidth={2.25} />
+                ) : (
+                  <CircleX size={18} color="#dc2626" strokeWidth={2.25} />
+                )}
+                <Text style={styles.careText}>{instruction.text}</Text>
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
+      ) : null}
 
-      <View style={styles.section}>
-        <SectionLabel>In Philippine markets</SectionLabel>
-        <View style={[styles.phMarketsCard, faintCardShadow()]}>
-          <Leaf size={16} color={BrandColors.primary} strokeWidth={2.25} />
-          <Text style={styles.phMarketsText}>{profile.philippineMarkets}</Text>
-        </View>
-      </View>
+      {activeTab === 'wear' ? (
+        <>
+          <View style={styles.section}>
+            <SectionLabel>Good for</SectionLabel>
+            <View style={[styles.contextCard, faintCardShadow()]}>
+              <ContextChipGroup
+                title="Weather"
+                icon={Sun}
+                labels={profile.bestWeather.map((id) => getDressingContextLabel(id))}
+              />
+              <ContextChipGroup
+                title="Occasion"
+                icon={Calendar}
+                labels={profile.bestOccasion.map((id) => getDressingContextLabel(id))}
+              />
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <SectionLabel>In Philippine markets</SectionLabel>
+            <View style={[styles.phMarketsCard, faintCardShadow()]}>
+              <Leaf size={16} color={BrandColors.primary} strokeWidth={2.25} />
+              <Text style={styles.phMarketsText}>{profile.philippineMarkets}</Text>
+            </View>
+          </View>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -502,6 +556,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  tabTrack: {
+    flexDirection: 'row',
+    backgroundColor: BrandColors.inputBackground,
+    borderRadius: 12,
+    padding: 3,
+    gap: 2,
+  },
+  tabSegment: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+  },
+  tabSegmentActive: {
+    backgroundColor: BrandColors.white,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  tabSegmentPressed: {
+    opacity: 0.7,
+  },
+  tabLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    color: BrandColors.textMuted,
+  },
+  tabLabelActive: {
+    fontFamily: Fonts.semiBold,
+    color: BrandColors.primaryDark,
   },
   quickStatLabel: {
     flex: 1,

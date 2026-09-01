@@ -148,3 +148,14 @@ export function getToneColor(tone: InsightTone): string {
   }
   return '#B91C1C';
 }
+
+/** Short chip-friendly version of skinFriendliness.label, which is a full sentence. */
+export function getSkinShortLabel(tone: InsightTone): string {
+  if (tone === 'good') {
+    return 'Skin-safe';
+  }
+  if (tone === 'caution') {
+    return 'May irritate';
+  }
+  return 'Less ideal';
+}

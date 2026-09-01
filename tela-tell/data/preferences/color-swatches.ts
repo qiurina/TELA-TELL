@@ -185,6 +185,40 @@ const COLOR_HEX: Record<string, string> = {
   'cool blue': '#6B8CAE',
   'cool grey': '#8A8D8F',
   silver: '#C0C0C0',
+
+  // Compound labels used in season guidance that had no exact or fuzzy match
+  // and were silently rendering as the generic grey fallback swatch.
+  'light yellow': '#FFF176',
+  'bright yellow': '#FFEE00',
+  'bright red': '#FF1744',
+  'vivid red': '#FF0000',
+  'vivid green': '#00E676',
+  'moss green': '#6B8E4E',
+  'sunny orange': '#FFA733',
+  'warm orange': '#FF7518',
+  'vivid orange': '#FF5500',
+  'stark white': '#FFFFFF',
+  'soft beige': '#E8D9C0',
+  'muted beige': '#D6C7AE',
+  'baby pink': '#FFD9E8',
+  'light pastels': '#EAD9E8',
+  'dusty pastels': '#D9CDD1',
+  'golden brown': '#996515',
+  'rose taupe': '#B08D8D',
+
+  // Base hues with no standalone entry, only compounds (e.g. 'hot pink',
+  // 'warm beige') — fills the gap so unanticipated compound labels fuzzy-match
+  // to the right color family instead of falling back to grey.
+  red: '#E53935',
+  orange: '#FF9800',
+  yellow: '#FDD835',
+  green: '#43A047',
+  blue: '#1E88E5',
+  pink: '#EC739F',
+  beige: '#E3D4B8',
+  white: '#FAFAFA',
+  rose: '#E8617D',
+  pastel: '#E8D5E3',
 };
 
 const FALLBACK_HEX = '#D1D5DB';
