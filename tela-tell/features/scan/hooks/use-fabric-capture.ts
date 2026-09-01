@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
+import { showAlert } from '@/components/ui/alert-dialog';
 import {
   GUIDE_ASPECT,
   cropUriToCenteredGuideAspect,
@@ -15,9 +16,10 @@ const PICKER_OPTIONS: ImagePicker.ImagePickerOptions = {
 function showPermissionAlert(kind: 'camera' | 'gallery') {
   const label = kind === 'camera' ? 'camera' : 'photo library';
 
-  Alert.alert(
+  showAlert(
     'Permission required',
     `TELA-TELL needs access to your ${label} to capture or upload fabric photos.`,
+    'info',
   );
 }
 

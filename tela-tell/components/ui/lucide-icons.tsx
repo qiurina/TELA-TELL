@@ -277,6 +277,17 @@ export const TriangleAlert: FC<IconProps> = (props) => {
   );
 };
 
+export const CircleHelp: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  return (
+    <Svg {...iconProps(props)}>
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 17h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+};
+
 export const Info: FC<IconProps> = (props) => {
   const { color, strokeWidth } = { ...defaults, ...props };
   return (

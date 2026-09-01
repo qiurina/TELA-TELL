@@ -2,7 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { OccasionWeatherGuide } from '@/features/profile/components/occasion-weather-guide';
 import { Check, CircleCheck, Plus, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
@@ -548,7 +548,7 @@ export function UserPreferencesPanel({
 
   return (
     <View style={[styles.panel, embedded && styles.panelEmbedded]}>
-      <ScanConfirmSheet
+      <ConfirmDialog
         visible={pendingMove !== null}
         title={pendingMove ? `${pendingMove.fabric} is already selected` : ''}
         message={pendingMove ? getFabricMoveMessage(pendingMove) : ''}

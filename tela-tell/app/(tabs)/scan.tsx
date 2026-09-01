@@ -3,7 +3,6 @@ import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { showAlert } from '@/components/ui/alert-dialog';
 import {
   CameraGuide,
   type CameraGuideHandle,
@@ -132,7 +132,7 @@ export default function ScanScreen() {
         router.push(`/results/${result.id}` as Href);
       } catch (error) {
         setIsAnalyzing(false);
-        Alert.alert(
+        showAlert(
           'Could not save scan',
           error instanceof Error ? error.message : 'Please try again.',
         );
@@ -164,7 +164,7 @@ export default function ScanScreen() {
         commitPreviewUri(photoUris[0], photoUris);
       }
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Could not capture photo',
         error instanceof Error ? error.message : 'Please try again.',
       );
@@ -185,7 +185,7 @@ export default function ScanScreen() {
         commitPreviewUri(photoUri);
       }
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Could not upload photo',
         error instanceof Error ? error.message : 'Please try again.',
       );

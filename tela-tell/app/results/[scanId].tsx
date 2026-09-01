@@ -1,8 +1,10 @@
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ActivityIndicator } from 'react-native';
 
+import { showAlert } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CompositionCard } from '@/features/results/components/composition-card';
 import { DualFabricResults } from '@/features/results/components/dual-fabric-results';
 import { FabricPhotoPreview } from '@/features/results/components/fabric-photo-preview';
@@ -78,7 +80,7 @@ export default function ResultsScreen() {
         await setScanFavorite(resolvedScanId, next);
       } catch {
         setIsFavorite(!next);
-        Alert.alert('Could not update favorite', 'Please try again.');
+        showAlert('Could not update favorite', 'Please try again.');
       } finally {
         setIsActionBusy(false);
       }
@@ -105,7 +107,7 @@ export default function ResultsScreen() {
           router.replace('/(tabs)/history' as Href);
         }
       } catch {
-        Alert.alert('Could not delete scan', 'Please try again.');
+        showAlert('Could not delete scan', 'Please try again.');
       } finally {
         setIsActionBusy(false);
       }
@@ -206,12 +208,13 @@ export default function ResultsScreen() {
         onCancel={() => setShowInsightsLocked(false)}
       />
 
-      <ScanConfirmSheet
+      <ConfirmDialog
         visible={showDeleteConfirm}
         title="Delete this scan?"
         message="This moves the scan to Recently Deleted for 30 days. You can restore it from Profile."
         confirmLabel="Move to trash"
         cancelLabel="Keep scan"
+        destructive
         onConfirm={handleConfirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
       />

@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Bookmark,
@@ -16,6 +16,8 @@ import {
   TriangleAlert,
   User,
 } from '@/components/ui/lucide-icons';
+import { showAlert } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
@@ -48,8 +50,6 @@ import {
   subscribeUserPreferences,
   type UserPreferences,
 } from '@/features/profile/lib/user-preferences';
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
-
 /** Root-stack routes (siblings of tabs) — tab bar stays under the push, no mid-anim hide. */
 const PROFILE_SKIN_TONE_HREF = '/skin-tone' as Href;
 const PROFILE_ALLERGIES_HREF = '/fabric-allergies' as Href;
@@ -65,6 +65,7 @@ export function ProfileSignedInView() {
   const router = useRouter();
   const { session, signOut } = useAuth();
   const [isDeleteSheetVisible, setIsDeleteSheetVisible] = useState(false);
+  const [isLogoutSheetVisible, setIsLogoutSheetVisible] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [pendingImport, setPendingImport] = useState<{
@@ -109,6 +110,11 @@ export function ProfileSignedInView() {
     router.replace('/welcome' as Href);
   };
 
+  const handleConfirmLogout = () => {
+    setIsLogoutSheetVisible(false);
+    void endSession();
+  };
+
   const handleExportData = async () => {
     if (isExporting) {
       return;
@@ -118,7 +124,7 @@ export function ProfileSignedInView() {
     try {
       await exportUserData({ userId: session?.userId ?? null, username });
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Could not export data',
         error instanceof Error ? error.message : 'Please try again.',
       );
@@ -148,10 +154,14 @@ export function ProfileSignedInView() {
       if (payload.preferences) {
         setPendingImport({ count, preferences: payload.preferences });
       } else {
-        Alert.alert('Import complete', `Imported ${count} scan${count === 1 ? '' : 's'}.`);
+        showAlert(
+          'Import complete',
+          `Imported ${count} scan${count === 1 ? '' : 's'}.`,
+          'success',
+        );
       }
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Could not import data',
         error instanceof Error ? error.message : 'Please try again.',
       );
@@ -303,7 +313,7 @@ export function ProfileSignedInView() {
 
       <Pressable
         style={({ pressed }) => [styles.logoutButton, faintCardShadow(), pressed && styles.pressed]}
-        onPress={() => void endSession()}
+        onPress={() => setIsLogoutSheetVisible(true)}
         accessibilityRole="button"
         accessibilityLabel="Log out">
         <LogOut size={18} color={BrandColors.textMuted} strokeWidth={2.25} />
@@ -318,7 +328,16 @@ export function ProfileSignedInView() {
         onDeleted={() => void endSession()}
       />
 
-      <ScanConfirmSheet
+      <ConfirmDialog
+        visible={isLogoutSheetVisible}
+        title="Are you sure you want to log out?"
+        confirmLabel="Log out"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setIsLogoutSheetVisible(false)}
+      />
+
+      <ConfirmDialog
         visible={pendingImport !== null}
         title="Replace your preferences?"
         message={

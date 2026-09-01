@@ -1,8 +1,9 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { showAlert } from '@/components/ui/alert-dialog';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { ScanGalleryGrid } from '@/features/profile/components/scan-gallery-grid';
 import { useAuth } from '@/features/auth/context/auth-provider';
@@ -92,7 +93,7 @@ export default function FavoriteScansScreen() {
         exitSelectionMode();
         await load();
       } catch {
-        Alert.alert('Could not unfavorite', 'Please try again.');
+        showAlert('Could not unfavorite', 'Please try again.');
       } finally {
         setBusy(false);
       }

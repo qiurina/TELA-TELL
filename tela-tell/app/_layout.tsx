@@ -17,6 +17,7 @@ import 'react-native-reanimated';
 
 import { AppErrorFallback } from '@/components/app-error-boundary';
 import { AppSplash } from '@/components/splash/app-splash';
+import { AlertHost } from '@/components/ui/alert-dialog';
 import { BrandColors } from '@/constants/brand';
 import { migrateDatabase } from '@/db/migrate';
 import { AuthProvider } from '@/features/auth/context/auth-provider';
@@ -214,7 +215,7 @@ export default function RootLayout() {
                 options={{
                   headerShown: false,
                   presentation: 'transparentModal',
-                  animation: 'slide_from_bottom',
+                  animation: 'fade',
                   contentStyle: { backgroundColor: 'transparent' },
                 }}
               />
@@ -223,7 +224,7 @@ export default function RootLayout() {
                 options={{
                   headerShown: false,
                   presentation: 'transparentModal',
-                  animation: 'slide_from_bottom',
+                  animation: 'fade',
                   contentStyle: { backgroundColor: 'transparent' },
                 }}
               />
@@ -240,6 +241,8 @@ export default function RootLayout() {
           <AppSplash fontsLoaded={fontsLoaded} />
         </Animated.View>
       ) : null}
+
+      <AlertHost />
     </GestureHandlerRootView>
   );
 }

@@ -1,10 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
+import { showAlert } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
 import { ScanHistoryFilters } from '@/features/history/components/scan-history-filters';
 import { filterScansByDate, type ScanDateFilter } from '@/features/history/lib/scan-date-filters';
@@ -185,7 +186,7 @@ export default function HistoryScreen() {
         exitSelectionMode();
         await reload();
       } catch {
-        Alert.alert(
+        showAlert(
           nextFavorite ? 'Could not favorite' : 'Could not unfavorite',
           'Please try again.',
         );
@@ -216,7 +217,7 @@ export default function HistoryScreen() {
         exitSelectionMode();
         await reload();
       } catch {
-        Alert.alert('Could not delete', 'Please try again.');
+        showAlert('Could not delete', 'Please try again.');
       } finally {
         setBusy(false);
       }
@@ -256,12 +257,13 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.root}>
-      <ScanConfirmSheet
+      <ConfirmDialog
         visible={showDeleteConfirm}
         title={selectedIds.size === 1 ? 'Delete scan?' : `Delete ${selectedIds.size} scans?`}
         message="They’ll move to Recently Deleted and can be restored within 30 days."
         confirmLabel="Delete"
         cancelLabel="Cancel"
+        destructive
         onConfirm={handleConfirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
       />

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { showAlert } from '@/components/ui/alert-dialog';
 import { Camera } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -95,7 +96,7 @@ export default function EditProfileScreen() {
       await refreshSession(updated);
       showSuccess('Profile picture updated!', 'stay');
     } catch {
-      Alert.alert('Could not update photo', 'Please try again.');
+      showAlert('Could not update photo', 'Please try again.');
     } finally {
       setIsAvatarSaving(false);
     }

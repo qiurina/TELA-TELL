@@ -2,7 +2,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -10,9 +9,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { showAlert } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { ScanGalleryGrid } from '@/features/profile/components/scan-gallery-grid';
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import { useAuth } from '@/features/auth/context/auth-provider';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -111,7 +111,7 @@ export default function DeletedScansScreen() {
         exitSelectionMode();
         await load();
       } catch {
-        Alert.alert('Could not restore', 'Please try again.');
+        showAlert('Could not restore', 'Please try again.');
       } finally {
         setBusy(false);
       }
@@ -132,7 +132,7 @@ export default function DeletedScansScreen() {
         exitSelectionMode();
         await load();
       } catch {
-        Alert.alert('Could not delete', 'Please try again.');
+        showAlert('Could not delete', 'Please try again.');
       } finally {
         setBusy(false);
       }
@@ -152,7 +152,7 @@ export default function DeletedScansScreen() {
         exitSelectionMode();
         await load();
       } catch {
-        Alert.alert('Could not delete', 'Please try again.');
+        showAlert('Could not delete', 'Please try again.');
       } finally {
         setBusy(false);
       }
@@ -167,22 +167,24 @@ export default function DeletedScansScreen() {
 
   return (
     <View style={styles.root}>
-      <ScanConfirmSheet
+      <ConfirmDialog
         visible={confirmDeleteSelected}
         title="Delete forever?"
         message={`Permanently delete ${selectedIds.size} scan${selectedIds.size === 1 ? '' : 's'}? This can’t be undone.`}
         confirmLabel="Delete forever"
         cancelLabel="Cancel"
+        destructive
         onConfirm={handleDeleteSelected}
         onCancel={() => setConfirmDeleteSelected(false)}
       />
 
-      <ScanConfirmSheet
+      <ConfirmDialog
         visible={confirmDeleteAll}
         title="Delete all forever?"
         message="Permanently delete every scan in Recently Deleted? This can’t be undone."
         confirmLabel="Delete all"
         cancelLabel="Cancel"
+        destructive
         onConfirm={handleDeleteAll}
         onCancel={() => setConfirmDeleteAll(false)}
       />
