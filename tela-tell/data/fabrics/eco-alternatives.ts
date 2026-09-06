@@ -533,15 +533,6 @@ export function getEcoGuidance(
   };
 }
 
-export function formatDetectedLabel(dominantFabric: string): string {
-  const trimmed = dominantFabric.trim();
-  if (/^detected:/i.test(trimmed)) {
-    return trimmed.replace(/^detected:\s*/i, '').trim() || trimmed;
-  }
-
-  return trimmed;
-}
-
 export function getEcoAlternativeText(alternative: EcoAlternative): string {
   return alternative.similarity ?? alternative.description ?? '';
 }

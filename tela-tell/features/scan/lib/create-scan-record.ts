@@ -1,4 +1,4 @@
-import { SCAN_RESULTS, type ScanResult } from '@/data/scans/mock-data';
+import type { ScanResult } from '@/data/scans/mock-data';
 import {
   resolveAllFabricAliases,
   resolveFabricAlias,
@@ -11,25 +11,11 @@ import { classifyFabric, type ClassificationResult } from '@/features/scan/lib/m
 
 export type CreateScanRecordInput = {
   sellerLabel?: string | null;
-  templateId?: string;
-  /** Burst of captured photos to run real on-device classification against; scores are averaged across them. */
   imageUris?: string[] | null;
 };
 
 function createScanId(): string {
   return `scan_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function pickTemplate(templateId?: string): ScanResult {
-  if (templateId) {
-    const found = SCAN_RESULTS.find((scan) => scan.id === templateId);
-    if (found) {
-      return found;
-    }
-  }
-
-  const index = Math.floor(Math.random() * SCAN_RESULTS.length);
-  return SCAN_RESULTS[index] ?? SCAN_RESULTS[0];
 }
 
 type CompositionLike = { material: string; percentage: number };
@@ -117,28 +103,6 @@ export function buildMislabeling(
   };
 }
 
-function cloneTemplate(template: ScanResult): ScanResult {
-  return {
-    ...template,
-    compositions: template.compositions.map((item) => ({ ...item })),
-    sustainability: {
-      ...template.sustainability,
-      factors: template.sustainability.factors.map((factor) => ({ ...factor })),
-    },
-    profile: {
-      ...template.profile,
-      careInstructions: template.profile.careInstructions.map((item) => ({ ...item })),
-      useCases: [...template.profile.useCases],
-    },
-    recommendations: {
-      ...template.recommendations,
-      garmentPurposes: template.recommendations.garmentPurposes.map((item) => ({ ...item })),
-      ecoAlternatives: template.recommendations.ecoAlternatives.map((item) => ({ ...item })),
-      reuse: { ...template.recommendations.reuse },
-    },
-  };
-}
-
 function buildResultFromClassification(classification: ClassificationResult): ScanResult {
   const primary = (resolveFabricAlias(classification.dominantFabric) ??
     classification.dominantFabric) as SupportedFabric;
@@ -164,11 +128,12 @@ function buildResultFromClassification(classification: ClassificationResult): Sc
   };
 }
 
-async function classifyFromImages(imageUris: string[]): Promise<ClassificationResult | null> {
+async function classifyFromImages(imageUris: string[]): Promise<ClassificationResult> {
   try {
     return await classifyFabric(imageUris);
-  } catch {
-    return null;
+  } catch (error) {
+    console.error('[TELA-TELL] classifyFabric failed:', error);
+    throw new Error('Could not analyze this photo. Please try again.');
   }
 }
 
@@ -177,10 +142,12 @@ export async function createScanRecord(input: CreateScanRecordInput = {}): Promi
   const sellerLabel = input.sellerLabel?.trim() || null;
 
   const imageUris = input.imageUris?.filter(Boolean) ?? [];
-  const classification = imageUris.length > 0 ? await classifyFromImages(imageUris) : null;
-  const base = classification
-    ? buildResultFromClassification(classification)
-    : cloneTemplate(pickTemplate(input.templateId));
+  if (imageUris.length === 0) {
+    throw new Error('No photo to analyze.');
+  }
+
+  const classification = await classifyFromImages(imageUris);
+  const base = buildResultFromClassification(classification);
 
   return {
     ...base,

@@ -124,7 +124,7 @@ export function getImageSize(uri: string): Promise<Size> {
   });
 }
 
-export async function cropImageToRect(uri: string, crop: PixelCrop): Promise<string> {
+async function cropImageToRect(uri: string, crop: PixelCrop): Promise<string> {
   if (crop.width < 2 || crop.height < 2) {
     return uri;
   }

@@ -1,5 +1,4 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -9,7 +8,6 @@ import { BrandColors } from '@/constants/brand';
 import { SUPPORTED_FABRICS, type SupportedFabric } from '@/data/fabrics/fabrics';
 import { Fonts } from '@/constants/fonts';
 import { useAuth } from '@/features/auth/context/auth-provider';
-import { getScanMode, setScanMode, type ScanMode } from '@/features/scan/lib/scan-session';
 import {
   getUserPreferencesSnapshot,
   hydrateUserPreferences,
@@ -159,11 +157,6 @@ function ColorSeasonPicker({
     </View>
   );
 }
-
-const SCAN_MODE_OPTIONS: { value: ScanMode; label: string }[] = [
-  { value: 'single', label: 'Single swatch' },
-  { value: 'dual', label: 'Two swatches' },
-];
 
 const ALLERGY_COLORS = {
   border: '#f87171',
@@ -357,43 +350,6 @@ function FabricToggleSection({
   );
 }
 
-function ScanModeRow({
-  selected,
-  onSelect,
-  disabled,
-}: {
-  selected: ScanMode;
-  onSelect: (value: ScanMode) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <View style={styles.scanModeRow}>
-      {SCAN_MODE_OPTIONS.map((option) => {
-        const active = selected === option.value;
-
-        return (
-          <Pressable
-            key={option.value}
-            style={({ pressed }) => [
-              styles.scanModeChip,
-              active && styles.scanModeChipActive,
-              pressed && styles.pressed,
-              disabled && styles.disabled,
-            ]}
-            onPress={() => onSelect(option.value)}
-            disabled={disabled}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: active }}>
-            <Text style={[styles.scanModeText, active && styles.scanModeTextActive]}>
-              {option.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 type UserPreferencesPanelProps = {
   disabled?: boolean;
   embedded?: boolean;
@@ -401,7 +357,6 @@ type UserPreferencesPanelProps = {
   /** Which preference groups to render. Defaults to full panel (modal). */
   scope?:
     | 'full'
-    | 'scan'
     | 'personalization'
     | 'skin-tone'
     | 'allergies'
@@ -437,7 +392,6 @@ export function UserPreferencesPanel({
     getUserPreferencesSnapshot,
     getUserPreferencesSnapshot,
   );
-  const [mode, setMode] = useState(getScanMode);
   const [pendingMove, setPendingMove] = useState<PendingFabricMove | null>(null);
   const hasEditedRef = useRef(false);
 
@@ -459,22 +413,10 @@ export function UserPreferencesPanel({
     };
   }, [userId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setMode(getScanMode());
-    }, []),
-  );
-
   const commitPrefs = (next: UserPreferences) => {
     hasEditedRef.current = true;
     setUserPreferences(next);
     void persistUserPreferences(userId);
-    onChange?.();
-  };
-
-  const commitMode = (next: ScanMode) => {
-    setMode(next);
-    setScanMode(next);
     onChange?.();
   };
 
@@ -535,7 +477,6 @@ export function UserPreferencesPanel({
   };
 
   const fabricNames: SupportedFabric[] = [...SUPPORTED_FABRICS];
-  const showScan = scope === 'full' || scope === 'scan';
   const showPersonalization = scope === 'full' || scope === 'personalization';
   const showSkinTone = showPersonalization || scope === 'skin-tone';
   const showAllergies = showPersonalization || scope === 'allergies';
@@ -557,23 +498,6 @@ export function UserPreferencesPanel({
         onConfirm={handleConfirmMove}
         onCancel={() => setPendingMove(null)}
       />
-      {showScan ? (
-        <View style={styles.section}>
-          <SectionHeader title="Scan mode" />
-          <ScanModeRow selected={mode} onSelect={commitMode} disabled={disabled} />
-          {mode === 'dual' ? (
-            <Text style={styles.dualHint}>
-              Place two fabric swatches on a flat surface, then draw a box around each one before
-              analyzing.
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-
-      {showScan && (showSkinTone || showAllergies || showPreferred || showDressingGuide) ? (
-        <View style={styles.divider} />
-      ) : null}
-
       {showSkinTone ? (
         <>
           <HorizontalSwatchPicker
@@ -785,44 +709,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: BLOCKED_COLORS.text,
   },
-  scanModeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  scanModeChip: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-    backgroundColor: BrandColors.white,
-  },
-  scanModeChipActive: {
-    borderColor: BrandColors.primary,
-    backgroundColor: BrandColors.lavenderCard,
-  },
-  scanModeText: {
-    fontFamily: Fonts.medium,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-  },
-  scanModeTextActive: {
-    color: BrandColors.primaryDark,
-    fontFamily: Fonts.semiBold,
-  },
   divider: {
     height: 1,
     backgroundColor: BrandColors.borderLight,
-  },
-  dualHint: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.primaryDark,
-    backgroundColor: BrandColors.lavenderCard,
-    borderRadius: 10,
-    padding: 10,
   },
   pressed: {
     opacity: 0.88,

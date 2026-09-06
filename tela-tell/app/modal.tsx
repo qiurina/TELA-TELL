@@ -62,7 +62,7 @@ export default function SellerLabelModal() {
   );
 
   useEffect(() => {
-    if (!scanId || scanId === 'dual') {
+    if (!scanId) {
       return;
     }
 
@@ -106,7 +106,7 @@ export default function SellerLabelModal() {
       clearLastSellerLabel();
     }
 
-    if (scanId && scanId !== 'dual') {
+    if (scanId) {
       void updateScanSellerLabel(scanId, trimmed.length > 0 ? trimmed : null);
     }
   };

@@ -13,11 +13,9 @@ import {
 } from 'react-native';
 
 import { Leaf, ScanLine, ShieldAlert } from '@/components/ui/lucide-icons';
-import { RegionBoxOverlay } from '@/features/results/components/region-box-overlay';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { getConfidenceLabel } from '@/data/scans/scan-confidence';
-import type { NormalizedRect } from '@/features/scan/lib/region-selection';
 
 const SLIDE_HEIGHT = 320;
 
@@ -31,7 +29,6 @@ type FabricPhotoPreviewProps = {
   detectedFabric?: string;
   detectedSubtitle?: string;
   confidence?: number;
-  markedRegions?: NormalizedRect[];
   referenceImage?: ImageSourcePropType | null;
   referenceTitle?: string;
   scanCaption?: string;
@@ -43,7 +40,6 @@ export function FabricPhotoPreview({
   detectedFabric,
   detectedSubtitle,
   confidence,
-  markedRegions,
   referenceImage,
   referenceTitle,
   scanCaption,
@@ -85,9 +81,6 @@ export function FabricPhotoPreview({
       {imageUri ? (
         <>
           <Image source={{ uri: imageUri }} style={styles.image} contentFit="contain" />
-          {markedRegions && markedRegions.length > 0 ? (
-            <RegionBoxOverlay regions={markedRegions} />
-          ) : null}
         </>
       ) : (
         <View style={styles.placeholder}>

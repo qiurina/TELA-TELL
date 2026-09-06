@@ -6,7 +6,6 @@ import { ActivityIndicator } from 'react-native';
 import { showAlert } from '@/components/ui/alert-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CompositionCard } from '@/features/results/components/composition-card';
-import { DualFabricResults } from '@/features/results/components/dual-fabric-results';
 import { FabricPhotoPreview } from '@/features/results/components/fabric-photo-preview';
 import { ResultsExploreActions } from '@/features/results/components/results-explore-actions';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
@@ -19,14 +18,12 @@ import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet'
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { deleteScan, isScanFavorite, setScanFavorite } from '@/db/scans';
-import { getDualSwatchRegions } from '@/features/scan/lib/dual-swatch-results';
 import { useScanResult } from '@/features/results/hooks/use-scan-result';
 import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 import { getFabricReference } from '@/data/fabrics/fabric-references';
 import { getScanResultHeadline } from '@/features/results/lib/scan-result-headline';
 import { buildMislabeling } from '@/features/scan/lib/create-scan-record';
 import { clearLastCaptureUri, getLastCaptureUri } from '@/features/scan/lib/last-capture';
-import { clearRegionSelection } from '@/features/scan/lib/region-selection';
 import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 
 export default function ResultsScreen() {
@@ -38,8 +35,6 @@ export default function ResultsScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isActionBusy, setIsActionBusy] = useState(false);
   const { scanId: resolvedScanId, result, isLoading, reload } = useScanResult(scanId);
-  const isDualDemo = resolvedScanId === 'dual';
-  const dualRegions = isDualDemo ? getDualSwatchRegions() : [];
   const capturedPhotoUri = getLastCaptureUri() ?? result?.imageUri ?? null;
 
   useFocusEffect(
@@ -50,7 +45,7 @@ export default function ResultsScreen() {
 
   useEffect(() => {
     let active = true;
-    if (!resolvedScanId || isDualDemo) {
+    if (!resolvedScanId) {
       setIsFavorite(false);
       return;
     }
@@ -65,10 +60,10 @@ export default function ResultsScreen() {
     return () => {
       active = false;
     };
-  }, [resolvedScanId, isDualDemo]);
+  }, [resolvedScanId]);
 
   const handleToggleFavorite = () => {
-    if (isActionBusy || !resolvedScanId || isDualDemo) {
+    if (isActionBusy || !resolvedScanId) {
       return;
     }
 
@@ -96,11 +91,8 @@ export default function ResultsScreen() {
     setIsActionBusy(true);
     void (async () => {
       try {
-        if (!isDualDemo) {
-          await deleteScan(resolvedScanId);
-        }
+        await deleteScan(resolvedScanId);
         clearLastCaptureUri();
-        clearRegionSelection();
         if (router.canGoBack()) {
           router.back();
         } else {
@@ -154,7 +146,6 @@ export default function ResultsScreen() {
   };
 
   const handleScanAnother = () => {
-    clearRegionSelection();
     requestFreshScan();
     router.push('/(tabs)/scan' as Href);
   };
@@ -166,31 +157,22 @@ export default function ResultsScreen() {
     });
   };
 
-  const primaryReference = !isDualDemo
-    ? getFabricReference(result.dominantFabric, result.compositions)
-    : null;
+  const primaryReference = getFabricReference(result.dominantFabric, result.compositions);
 
-  const healthRisk = !isDualDemo
-    ? getSyntheticHealthRisk(result.dominantFabric, result.compositions ?? [], result.garmentCondition)
-    : null;
+  const healthRisk = getSyntheticHealthRisk(
+    result.dominantFabric,
+    result.compositions ?? [],
+    result.garmentCondition,
+  );
 
-  const fiberBadge = !isDualDemo
-    ? healthRisk
-      ? {
-          label:
-            healthRisk.fibers.length > 1 ? 'Synthetic Blend Detected' : 'Synthetic Fiber Detected',
-          tone: 'synthetic' as const,
-        }
-      : { label: 'No Synthetic Detected', tone: 'clear' as const }
-    : null;
+  const fiberBadge = healthRisk
+    ? {
+        label: healthRisk.fibers.length > 1 ? 'Synthetic Blend Detected' : 'Synthetic Fiber Detected',
+        tone: 'synthetic' as const,
+      }
+    : { label: 'No Synthetic Detected', tone: 'clear' as const };
 
-  const headline = !isDualDemo
-    ? getScanResultHeadline(result.dominantFabric, result.compositions ?? [])
-    : {
-        title: 'Linen + Cotton swatches',
-        subtitle: 'Dual-swatch demo',
-        isBlend: true,
-      };
+  const headline = getScanResultHeadline(result.dominantFabric, result.compositions ?? []);
 
   return (
     <View style={styles.root}>
@@ -222,7 +204,7 @@ export default function ResultsScreen() {
       <ResultsScreenHeader
         title="Scan Results"
         onBack={() => router.back()}
-        onToggleFavorite={isDualDemo ? undefined : handleToggleFavorite}
+        onToggleFavorite={handleToggleFavorite}
         onDelete={() => setShowDeleteConfirm(true)}
         isFavorite={isFavorite}
         actionsDisabled={isActionBusy}
@@ -236,53 +218,31 @@ export default function ResultsScreen() {
           scanCaption="Your scan"
           detectedFabric={headline.title}
           detectedSubtitle={headline.isBlend ? undefined : headline.subtitle}
-          confidence={
-            isDualDemo
-              ? Math.round(
-                  dualRegions.reduce((sum, region) => sum + region.confidence, 0) /
-                    Math.max(dualRegions.length, 1),
-                )
-              : result.confidence
-          }
-          markedRegions={
-            isDualDemo
-              ? dualRegions
-                  .map((region) => region.region)
-                  .filter((region): region is NonNullable<typeof region> => Boolean(region))
-              : undefined
-          }
+          confidence={result.confidence}
           referenceImage={primaryReference?.image}
           referenceTitle={primaryReference?.title}
           fiberBadge={fiberBadge}
         />
 
-        {isDualDemo ? (
-          <DualFabricResults regions={dualRegions} scanImageUri={capturedPhotoUri} />
-        ) : (
-          <>
-            <ScanConfidenceBanner
-              confidence={result.confidence}
-              dominantFabric={headline.title}
-              compact
-            />
+        <ScanConfidenceBanner
+          confidence={result.confidence}
+          dominantFabric={headline.title}
+          compact
+        />
 
-            {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
+        {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
 
-            <CompositionCard compositions={result.compositions ?? []} />
-          </>
-        )}
+        <CompositionCard compositions={result.compositions ?? []} />
 
         <StatusBadges sustainability={result.sustainability} />
 
-        {!isDualDemo ? (
-          <SellerComparisonCard
-            sellerLabel={sellerLabel}
-            detectedLabel={headline.title}
-            mislabelingDetected={hasSellerLabel && liveMislabel.detected}
-            mislabelMessage={liveMislabel.message}
-            onAddLabel={handleAddLabel}
-          />
-        ) : null}
+        <SellerComparisonCard
+          sellerLabel={sellerLabel}
+          detectedLabel={headline.title}
+          mislabelingDetected={hasSellerLabel && liveMislabel.detected}
+          mislabelMessage={liveMislabel.message}
+          onAddLabel={handleAddLabel}
+        />
 
         <ResultsExploreActions
           onProfile={handleViewProfile}

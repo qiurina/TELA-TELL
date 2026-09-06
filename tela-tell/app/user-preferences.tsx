@@ -17,7 +17,7 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
 import { useAuth } from '@/features/auth/context/auth-provider';
-import { resetScanSession } from '@/features/scan/lib/scan-session';
+import { clearLastGarmentCondition } from '@/features/scan/lib/garment-condition';
 import {
   clearUserPreferences,
   persistUserPreferences,
@@ -48,7 +48,7 @@ export default function UserPreferencesScreen() {
 
   const handleClear = () => {
     clearUserPreferences();
-    resetScanSession();
+    clearLastGarmentCondition();
     void persistUserPreferences(session?.userId);
     setFormKey((current) => current + 1);
   };

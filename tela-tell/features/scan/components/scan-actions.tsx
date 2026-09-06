@@ -8,7 +8,6 @@ import {
   GarmentConditionSheet,
   getGarmentConditionLabel,
 } from '@/features/scan/components/garment-condition-picker';
-import { getScanModeLabel, ScanModeSheet } from '@/features/scan/components/scan-mode-sheet';
 import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import {
   Camera,
@@ -16,7 +15,6 @@ import {
   ImagePlus,
   Lock,
   Plus,
-  ScanLine,
   Settings,
   Tag,
   X,
@@ -33,11 +31,8 @@ import {
   getUserPreferencesSummary,
   hasActiveUserPreferences,
 } from '@/features/profile/lib/user-preferences';
-import { getScanMode, setScanMode, type ScanMode } from '@/features/scan/lib/scan-session';
 
 const primaryGradient = [BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark] as const;
-
-const SHOW_SCAN_MODE_SELECTOR = false;
 
 type FloatingCaptureBarProps = {
   hasPreview?: boolean;
@@ -193,9 +188,7 @@ export function ScanDetailsPanel({
   const { isSignedIn } = useAuth();
   const [showPreferencesLocked, setShowPreferencesLocked] = useState(false);
   const [showConditionSheet, setShowConditionSheet] = useState(false);
-  const [showScanModeSheet, setShowScanModeSheet] = useState(false);
   const [hasPreferences, setHasPreferences] = useState(() => hasActiveUserPreferences());
-  const [scanMode, setScanModeState] = useState<ScanMode>(() => getScanMode());
   const trimmedLabel = savedSellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
   const preferencesLocked = !isSignedIn;
@@ -204,14 +197,8 @@ export function ScanDetailsPanel({
   useFocusEffect(
     useCallback(() => {
       setHasPreferences(hasActiveUserPreferences());
-      setScanModeState(getScanMode());
     }, []),
   );
-
-  const handleScanModeChange = (mode: ScanMode) => {
-    setScanMode(mode);
-    setScanModeState(mode);
-  };
 
   const summaryParts: string[] = [];
   if (hasCustomCondition) {
@@ -307,18 +294,6 @@ export function ScanDetailsPanel({
               }
             />
 
-            {SHOW_SCAN_MODE_SELECTOR ? (
-              <DetailActionRow
-                icon={<ScanLine size={16} color={BrandColors.primary} strokeWidth={2.25} />}
-                label="Scan mode"
-                value={getScanModeLabel(scanMode)}
-                isSet
-                onPress={() => setShowScanModeSheet(true)}
-                disabled={isAnalyzing}
-                accessibilityLabel={`Scan mode, ${getScanModeLabel(scanMode)}. Change`}
-              />
-            ) : null}
-
             <DetailActionRow
               icon={
                 preferencesLocked ? (
@@ -402,18 +377,6 @@ export function ScanDetailsPanel({
                 }
               />
 
-              {SHOW_SCAN_MODE_SELECTOR ? (
-                <DetailActionRow
-                  icon={<ScanLine size={16} color={BrandColors.primary} strokeWidth={2.25} />}
-                  label="Scan mode"
-                  value={getScanModeLabel(scanMode)}
-                  isSet
-                  onPress={() => setShowScanModeSheet(true)}
-                  disabled={isAnalyzing}
-                  accessibilityLabel={`Scan mode, ${getScanModeLabel(scanMode)}. Change`}
-                />
-              ) : null}
-
               <DetailActionRow
                 icon={
                   preferencesLocked ? (
@@ -453,14 +416,6 @@ export function ScanDetailsPanel({
         onClose={() => setShowConditionSheet(false)}
       />
 
-      {SHOW_SCAN_MODE_SELECTOR ? (
-        <ScanModeSheet
-          visible={showScanModeSheet}
-          value={scanMode}
-          onChange={handleScanModeChange}
-          onClose={() => setShowScanModeSheet(false)}
-        />
-      ) : null}
     </View>
   );
 }

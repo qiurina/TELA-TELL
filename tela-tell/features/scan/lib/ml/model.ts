@@ -15,7 +15,7 @@ export class ModelUnavailableError extends Error {
   }
 }
 
-type TFLiteModel = { runSync(inputs: Float32Array[]): Float32Array[] };
+type TFLiteModel = { runSync(inputs: ArrayBuffer[]): ArrayBuffer[] };
 
 let modelPromise: Promise<TFLiteModel> | null = null;
 
@@ -23,7 +23,7 @@ let modelPromise: Promise<TFLiteModel> | null = null;
 async function loadModel(): Promise<TFLiteModel> {
   if (!modelPromise) {
     modelPromise = (async () => {
-      let loadTensorflowModel: (asset: number) => Promise<TFLiteModel>;
+      let loadTensorflowModel: (asset: number, delegates: string[]) => Promise<TFLiteModel>;
       try {
         ({ loadTensorflowModel } = require('react-native-fast-tflite'));
       } catch {
@@ -32,11 +32,19 @@ async function loadModel(): Promise<TFLiteModel> {
 
       try {
         const asset = require('@/assets/models/fabric_classifier.tflite');
-        return await loadTensorflowModel(asset);
-      } catch {
+        // The native side requires an actual array here (an empty array means
+        // "use the default CPU delegate") — passing undefined throws a native
+        // error with no readable JS message.
+        return await loadTensorflowModel(asset, []);
+      } catch (error) {
+        console.error('[TELA-TELL] loadTensorflowModel failed:', error);
         throw new ModelUnavailableError();
       }
-    })();
+    })().catch((error) => {
+      // Let the next scan attempt retry instead of replaying this same failure forever.
+      modelPromise = null;
+      throw error;
+    });
   }
   return modelPromise;
 }
@@ -79,8 +87,8 @@ export async function classifyFabric(imageUris: string[]): Promise<Classificatio
   const scoreSets: Float32Array[] = [];
   for (const uri of imageUris) {
     const input = await imageToInputTensor(uri);
-    const outputs = model.runSync([input]);
-    scoreSets.push(outputs[0]);
+    const outputs = model.runSync([input.buffer as ArrayBuffer]);
+    scoreSets.push(new Float32Array(outputs[0]));
   }
 
   const scores = scoreSets.length > 1 ? averageScores(scoreSets) : scoreSets[0];

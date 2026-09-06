@@ -31,14 +31,12 @@ import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
 import { clearLastCaptureUri, setLastCaptureUri } from '@/features/scan/lib/last-capture';
 import { optimizeScanImage } from '@/features/scan/lib/crop-to-guide';
 import { getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
-import { clearRegionSelection } from '@/features/scan/lib/region-selection';
 import {
   clearLastGarmentCondition,
   getLastGarmentCondition,
   setLastGarmentCondition,
 } from '@/features/scan/lib/garment-condition';
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
-import { getScanMode } from '@/features/scan/lib/scan-session';
 import { useAuth } from '@/features/auth/context/auth-provider';
 import { saveScan } from '@/db/scans';
 import { createScanRecord } from '@/features/scan/lib/create-scan-record';
@@ -68,7 +66,6 @@ export default function ScanScreen() {
         setPreviewUri(null);
         setBurstUris([]);
         clearLastCaptureUri();
-        clearRegionSelection();
         clearLastGarmentCondition();
         setGarmentCondition(DEFAULT_GARMENT_CONDITION);
         setDetailsExpanded(true);
@@ -93,15 +90,6 @@ export default function ScanScreen() {
     }
 
     const ANALYSIS_MS = 1500;
-
-    if (getScanMode() === 'dual') {
-      setIsAnalyzing(true);
-      setTimeout(() => {
-        setIsAnalyzing(false);
-        router.push('/results/dual' as Href);
-      }, ANALYSIS_MS);
-      return;
-    }
 
     setIsAnalyzing(true);
 
@@ -201,13 +189,6 @@ export default function ScanScreen() {
 
     setLastGarmentCondition(garmentCondition);
 
-    if (getScanMode() === 'dual') {
-      setLastCaptureUri(previewUri);
-      clearRegionSelection();
-      router.push('/region-select' as Href);
-      return;
-    }
-
     runAnalysis(previewUri, burstUris);
   };
 
@@ -220,7 +201,6 @@ export default function ScanScreen() {
     setBurstUris([]);
     clearLastCaptureUri();
     setDetailsExpanded(true);
-    clearRegionSelection();
     clearLastGarmentCondition();
     setGarmentCondition(DEFAULT_GARMENT_CONDITION);
   };

@@ -209,7 +209,6 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: BrandColors.white },
                 }}
               />
-              <Stack.Screen name="region-select" options={{ headerShown: false }} />
               <Stack.Screen
                 name="modal"
                 options={{
