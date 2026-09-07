@@ -6,9 +6,14 @@ import type {
   ScanRecommendations,
   ScanResult,
   SuitabilityLevel,
+  SustainabilityRating,
 } from '@/data/scans/mock-data';
-import { type SupportedFabric } from '@/data/fabrics/fabrics';
-import { getFiberProfile, type FiberProfile } from '@/data/fabrics/fiber-profiles';
+import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import {
+  getFiberProfile,
+  type FiberProfile,
+  type SustainabilityBreakdown,
+} from '@/data/fabrics/fiber-profiles';
 import { getEcoGuidance } from '@/data/fabrics/eco-alternatives';
 import { OCCASION_CONTEXT_OPTIONS } from '@/data/preferences/occasion-weather';
 
@@ -28,27 +33,102 @@ function buildProfile(fiber: FiberProfile): FabricProfile {
   };
 }
 
+type WeightedFiber = { fiber: FiberProfile; weight: number };
+
+/**
+ * Mass-fraction weighting across every resolved fiber in the composition, matching the Higg
+ * MSI's own documented approach to blended-fabric scoring (weighted average by blend
+ * proportion) rather than scoring the whole garment off the dominant fiber alone. Falls back to
+ * the primary fiber alone when nothing in `compositions` resolves. See
+ * docs/fiber-percentage-methodology.md.
+ */
+function resolveWeightedFibers(
+  primaryFiber: FiberProfile,
+  compositions: FabricComposition[],
+): WeightedFiber[] {
+  const resolved: { fiber: FiberProfile; percentage: number }[] = [];
+
+  for (const item of compositions) {
+    const fabric = resolveFabricAlias(item.material);
+    if (!fabric) {
+      continue;
+    }
+    resolved.push({ fiber: getFiberProfile(fabric), percentage: item.percentage });
+  }
+
+  const total = resolved.reduce((sum, item) => sum + item.percentage, 0);
+  if (total <= 0) {
+    return [{ fiber: primaryFiber, weight: 1 }];
+  }
+
+  return resolved.map((item) => ({ fiber: item.fiber, weight: item.percentage / total }));
+}
+
+function weightedBreakdown(weighted: WeightedFiber[]): SustainabilityBreakdown {
+  const weightedSum = (key: keyof SustainabilityBreakdown) =>
+    weighted.reduce((sum, { fiber, weight }) => sum + fiber.breakdown[key] * weight, 0);
+
+  return {
+    biodegradability: weightedSum('biodegradability'),
+    waterEfficiency: weightedSum('waterEfficiency'),
+    recyclability: weightedSum('recyclability'),
+    lowCarbon: weightedSum('lowCarbon'),
+  };
+}
+
+function overallScore(breakdown: SustainabilityBreakdown): number {
+  const raw =
+    (breakdown.biodegradability +
+      breakdown.waterEfficiency +
+      breakdown.recyclability +
+      breakdown.lowCarbon) /
+    4;
+  return Math.round(raw * 10) / 10;
+}
+
+function ratingForScore(score: number): SustainabilityRating {
+  if (score >= 7.5) {
+    return 'green';
+  }
+  if (score >= 5.5) {
+    return 'yellow';
+  }
+  return 'red';
+}
+
+function labelForRating(rating: SustainabilityRating): string {
+  if (rating === 'green') {
+    return 'Sustainable';
+  }
+  if (rating === 'yellow') {
+    return 'Moderate';
+  }
+  return 'Low';
+}
+
 function buildSustainabilityFactors(
-  fiber: FiberProfile,
+  primaryFiber: FiberProfile,
+  breakdown: SustainabilityBreakdown,
   isBlend: boolean,
 ): ScanResult['sustainability']['factors'] {
   const factors: ScanResult['sustainability']['factors'] = [];
+  const subject = isBlend ? 'This blend' : primaryFiber.fabric;
 
   factors.push({
-    text: `${fiber.fabric} is the dominant fiber (${fiber.fiberType.toLowerCase()})`,
-    positive: fiber.sustainabilityRating !== 'red',
+    text: `${primaryFiber.fabric} is the dominant fiber (${primaryFiber.fiberType.toLowerCase()})`,
+    positive: primaryFiber.sustainabilityRating !== 'red',
   });
 
-  if (fiber.breakdown.biodegradability >= 7) {
-    factors.push({ text: `${fiber.fabric} biodegrades relatively well`, positive: true });
-  } else if (fiber.breakdown.biodegradability <= 4) {
-    factors.push({ text: `${fiber.fabric} does not biodegrade easily`, positive: false });
+  if (breakdown.biodegradability >= 7) {
+    factors.push({ text: `${subject} biodegrades relatively well`, positive: true });
+  } else if (breakdown.biodegradability <= 4) {
+    factors.push({ text: `${subject} does not biodegrade easily`, positive: false });
   }
 
-  if (fiber.breakdown.recyclability <= 4) {
-    factors.push({ text: `Limited recycling options for ${fiber.fabric}`, positive: false });
-  } else if (fiber.breakdown.recyclability >= 7) {
-    factors.push({ text: `${fiber.fabric} is commonly recyclable`, positive: true });
+  if (breakdown.recyclability <= 4) {
+    factors.push({ text: `Limited recycling options for ${subject.toLowerCase()}`, positive: false });
+  } else if (breakdown.recyclability >= 7) {
+    factors.push({ text: `${subject} is commonly recyclable`, positive: true });
   }
 
   if (isBlend) {
@@ -98,20 +178,28 @@ export function buildScanProfile(
   const fiber = getFiberProfile(primaryFiber);
   const ecoGuidance = getEcoGuidance(dominantFabric, compositions);
 
+  // Sustainability is weighted across the full detected composition (see
+  // resolveWeightedFibers), not just the dominant fiber — profile/recommendations below stay
+  // keyed to the dominant fiber, since care instructions and use-case guidance describe one
+  // representative fiber rather than something meaningful to blend-average.
+  const weighted = resolveWeightedFibers(fiber, compositions);
+  const breakdown = weightedBreakdown(weighted);
+  const score = overallScore(breakdown);
+  const rating = ratingForScore(score);
+
   const recommendations: ScanRecommendations = {
     garmentPurposes: buildGarmentPurposes(fiber),
     ecoAlternatives: ecoGuidance.ecoAlternatives,
-    recycledAwareness: ecoGuidance.recycledAwareness,
     reuse: ecoGuidance.reuse,
   };
 
   return {
     profile: buildProfile(fiber),
     sustainability: {
-      rating: fiber.sustainabilityRating,
-      label: fiber.sustainabilityLabel,
-      score: fiber.sustainabilityScore,
-      factors: buildSustainabilityFactors(fiber, isBlend),
+      rating,
+      label: labelForRating(rating),
+      score,
+      factors: buildSustainabilityFactors(fiber, breakdown, isBlend),
     },
     recommendations,
   };

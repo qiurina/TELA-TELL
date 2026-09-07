@@ -10,9 +10,7 @@ import {
   CircleX,
   Droplets,
   Leaf,
-  MoveHorizontal,
   Recycle,
-  Shield,
   Sun,
   TriangleAlert,
   Wind,
@@ -22,19 +20,12 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import { FABRIC_REFERENCES } from '@/data/fabrics/fabric-references';
+import { getComfortProfile } from '@/data/fabrics/comfort-profile';
 import type { FiberProfile } from '@/data/fabrics/fiber-profiles';
 import { FABRIC_CATEGORY_COLORS, FABRIC_REGISTRY } from '@/data/fabrics/fabrics';
 import { getDressingContextLabel } from '@/data/preferences/occasion-weather';
-import {
-  SUSTAINABILITY_DOT,
-  getFabricPropertyColor,
-  type SustainabilityRating,
-} from '@/data/scans/mock-data';
-import {
-  getEnvironmentalSummary,
-  getHealthVerdicts,
-  getSheddingColor,
-} from '@/features/fabrics/lib/fiber-profile-insights';
+import { SUSTAINABILITY_DOT, type SustainabilityRating } from '@/data/scans/mock-data';
+import { getEnvironmentalSummary, getSheddingColor } from '@/features/fabrics/lib/fiber-profile-insights';
 
 type FiberProfileContentProps = {
   profile: FiberProfile;
@@ -45,7 +36,7 @@ type FiberProfileContentProps = {
 type ProfileTab = 'health' | 'eco' | 'care' | 'wear';
 
 const PROFILE_TABS: { key: ProfileTab; label: string }[] = [
-  { key: 'health', label: 'Health' },
+  { key: 'health', label: 'Comfort' },
   { key: 'eco', label: 'Eco' },
   { key: 'care', label: 'Care' },
   { key: 'wear', label: 'Wear' },
@@ -90,30 +81,6 @@ const SUSTAINABILITY_BADGE: Record<
   yellow: { background: '#FFFBEB', border: '#FDE68A', text: '#B45309' },
   red: { background: '#FEF2F2', border: '#FECACA', text: '#B91C1C' },
 };
-
-function QuickStat({
-  icon: Icon,
-  label,
-  value,
-  valueColor,
-}: {
-  icon: FC<IconProps>;
-  label: string;
-  value: string;
-  valueColor?: string;
-}) {
-  return (
-    <View style={[styles.quickStat, faintCardShadow()]}>
-      <View style={styles.quickStatHeader}>
-        <Icon size={15} color={BrandColors.primary} strokeWidth={2.25} />
-        <Text style={styles.quickStatLabel} numberOfLines={1}>
-          {label}
-        </Text>
-      </View>
-      <Text style={[styles.quickStatValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
-    </View>
-  );
-}
 
 function SustainabilityScoreStack({
   score,
@@ -250,7 +217,7 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
   const reference = FABRIC_REFERENCES[profile.fabric];
   const category = FABRIC_REGISTRY.find((item) => item.name === profile.fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
-  const health = getHealthVerdicts(profile);
+  const comfort = getComfortProfile(profile);
   const environment = getEnvironmentalSummary(profile);
 
   const categoryPill = categoryStyle ? (
@@ -314,48 +281,28 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
         </View>
       )}
 
-      <View style={styles.quickStatsGrid}>
-        <View style={styles.quickStatsRow}>
-          <QuickStat
-            icon={Wind}
-            label="Breathability"
-            value={profile.breathability}
-            valueColor={getFabricPropertyColor(profile.breathability)}
-          />
-          <QuickStat
-            icon={Shield}
-            label="Durability"
-            value={profile.durability}
-            valueColor={getFabricPropertyColor(profile.durability)}
-          />
-        </View>
-        <View style={styles.quickStatsRow}>
-          <QuickStat
-            icon={MoveHorizontal}
-            label="Stretch"
-            value={profile.stretch}
-            valueColor={getFabricPropertyColor(profile.stretch)}
-          />
-          <QuickStat icon={Droplets} label="Moisture" value={profile.moisture} />
-        </View>
-      </View>
-
       <ProfileTabs active={activeTab} onSelect={setActiveTab} />
 
       {activeTab === 'health' ? (
         <View style={styles.section}>
-          <SectionLabel>Skin health</SectionLabel>
+          <SectionLabel>Wearing comfort</SectionLabel>
           <View style={[styles.textCard, faintCardShadow()]}>
-            <InsightLine text={health.skinFriendliness.label} tone={health.skinFriendliness.tone} />
             <InsightLine
-              text={`Heat retention: ${health.heatRetention.label}`}
-              tone={health.heatRetention.tone}
+              text={`Breathability: ${comfort.breathability.note}`}
+              tone={comfort.breathability.tone}
             />
             <InsightLine
-              text={`Irritation potential: ${health.irritationPotential.label}`}
-              tone={health.irritationPotential.tone}
+              text={`Moisture: ${comfort.moistureManagement.note}`}
+              tone={comfort.moistureManagement.tone}
             />
-            <InsightLine text={health.tip.text} tone={health.tip.tone} />
+            <InsightLine
+              text={`Heat retention: ${comfort.heatRetention.note}`}
+              tone={comfort.heatRetention.tone}
+            />
+            <InsightLine
+              text={`Feel: ${comfort.mechanicalComfort.note}`}
+              tone={comfort.mechanicalComfort.tone}
+            />
           </View>
         </View>
       ) : null}
@@ -403,31 +350,21 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
       ) : null}
 
       {activeTab === 'wear' ? (
-        <>
-          <View style={styles.section}>
-            <SectionLabel>Good for</SectionLabel>
-            <View style={[styles.contextCard, faintCardShadow()]}>
-              <ContextChipGroup
-                title="Weather"
-                icon={Sun}
-                labels={profile.bestWeather.map((id) => getDressingContextLabel(id))}
-              />
-              <ContextChipGroup
-                title="Occasion"
-                icon={Calendar}
-                labels={profile.bestOccasion.map((id) => getDressingContextLabel(id))}
-              />
-            </View>
+        <View style={styles.section}>
+          <SectionLabel>Good for</SectionLabel>
+          <View style={[styles.contextCard, faintCardShadow()]}>
+            <ContextChipGroup
+              title="Weather"
+              icon={Sun}
+              labels={profile.bestWeather.map((id) => getDressingContextLabel(id))}
+            />
+            <ContextChipGroup
+              title="Occasion"
+              icon={Calendar}
+              labels={profile.bestOccasion.map((id) => getDressingContextLabel(id))}
+            />
           </View>
-
-          <View style={styles.section}>
-            <SectionLabel>In Philippine markets</SectionLabel>
-            <View style={[styles.phMarketsCard, faintCardShadow()]}>
-              <Leaf size={16} color={BrandColors.primary} strokeWidth={2.25} />
-              <Text style={styles.phMarketsText}>{profile.philippineMarkets}</Text>
-            </View>
-          </View>
-        </>
+        </View>
       ) : null}
     </View>
   );
@@ -535,28 +472,6 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: BrandColors.text,
   },
-  quickStatsGrid: {
-    gap: 8,
-  },
-  quickStatsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  quickStat: {
-    flex: 1,
-    backgroundColor: BrandColors.white,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  quickStatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   tabTrack: {
     flexDirection: 'row',
     backgroundColor: BrandColors.inputBackground,
@@ -590,17 +505,6 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     fontFamily: Fonts.semiBold,
     color: BrandColors.primaryDark,
-  },
-  quickStatLabel: {
-    flex: 1,
-    fontFamily: Fonts.medium,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-  },
-  quickStatValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 14,
-    color: BrandColors.text,
   },
   section: {
     gap: 8,
@@ -744,23 +648,6 @@ const styles = StyleSheet.create({
   useChipText: {
     fontFamily: Fonts.semiBold,
     fontSize: 12,
-    color: BrandColors.primaryDark,
-  },
-  phMarketsCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: BrandColors.lavenderCard,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-  },
-  phMarketsText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
-    fontSize: 14,
-    lineHeight: 21,
     color: BrandColors.primaryDark,
   },
 });

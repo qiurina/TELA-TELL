@@ -46,7 +46,6 @@ export type EcoAlternative = {
 export type ScanRecommendations = {
   garmentPurposes: GarmentPurposeItem[];
   ecoAlternatives: EcoAlternative[];
-  recycledAwareness: string;
   reuse: {
     resale: string;
     donate: string;

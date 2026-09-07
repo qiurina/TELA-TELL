@@ -2,12 +2,10 @@ import type { FiberProfile } from '@/data/fabrics/fiber-profiles';
 
 export type InsightTone = 'good' | 'caution' | 'warn';
 
-export type HealthVerdicts = {
-  skinFriendliness: { label: string; tone: InsightTone };
-  heatRetention: { label: string; tone: 'good' | 'caution' };
-  irritationPotential: { label: string; tone: InsightTone };
-  tip: { text: string; tone: 'good' | 'caution' };
-};
+// Skin/health verdicts used to live here as a fourth, independent, uncited judgment layer.
+// Replaced by the single consolidated model in @/data/fabrics/comfort-profile.ts — see
+// docs/profile-screen-audit.md. This file now only covers sustainability-derived labels and
+// shared tone/color utilities.
 
 export type EnvironmentalSummary = {
   renewable: string;
@@ -16,69 +14,6 @@ export type EnvironmentalSummary = {
   carbonImpact: string;
   microplasticShedding: string;
 };
-
-export function getHealthVerdicts(profile: FiberProfile): HealthVerdicts {
-  const fabric = profile.fabric;
-  const lowerFiberType = profile.fiberType.toLowerCase();
-  const lowerTexture = profile.texture.toLowerCase();
-  const lowerBreathability = profile.breathability.toLowerCase();
-  const lowerWeight = profile.weight.toLowerCase();
-
-  const isSynthetic = lowerFiberType.includes('synthetic');
-  const isSemiSynthetic = lowerFiberType.includes('semi-synthetic');
-  const isAnimal = lowerFiberType.includes('animal');
-  const isPlant = lowerFiberType.includes('plant');
-  const texturedOrRough =
-    lowerTexture.includes('stiff') ||
-    lowerTexture.includes('slick') ||
-    lowerTexture.includes('fluffy') ||
-    lowerTexture.includes('grain') ||
-    lowerTexture.includes('napped');
-
-  const skinFriendliness =
-    fabric === 'Cotton' || fabric === 'Linen' || fabric === 'Rayon' || fabric === 'Silk'
-      ? { label: 'Generally suitable for sensitive skin', tone: 'good' as const }
-      : fabric === 'Wool' || fabric === 'Leather' || fabric === 'Suede'
-        ? { label: 'May feel rough on very sensitive skin', tone: 'caution' as const }
-        : isSynthetic
-          ? { label: 'Less ideal for sensitive skin', tone: 'warn' as const }
-          : { label: 'Usually comfortable for most skin types', tone: 'good' as const };
-
-  const irritationPotential =
-    fabric === 'Acrylic' || fabric === 'Polyester' || fabric === 'Nylon' || fabric === 'Spandex'
-      ? { label: 'Moderate to high', tone: 'warn' as const }
-      : fabric === 'Wool' || texturedOrRough
-        ? { label: 'Moderate', tone: 'caution' as const }
-        : { label: 'Low', tone: 'good' as const };
-
-  const heatRetentionLabel =
-    fabric === 'Wool' || fabric === 'Acrylic' || lowerWeight.includes('heavy')
-      ? 'High'
-      : lowerBreathability.includes('very high') || lowerBreathability.includes('high')
-        ? 'Low to moderate'
-        : 'Moderate';
-
-  const heatRetention = {
-    label: heatRetentionLabel,
-    tone: (heatRetentionLabel === 'High' ? 'caution' : 'good') as 'good' | 'caution',
-  };
-
-  const tip =
-    profile.careInstructions.find((item) => !item.recommended)?.text.toLowerCase().includes('shrink')
-      ? { text: 'May shrink if exposed to high heat', tone: 'caution' as const }
-      : isPlant || isSemiSynthetic
-        ? { text: 'Absorbs moisture well for day-to-day comfort', tone: 'good' as const }
-        : isAnimal
-          ? { text: 'Feels insulating and holds warmth well', tone: 'good' as const }
-          : { text: 'Quick-drying, but may trap more heat on skin', tone: 'caution' as const };
-
-  return {
-    skinFriendliness,
-    heatRetention,
-    irritationPotential,
-    tip,
-  };
-}
 
 export function getEnvironmentalSummary(profile: FiberProfile): EnvironmentalSummary {
   const lowerFiberType = profile.fiberType.toLowerCase();
@@ -90,29 +25,34 @@ export function getEnvironmentalSummary(profile: FiberProfile): EnvironmentalSum
         ? 'Partly'
         : 'No';
 
+  // Thresholds (7/4) match buildSustainabilityFactors() in build-scan-profile.ts — the same
+  // breakdown number used to read "Partly biodegradable" here but a positive "biodegrades
+  // relatively well" on the Results screen for Rayon (7.5) before this was unified. See
+  // docs/fiber-percentage-methodology.md.
   const biodegradable =
-    profile.breakdown.biodegradability >= 8
+    profile.breakdown.biodegradability >= 7
       ? 'Yes'
-      : profile.breakdown.biodegradability >= 5.5
-        ? 'Partly'
-        : 'No';
+      : profile.breakdown.biodegradability <= 4
+        ? 'No'
+        : 'Partly';
 
   const recyclable =
-    profile.breakdown.recyclability >= 8
+    profile.breakdown.recyclability >= 7
       ? 'High'
-      : profile.breakdown.recyclability >= 6
-        ? 'Moderate'
-        : 'Low';
+      : profile.breakdown.recyclability <= 4
+        ? 'Low'
+        : 'Moderate';
 
   const carbonImpact =
-    profile.breakdown.lowCarbon >= 8
+    profile.breakdown.lowCarbon >= 7
       ? 'Low'
-      : profile.breakdown.lowCarbon >= 6
-        ? 'Moderate'
-        : 'High';
+      : profile.breakdown.lowCarbon <= 4
+        ? 'High'
+        : 'Moderate';
 
+  // Matches FIBER_RISK_LEVELS in synthetic-health-risk.ts (Napper & Thompson 2016 shedding-rate ranking) — see docs/fabric-score-sources.md
   const microplasticShedding = lowerFiberType.includes('synthetic')
-    ? profile.fabric === 'Polyester' || profile.fabric === 'Acrylic' || profile.fabric === 'Spandex'
+    ? profile.fabric === 'Polyester' || profile.fabric === 'Acrylic'
       ? 'High'
       : 'Moderate'
     : 'Low';
@@ -147,15 +87,4 @@ export function getToneColor(tone: InsightTone): string {
     return '#B45309';
   }
   return '#B91C1C';
-}
-
-/** Short chip-friendly version of skinFriendliness.label, which is a full sentence. */
-export function getSkinShortLabel(tone: InsightTone): string {
-  if (tone === 'good') {
-    return 'Skin-safe';
-  }
-  if (tone === 'caution') {
-    return 'May irritate';
-  }
-  return 'Less ideal';
 }

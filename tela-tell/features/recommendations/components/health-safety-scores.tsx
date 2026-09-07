@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Droplets, Heart, Leaf, Recycle, type IconProps } from '@/components/ui/lucide-icons';
+import { Droplets, Heart, type IconProps } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
@@ -36,8 +36,6 @@ const TONE_COLORS: Record<
 const METRIC_ICONS: Record<HealthSafetyMetricId, FC<IconProps>> = {
   skinHealth: Heart,
   microplasticShedding: Droplets,
-  sustainabilityImpact: Leaf,
-  environmentalImpact: Recycle,
 };
 
 type HealthSafetyScoresProps = {

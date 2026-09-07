@@ -1,5 +1,6 @@
 import { resolveSupportedFabric } from '@/data/fabrics/fabric-references';
 import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import { getFiberProfile } from '@/data/fabrics/fiber-profiles';
 import { getSignificantFibers, type CompositionInput } from '@/data/scans/scan-confidence';
 import type { FabricComposition } from '@/data/scans/mock-data';
 import {
@@ -74,6 +75,25 @@ function findMatchingRec(
   });
 }
 
+/**
+ * True if this fiber's own profile (fiber-profiles.ts) already lists this context as one of
+ * its best weather/occasion fits. Checked in addition to the per-context "spotlight" bestChoices
+ * list above (which only has room for ~3 fibers per context) so a fiber isn't shown as merely
+ * "Okay" here while its own Fiber Profile page calls the same context a good fit. The two
+ * datasets were reconciled to remove direct contradictions — see docs/profile-screen-audit.md.
+ */
+function fiberEndorsesContext(fabric: SupportedFabric, context: DressingContext): boolean {
+  const profile = getFiberProfile(fabric);
+  return (
+    (profile.bestWeather as DressingContext[]).includes(context) ||
+    (profile.bestOccasion as DressingContext[]).includes(context)
+  );
+}
+
+function isBestFit(share: ResolvedShare, context: DressingContext, bestChoices: FabricRecommendation[]): boolean {
+  return Boolean(findMatchingRec(share, bestChoices)) || fiberEndorsesContext(share.fabric, context);
+}
+
 function garmentLabel(shares: ResolvedShare[], dominantFabric: string): string {
   if (shares.length >= 2) {
     return `${shares[0].fabric}-${shares[1].fabric} blend`;
@@ -96,11 +116,7 @@ export function getDressingContextFits(
     const guide = getOccasionWeatherGuide(context);
     const label = getDressingContextLabel(context);
 
-    const bestHits = shares
-      .map((share) => ({ share, rec: findMatchingRec(share, guide.bestChoices) }))
-      .filter((item): item is { share: ResolvedShare; rec: FabricRecommendation } =>
-        Boolean(item.rec),
-      );
+    const bestHits = shares.filter((share) => isBestFit(share, context, guide.bestChoices));
     const avoidHits = shares
       .map((share) => ({ share, rec: findMatchingRec(share, guide.avoid) }))
       .filter((item): item is { share: ResolvedShare; rec: FabricRecommendation } =>
@@ -108,7 +124,7 @@ export function getDressingContextFits(
       );
 
     const avoidShare = avoidHits.reduce((max, item) => Math.max(max, item.share.percentage), 0);
-    const bestShare = bestHits.reduce((max, item) => Math.max(max, item.share.percentage), 0);
+    const bestShare = bestHits.reduce((max, share) => Math.max(max, share.percentage), 0);
 
     if (bestHits.length > 0 && avoidHits.length === 0) {
       const top = bestHits[0];
@@ -118,7 +134,7 @@ export function getDressingContextFits(
         status: 'great' as const,
         summary:
           shares.length > 1
-            ? `${top.share.fabric} (${top.share.percentage}%) suits ${label.toLowerCase()}.`
+            ? `${top.fabric} (${top.percentage}%) suits ${label.toLowerCase()}.`
             : `${labelForGarment} is a strong match for ${label.toLowerCase()}.`,
         alternatives: [],
       };
@@ -143,7 +159,7 @@ export function getDressingContextFits(
         context,
         label,
         status,
-        summary: `This mix has ${best.share.fabric} and ${avoid.share.fabric}. It can work for some uses, but is trickier for ${label.toLowerCase()}.`,
+        summary: `This mix has ${best.fabric} and ${avoid.share.fabric}. It can work for some uses, but is trickier for ${label.toLowerCase()}.`,
         alternatives: guide.bestChoices.slice(0, 3),
       };
     }

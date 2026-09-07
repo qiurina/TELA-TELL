@@ -1,4 +1,8 @@
-import { getSignificantFibers, type CompositionInput } from '@/data/scans/scan-confidence';
+import {
+  getSignificantFibers,
+  TRACE_DETECTION_MIN_PERCENT,
+  type CompositionInput,
+} from '@/data/scans/scan-confidence';
 import { getFabricCategory, resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 import type { GarmentCondition } from '@/data/scans/garment-condition';
 
@@ -18,13 +22,16 @@ export type SyntheticHealthRisk = {
 export const HEALTH_RISK_DISCLAIMER =
   'Advisory only. Risk level is based on fiber type and published research on synthetic microplastics. The synthetic percentage is the model\'s visual confidence estimate, not a lab-verified fiber measurement. The scan does not detect microplastic particles, chemical additives, dyes, or finishes, and is not medical advice.';
 
+// Deliberately doesn't claim the fiber itself causes skin reactions — most real textile
+// contact-dermatitis cases trace to dyes and finishing chemicals, which this scan can't detect
+// (see HEALTH_RISK_DISCLAIMER below and docs/profile-screen-audit.md).
 const LEVEL_SUMMARIES: Record<HealthRiskLevel, string> = {
   high:
-    'This mix can shed microplastic fibers in wear and wash. Chemical additives may transfer with long skin contact.',
+    'This mix sheds the most microplastic fiber of the materials tracked here, in both wash and everyday wear. If skin reacts to a synthetic-heavy garment, dyes or finishes — not the fiber itself — are the more likely cause, and this scan cannot detect either.',
   moderate:
-    'This mix may shed microplastic fibers when worn or washed. Finishes can transfer with long skin contact.',
+    'This mix can shed some microplastic fiber in wash and wear. As with any synthetic-leaning garment, dyes or finishes are the more likely cause of any skin reaction, not the fiber itself.',
   low:
-    'Synthetic share looks lower here. Wash habits and how long it sits on skin still matter.',
+    'Synthetic share looks lower here, so shedding is less of a concern. Wash habits still matter for any garment.',
 };
 
 const FIBER_RISK_LEVELS: Partial<Record<SupportedFabric, HealthRiskLevel>> = {
@@ -91,7 +98,10 @@ export function getSyntheticHealthRisk(
 ): SyntheticHealthRisk | null {
   const syntheticFibers: SupportedFabric[] = [];
 
-  for (const item of getSignificantFibers(compositions)) {
+  // Shedding research shows low-share synthetics (and blends generally) can still shed
+  // materially — use the noise floor here, not the blend-display heuristic, so a real
+  // detected synthetic isn't silently dropped from the risk assessment.
+  for (const item of getSignificantFibers(compositions, TRACE_DETECTION_MIN_PERCENT)) {
     const fiber = resolveFabricAlias(item.material);
     if (fiber && isSyntheticFiber(fiber) && !syntheticFibers.includes(fiber)) {
       syntheticFibers.push(fiber);

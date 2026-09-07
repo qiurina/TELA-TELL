@@ -14,13 +14,16 @@ import {
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
 import { getFiberProfile, getFiberSlug } from '@/data/fabrics/fiber-profiles';
+import {
+  getComfortShortLabel,
+  getFiberComfortScore,
+  overallComfortTone,
+} from '@/data/fabrics/comfort-profile';
 import { getSignificantFibers, type CompositionInput } from '@/data/scans/scan-confidence';
 import { SUSTAINABILITY_DOT } from '@/data/scans/mock-data';
 import {
   getEnvironmentalSummary,
-  getHealthVerdicts,
   getSheddingColor,
-  getSkinShortLabel,
   getToneColor,
 } from '@/features/fabrics/lib/fiber-profile-insights';
 
@@ -65,10 +68,11 @@ function CompactFiberCard({
   const reference = FABRIC_REFERENCES[fabric];
   const category = FABRIC_REGISTRY.find((item) => item.name === fabric)?.category;
   const categoryColors = category ? FABRIC_CATEGORY_COLORS[category] : null;
-  const health = getHealthVerdicts(profile);
+  const comfortScore = getFiberComfortScore(profile);
+  const comfortTone = overallComfortTone(comfortScore);
   const environment = getEnvironmentalSummary(profile);
   const sheddingColor = getSheddingColor(environment.microplasticShedding);
-  const skinColor = getToneColor(health.skinFriendliness.tone);
+  const comfortColor = getToneColor(comfortTone);
   const careTip =
     profile.careInstructions.find((item) => item.recommended)?.text ??
     profile.careInstructions[0]?.text ??
@@ -119,9 +123,9 @@ function CompactFiberCard({
       <View style={styles.statsRow}>
         <View style={styles.statChip}>
           <Heart size={15} color={BrandColors.primary} strokeWidth={2.25} />
-          <Text style={styles.statCaption}>Skin</Text>
-          <Text style={[styles.statValue, { color: skinColor }]} numberOfLines={1}>
-            {getSkinShortLabel(health.skinFriendliness.tone)}
+          <Text style={styles.statCaption}>Comfort</Text>
+          <Text style={[styles.statValue, { color: comfortColor }]} numberOfLines={1}>
+            {getComfortShortLabel(comfortTone)}
           </Text>
         </View>
 

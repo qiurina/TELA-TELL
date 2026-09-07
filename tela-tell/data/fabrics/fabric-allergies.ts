@@ -1,6 +1,6 @@
 import { resolveSupportedFabric } from '@/data/fabrics/fabric-references';
 import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
-import { getSignificantFibers } from '@/data/scans/scan-confidence';
+import { getSignificantFibers, TRACE_DETECTION_MIN_PERCENT } from '@/data/scans/scan-confidence';
 import type { FabricComposition } from '@/data/scans/mock-data';
 
 export type HypoallergenicAlternative = {
@@ -105,7 +105,9 @@ function resolveScanFibers(
   dominantFabric: string,
   compositions: FabricComposition[],
 ): { fabric: SupportedFabric; percentage?: number }[] {
-  const significant = getSignificantFibers(compositions);
+  // A user's declared allergen shouldn't be hidden by a blend-display cutoff — use the noise
+  // floor so a real trace detection still surfaces a conflict.
+  const significant = getSignificantFibers(compositions, TRACE_DETECTION_MIN_PERCENT);
   const resolved: { fabric: SupportedFabric; percentage?: number }[] = [];
 
   for (const item of significant) {

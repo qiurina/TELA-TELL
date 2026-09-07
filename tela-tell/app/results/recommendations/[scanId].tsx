@@ -42,8 +42,6 @@ export default function RecommendationsScreen() {
         <RecommendationsContent
           dominantFabric={result.dominantFabric}
           detectedCompositions={result.compositions ?? []}
-          sustainabilityScore={result.sustainability.score}
-          sustainabilityRating={result.sustainability.rating}
           garmentCondition={result.garmentCondition}
         />
       </ScrollView>

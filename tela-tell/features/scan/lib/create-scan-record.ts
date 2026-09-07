@@ -4,7 +4,11 @@ import {
   resolveFabricAlias,
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
-import { getSignificantFibers, isBlendDetected } from '@/data/scans/scan-confidence';
+import {
+  getSignificantFibers,
+  isBlendDetected,
+  TRACE_DETECTION_MIN_PERCENT,
+} from '@/data/scans/scan-confidence';
 import { formatScanDisplayTime, formatScannedAtDate } from '@/features/scan/lib/scan-timestamp';
 import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
 import { classifyFabric, type ClassificationResult } from '@/features/scan/lib/ml/model';
@@ -26,7 +30,8 @@ function resolveScanFibers(
 ): SupportedFabric[] {
   const fibers: SupportedFabric[] = [];
 
-  for (const item of getSignificantFibers(compositions)) {
+  // Label-accuracy check: does the scan detect this fiber at all, not "is it blend-significant".
+  for (const item of getSignificantFibers(compositions, TRACE_DETECTION_MIN_PERCENT)) {
     const fabric = resolveFabricAlias(item.material);
     if (fabric && !fibers.includes(fabric)) {
       fibers.push(fabric);
@@ -39,16 +44,6 @@ function resolveScanFibers(
   }
 
   return fibers;
-}
-
-function formatFoundLabel(fibers: SupportedFabric[], dominantFabric: string): string {
-  if (fibers.length >= 2) {
-    return `${fibers[0]}-${fibers[1]} blend`;
-  }
-  if (fibers.length === 1) {
-    return fibers[0];
-  }
-  return dominantFabric.replace(/\s*dominant\s*/i, '').trim() || 'a different fabric';
 }
 
 export function buildMislabeling(
@@ -92,14 +87,10 @@ export function buildMislabeling(
     };
   }
 
-  const foundLabel = formatFoundLabel(scanFibers, dominantFabric);
-  const missingLabel =
-    missingFromScan.length === 1 ? missingFromScan[0] : missingFromScan.join(' / ');
-
   return {
     detected: true,
     title: 'Possible Mislabeling Detected',
-    message: `Seller stated '${trimmed}' but the scan did not find ${missingLabel}. Scan found ${foundLabel}. Consider negotiating the price.`,
+    message: "Doesn't match what the seller listed. Consider negotiating the price.",
   };
 }
 

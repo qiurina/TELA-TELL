@@ -7,7 +7,6 @@ import { SyntheticMicroplasticGuide } from '@/features/recommendations/component
 import {
   Heart,
   Leaf,
-  Recycle,
   Scissors,
   Tag,
 } from '@/components/ui/lucide-icons';
@@ -20,10 +19,7 @@ import {
 import { getHealthSafetyMetrics } from '@/data/fabrics/health-safety-scores';
 import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 import { Fonts } from '@/constants/fonts';
-import {
-  type FabricComposition,
-  type SustainabilityRating,
-} from '@/data/scans/mock-data';
+import { type FabricComposition } from '@/data/scans/mock-data';
 import type { GarmentCondition } from '@/data/scans/garment-condition';
 
 function SectionLabel({ title }: { title: string }) {
@@ -50,20 +46,6 @@ function EcoAlternativesSection({
             </View>
           </View>
         ))}
-      </View>
-    </View>
-  );
-}
-
-function RecycledAwarenessSection({ message }: { message: string }) {
-  return (
-    <View style={styles.section}>
-      <SectionLabel title="RECYCLED OPTIONS AWARENESS" />
-      <View style={styles.recycledCard}>
-        <View style={styles.recycledIconWrap}>
-          <Recycle size={20} color="#ca8a04" strokeWidth={2.5} />
-        </View>
-        <Text style={styles.recycledText}>{message}</Text>
       </View>
     </View>
   );
@@ -118,25 +100,18 @@ function GarmentActionsSection({ reuse }: { reuse: ReturnType<typeof getEcoGuida
 type RecommendationsContentProps = {
   dominantFabric: string;
   detectedCompositions?: FabricComposition[];
-  sustainabilityScore?: number;
-  sustainabilityRating?: SustainabilityRating;
   garmentCondition?: GarmentCondition;
 };
 
 export function RecommendationsContent({
   dominantFabric,
   detectedCompositions,
-  sustainabilityScore,
-  sustainabilityRating,
   garmentCondition,
 }: RecommendationsContentProps) {
   const compositions = detectedCompositions ?? [];
   const ecoGuidance = getEcoGuidance(dominantFabric, compositions);
   const healthRisk = getSyntheticHealthRisk(dominantFabric, compositions, garmentCondition);
-  const healthMetrics = getHealthSafetyMetrics(dominantFabric, compositions, {
-    sustainabilityScore,
-    sustainabilityRating,
-  });
+  const healthMetrics = getHealthSafetyMetrics(dominantFabric, compositions);
 
   return (
     <View style={styles.container}>
@@ -145,7 +120,6 @@ export function RecommendationsContent({
       <HealthSafetyScores metrics={healthMetrics} />
 
       <EcoAlternativesSection alternatives={ecoGuidance.ecoAlternatives} />
-      <RecycledAwarenessSection message={ecoGuidance.recycledAwareness} />
       <GarmentActionsSection reuse={ecoGuidance.reuse} />
     </View>
   );
@@ -200,31 +174,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: BrandColors.textMuted,
-  },
-  recycledCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: '#fffbeb',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#fde68a',
-  },
-  recycledIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: BrandColors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recycledText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    lineHeight: 20,
-    color: BrandColors.text,
   },
   actionRow: {
     flexDirection: 'row',

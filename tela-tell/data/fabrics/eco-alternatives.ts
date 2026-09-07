@@ -8,7 +8,6 @@ import { getSignificantFibers, isBlendDetected } from '@/data/scans/scan-confide
 
 export type EcoGuidance = {
   ecoAlternatives: EcoAlternative[];
-  recycledAwareness: string;
   reuse: {
     resale: string;
     donate: string;
@@ -44,8 +43,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Same hand-feel for shirts and dresses. Popular with upcyclers.',
       },
     ],
-    recycledAwareness:
-      'Check for GOTS or recycled cotton tags. Verify fiber on blends before reselling.',
     reuse: {
       resale: 'List as cotton or blend on Carousell or Facebook Marketplace if gently used.',
       donate: 'Most barangay textile drives accept cotton garments.',
@@ -67,8 +64,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Strong outer layers. Mindanao plant fiber, breathable in heat.',
       },
     ],
-    recycledAwareness:
-      'Wool is rare in Philippine ukay. Store with moth protection; felted scraps suit crafters.',
     reuse: {
       resale: 'Niche winter-wear buyers online. Note pilling honestly.',
       donate: 'Check if local craft groups accept wool for felting.',
@@ -90,8 +85,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Comparable sheen and drape. Ethical alternative for formal wear.',
       },
     ],
-    recycledAwareness:
-      'Heritage silk in ukay is often underpriced. Inspect for snags and yellowing.',
     reuse: {
       resale: 'Market to formal-wear and cultural costume buyers with clear fiber notes.',
       donate: 'School theater or cultural groups may accept verified silk garments.',
@@ -113,8 +106,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Relaxed feel with less wrinkling in humid storage.',
       },
     ],
-    recycledAwareness:
-      'Linen wrinkles in humidity. Note care when listing on ukay.',
     reuse: {
       resale: 'Summer linen sells well in vintage markets. Steam before photos.',
       donate: 'Warm-weather drives welcome linen blends.',
@@ -136,8 +127,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Soft drape with closed-loop processing. Good for flowy pieces.',
       },
     ],
-    recycledAwareness:
-      'Synthetics shed microplastics in wash. Use a Guppyfriend bag and air-dry.',
     reuse: {
       resale: 'Note odor and wear on listings. Athletic wear has steady demand.',
       donate: 'Confirm programs accept synthetics; not all drives do.',
@@ -159,8 +148,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Natural option when stretch matters less. Breathable in tropical heat.',
       },
     ],
-    recycledAwareness:
-      'Check elasticity and seams on nylon activewear before buying to resell.',
     reuse: {
       resale: 'List sportswear and bags separately with clear photos of wear.',
       donate: 'Limited acceptance. Prefer upcycle if heavily worn.',
@@ -182,8 +169,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Breathable everyday knits. Less heat-trapping in PH weather.',
       },
     ],
-    recycledAwareness:
-      'Acrylic knits pill quickly in ukay. Price accordingly and photograph texture.',
     reuse: {
       resale: 'Budget knitwear market. Disclose pilling and stretch loss.',
       donate: 'Craft groups may take acrylic yarn from unraveled garments.',
@@ -205,8 +190,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Non-stretch option when fit recovery matters less in tropical heat.',
       },
     ],
-    recycledAwareness:
-      'Spandex is almost always blended. Check labels; stretch-heavy synthetics shed more.',
     reuse: {
       resale: 'List activewear and stretch denim with clear fiber notes.',
       donate: 'Confirm programs accept synthetic blends.',
@@ -228,8 +211,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Philippine plant fiber with comparable breathability for formal wear.',
       },
     ],
-    recycledAwareness:
-      'Rayon weakens when wet. Wash gently; shrinkage is common on ukay finds.',
     reuse: {
       resale: 'Flowy dresses and blouses sell well. Note shrink history if known.',
       donate: 'General textile drives usually accept rayon blends.',
@@ -251,8 +232,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Natural alternative for totes and outerwear.',
       },
     ],
-    recycledAwareness:
-      'Leather ages with humidity. Condition before resale and note scuffs honestly.',
     reuse: {
       resale: 'Vintage leather market. Photograph grain, seams, and odor.',
       donate: 'Craft groups may accept clean leather scraps.',
@@ -274,8 +253,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Soft matte texture for casual layers without animal material.',
       },
     ],
-    recycledAwareness:
-      'Suede stains easily in humid storage. Brush nap and disclose water marks.',
     reuse: {
       resale: 'Note nap direction and wear. Suede buyers inspect texture closely.',
       donate: 'Limited acceptance. Prefer upcycle if heavily stained.',
@@ -297,8 +274,6 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
         similarity: 'Strong ropes, bags, and home textiles from other PH plant fibers.',
       },
     ],
-    recycledAwareness:
-      'Support Mindanao abaca weavers when buying new. In ukay, look for sinamay and barong panels.',
     reuse: {
       resale: 'List as Philippine abaca or sinamay to craft and formal-wear buyers.',
       donate: 'Weaving cooperatives may accept clean plant-fiber yardage.',
@@ -322,8 +297,6 @@ const MIXED_FIBER_GUIDANCE: EcoGuidance = {
         similarity: 'Clearer match for alternatives. Rescan one fabric area in even lighting.',
       },
   ],
-  recycledAwareness:
-    'Mixed ukay finds are common. Rescan under even light or check the garment tag first.',
   reuse: {
     resale: 'Verify fiber type before listing. Buyers ask for composition on blends.',
     donate: 'Donate only after a clearer scan or label check.',
@@ -476,22 +449,6 @@ function buildBlendReuse(
   };
 }
 
-function buildBlendRecycledAwareness(
-  primary: SupportedFabric,
-  fibers: { fabric: SupportedFabric; percentage: number }[],
-): string {
-  const syntheticShare = fibers
-    .filter((item) => getFabricCategory(item.fabric) === 'Synthetic')
-    .reduce((sum, item) => sum + item.percentage, 0);
-  const primaryNote = ECO_GUIDANCE_BY_FIBER[primary].recycledAwareness;
-
-  if (syntheticShare >= 25) {
-    return `This looks like a blend with about ${Math.round(syntheticShare)}% synthetic content. Prefer recycled or natural-dominant tags when buying again. ${primaryNote}`;
-  }
-
-  return `Detected as a blend. Keep the full mix in mind when comparing tags. ${primaryNote}`;
-}
-
 export function getEcoGuidance(
   dominantFabric: string,
   compositions: FabricComposition[] = [],
@@ -515,7 +472,6 @@ export function getEcoGuidance(
   if (blend) {
     return {
       ecoAlternatives: buildBlendAlternatives(primary, significant),
-      recycledAwareness: buildBlendRecycledAwareness(primary, significant),
       reuse: buildBlendReuse(significant),
       context: {
         kind: 'blend',

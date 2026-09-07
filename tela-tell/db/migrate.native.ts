@@ -1,5 +1,6 @@
 import { getDatabase } from '@/db/client';
 import { SCHEMA_SQL } from '@/db/schema';
+import type { SupportedFabric } from '@/data/fabrics/fabrics';
 
 let migrationPromise: Promise<void> | null = null;
 
@@ -27,11 +28,66 @@ async function runMigration(): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)',
   );
   await backfillScanCreatedAt(db);
+  await resyncScanSustainability(db);
 
   try {
     const { purgeExpiredDeletedScans } = await import('@/db/scans');
     await purgeExpiredDeletedScans(30);
   } catch {
+  }
+}
+
+/**
+ * Re-derives sustainability (and profile/recommendations) for every stored scan from the
+ * current fiber-profiles.ts data, since saveScan() snapshots these at scan time rather than
+ * computing them live on read. Safe to run on every launch — recompute is pure/cheap, and a
+ * fiber-profiles.ts update should retroactively fix history, not just new scans.
+ */
+async function resyncScanSustainability(db: Awaited<ReturnType<typeof getDatabase>>) {
+  const { buildScanProfile } = await import('@/features/scan/lib/build-scan-profile');
+  const { resolveFabricAlias } = await import('@/data/fabrics/fabrics');
+  const { isBlendDetected } = await import('@/data/scans/scan-confidence');
+
+  const rows = await db.getAllAsync<{ scan_ID: string; resultJson: string | null }>(
+    'SELECT scan_ID, resultJson FROM tblScan',
+  );
+
+  for (const row of rows) {
+    if (!row.resultJson) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(row.resultJson);
+      const compositions = parsed.compositions ?? [];
+      const primary = (resolveFabricAlias(parsed.dominantFabric) ??
+        parsed.dominantFabric) as SupportedFabric;
+      const isBlend = isBlendDetected(compositions);
+
+      const { profile, sustainability, recommendations } = buildScanProfile(
+        primary,
+        parsed.dominantFabric,
+        compositions,
+        isBlend,
+      );
+
+      const next = { ...parsed, profile, sustainability, recommendations };
+
+      await db.runAsync(
+        `UPDATE tblScan
+         SET sustainabilityRating = ?, sustainabilityLabel = ?, sustainabilityScore = ?, resultJson = ?
+         WHERE scan_ID = ?`,
+        [
+          sustainability.rating,
+          sustainability.label,
+          sustainability.score,
+          JSON.stringify(next),
+          row.scan_ID,
+        ],
+      );
+    } catch {
+      continue;
+    }
   }
 }
 

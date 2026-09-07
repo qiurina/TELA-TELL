@@ -1,16 +1,16 @@
-import { getSignificantFibers, type CompositionInput } from '@/data/scans/scan-confidence';
+import type { CompositionInput } from '@/data/scans/scan-confidence';
 import { getFabricCategory, resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
-import type { SustainabilityRating } from '@/data/scans/mock-data';
+import { getFiberProfile } from '@/data/fabrics/fiber-profiles';
+import { getWeightedComfort, type ComfortAxisKey } from '@/data/fabrics/comfort-profile';
 
 export type HealthSafetyTone = 'good' | 'caution' | 'warn';
 
 export type SheddingLevel = 'Low' | 'Medium' | 'High';
 
-export type HealthSafetyMetricId =
-  | 'skinHealth'
-  | 'microplasticShedding'
-  | 'sustainabilityImpact'
-  | 'environmentalImpact';
+// Sustainability Impact and Environmental Impact metrics were removed — they duplicated the
+// Sustainability score already shown on the Results screen and the Profile screen's Eco tab
+// (same underlying score, recomputed and re-labeled a third time here).
+export type HealthSafetyMetricId = 'skinHealth' | 'microplasticShedding';
 
 export type HealthSafetyMetric = {
   id: HealthSafetyMetricId;
@@ -24,11 +24,6 @@ export type HealthSafetyMetric = {
   /** Suffix under/after value — "/10" or empty for level labels. */
   valueSuffix: string;
   sheddingLevel?: SheddingLevel;
-};
-
-export type HealthSafetyInput = {
-  sustainabilityScore?: number;
-  sustainabilityRating?: SustainabilityRating;
 };
 
 function clampScore(value: number): number {
@@ -59,15 +54,31 @@ function shareOf(
   return total;
 }
 
-function fiberListLabel(fibers: SupportedFabric[]): string {
-  if (fibers.length === 0) {
-    return 'this fabric';
-  }
-  if (fibers.length === 1) {
-    return fibers[0].toLowerCase();
-  }
-  return `${fibers.slice(0, 2).join(' / ').toLowerCase()}`;
-}
+// Notes for whichever comfort axis scores lowest across the weighted blend — see
+// data/fabrics/comfort-profile.ts for the research behind each axis. Deliberately framed as
+// comfort/discomfort, not irritation or allergy.
+const AXIS_NOTE: Record<ComfortAxisKey, Record<'good' | 'caution' | 'warn', string>> = {
+  breathability: {
+    good: 'Good airflow for everyday comfort in warm weather.',
+    caution: 'Moderate airflow — reasonable for most everyday wear.',
+    warn: 'Lower airflow can trap heat against skin in hot, humid conditions.',
+  },
+  moistureManagement: {
+    good: 'Handles moisture well for warm, humid weather.',
+    caution: 'Limited moisture absorption in this mix.',
+    warn: 'Traps moisture against skin — a known trigger for heat rash in hot, humid conditions.',
+  },
+  heatRetention: {
+    good: 'Breathable enough to avoid trapping much heat.',
+    caution: 'Some heat retention — more noticeable in everyday tropical wear.',
+    warn: 'Retains more heat, which can feel uncomfortable in everyday tropical wear.',
+  },
+  mechanicalComfort: {
+    good: 'Smooth feel with low friction against skin.',
+    caution: 'Firmer or more structured texture against bare skin.',
+    warn: "Coarser fiber can cause a mechanical 'prickle' feeling against skin — a physical effect of fiber thickness, not an allergy.",
+  },
+};
 
 /** Acrylic & polyester shed more readily than nylon / spandex blends. */
 function sheddingLevelFromComposition(
@@ -104,59 +115,27 @@ function sheddingBarScore(level: SheddingLevel): number {
   return 9.0;
 }
 
-function sustainabilityToScore(
-  score: number | undefined,
-  rating: SustainabilityRating | undefined,
-): number {
-  if (typeof score === 'number' && Number.isFinite(score)) {
-    return clampScore(score);
-  }
-  if (rating === 'green') {
-    return 8.5;
-  }
-  if (rating === 'yellow') {
-    return 6.5;
-  }
-  if (rating === 'red') {
-    return 4.0;
-  }
-  return 7.0;
-}
-
 export function getHealthSafetyMetrics(
   dominantFabric: string,
   compositions: CompositionInput[] = [],
-  input: HealthSafetyInput = {},
 ): HealthSafetyMetric[] {
   const items =
     compositions.length > 0 ? compositions : [{ material: dominantFabric, percentage: 100 }];
-  const significant = getSignificantFibers(items);
 
   const syntheticShare = shareOf(items, (fiber) => getFabricCategory(fiber) === 'Synthetic');
-  const woolShare = shareOf(items, (fiber) => fiber === 'Wool');
   const acrylicShare = shareOf(items, (fiber) => fiber === 'Acrylic');
   const polyesterShare = shareOf(items, (fiber) => fiber === 'Polyester');
   const highShedShare = acrylicShare + polyesterShare;
-  const irritantShare = woolShare + acrylicShare;
 
-  const irritantFibers = significant
-    .map((item) => resolveFabricAlias(item.material))
-    .filter((fiber): fiber is SupportedFabric => Boolean(fiber))
-    .filter(
-      (fiber) =>
-        fiber === 'Wool' || fiber === 'Acrylic' || getFabricCategory(fiber) === 'Synthetic',
-    );
-  const uniqueIrritants = [...new Set(irritantFibers)];
-
-  // 1. Skin Health — comfort + sensitive skin.
-  let skinHealth = 9.2 - irritantShare * 0.055 - syntheticShare * 0.02;
-  skinHealth = clampScore(skinHealth);
-  const skinNote =
-    skinHealth >= 8
-      ? 'Gentle on most skin. Good everyday comfort for sensitive wearers.'
-      : skinHealth >= 6.5
-        ? `May affect comfort for sensitive skin due to ${fiberListLabel(uniqueIrritants)}.`
-        : `Higher irritation potential. Prefer a soft natural layer next to skin.`;
+  // Wearing Comfort — breathability, moisture management, heat retention, and mechanical feel,
+  // weighted across the full detected composition. Replaces a previous "irritant fiber"
+  // formula; see data/fabrics/comfort-profile.ts for the research behind each axis. This
+  // deliberately does not claim any fiber causes/prevents allergies.
+  const primaryFabric = resolveFabricAlias(dominantFabric) ?? (items[0]?.material as SupportedFabric);
+  const primaryProfile = getFiberProfile(primaryFabric);
+  const comfort = getWeightedComfort(primaryProfile, items);
+  const skinHealth = clampScore(comfort.score);
+  const skinNote = AXIS_NOTE[comfort.weakestAxis][comfort.weakestAxisTone];
 
   // 2. Microplastic shedding — educational Low / Medium / High.
   const sheddingLevel = sheddingLevelFromComposition(syntheticShare, highShedShare);
@@ -167,32 +146,10 @@ export function getHealthSafetyMetrics(
         ? 'Some synthetics. Moderate shedding; wash cold on full loads.'
         : 'High synthetic share. More shedding in wear and laundry.';
 
-  // 3. Sustainability impact — from scan sustainability score/rating.
-  const sustainability = sustainabilityToScore(
-    input.sustainabilityScore,
-    input.sustainabilityRating,
-  );
-  const sustainabilityNote =
-    sustainability >= 8
-      ? 'Stronger eco profile for reuse and lower-impact fiber choices.'
-      : sustainability >= 6
-        ? 'Mixed sustainability. Prefer longer wear and careful washing.'
-        : 'Weaker sustainability profile. Prioritize reuse, repair, or natural swaps.';
-
-  // 4. Environmental impact — footprint from synthetics + sustainability.
-  let environmental = sustainability - syntheticShare * 0.03 - highShedShare * 0.015;
-  environmental = clampScore(environmental);
-  const environmentalNote =
-    environmental >= 8
-      ? 'Lower environmental burden relative to heavy synthetic blends.'
-      : environmental >= 6
-        ? 'Moderate footprint. Extend garment life to reduce waste.'
-        : 'Higher environmental load from synthetics and wash shedding.';
-
   return [
     {
       id: 'skinHealth',
-      title: 'Skin Health',
+      title: 'Wearing Comfort',
       note: skinNote,
       score: skinHealth,
       tone: toneForScore(skinHealth),
@@ -208,24 +165,6 @@ export function getHealthSafetyMetrics(
       valueLabel: sheddingLevel,
       valueSuffix: '',
       sheddingLevel,
-    },
-    {
-      id: 'sustainabilityImpact',
-      title: 'Sustainability Impact',
-      note: sustainabilityNote,
-      score: sustainability,
-      tone: toneForScore(sustainability),
-      valueLabel: sustainability.toFixed(1),
-      valueSuffix: ' /10',
-    },
-    {
-      id: 'environmentalImpact',
-      title: 'Environmental Impact',
-      note: environmentalNote,
-      score: environmental,
-      tone: toneForScore(environmental),
-      valueLabel: environmental.toFixed(1),
-      valueSuffix: ' /10',
     },
   ];
 }
