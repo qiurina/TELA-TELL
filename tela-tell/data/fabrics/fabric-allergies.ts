@@ -26,22 +26,18 @@ const DEFAULT_ALTERNATIVES: HypoallergenicAlternative[] = [
 const FABRIC_ALTERNATIVES: Partial<Record<SupportedFabric, HypoallergenicAlternative[]>> = {
   Cotton: [
     { name: 'Linen', note: 'Breathable natural weave with a crisp hand-feel' },
-    { name: 'Bamboo fabric', note: 'Smooth, gentle option for reactive skin' },
     { name: 'Tencel / lyocell', note: 'Soft drape with moisture-wicking comfort' },
   ],
   Linen: [
     { name: 'Cotton', note: 'Soft everyday option when linen feels too coarse' },
-    { name: 'Bamboo fabric', note: 'Smooth finish with low irritation' },
     { name: 'Tencel / lyocell', note: 'Fluid drape without linen stiffness' },
   ],
   Abaca: [
     { name: 'Cotton', note: 'Softer hand-feel for everyday comfort' },
     { name: 'Linen', note: 'Similar breathability with a familiar weave' },
-    { name: 'Bamboo fabric', note: 'Gentle alternative for sensitive skin' },
   ],
   Wool: [
     { name: 'Cotton', note: 'Naturally hypoallergenic and breathable for everyday wear' },
-    { name: 'Bamboo fabric', note: 'Gentle on skin with a smooth hand-feel' },
     { name: 'Linen', note: 'Breathable with low irritation in hot, humid weather' },
   ],
   Silk: [

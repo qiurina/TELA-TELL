@@ -53,7 +53,7 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Recycled wool',
-        similarity: 'Warm layers with loft. RWS labels appear in imported ukay.',
+        similarity: 'Warm layers with loft. Look for GRS (Global Recycled Standard) tags in imported ukay.',
       },
       {
         name: 'Lightweight cotton blend',
