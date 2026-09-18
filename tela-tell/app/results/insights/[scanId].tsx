@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ActivityIndicator } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View , ActivityIndicator } from 'react-native';
+
 
 import { PersonalizedInsightsContent } from '@/features/recommendations/components/personalized-insights-content';
 import { ProfilePreferencesGate } from '@/features/profile/components/profile-preferences-gate';

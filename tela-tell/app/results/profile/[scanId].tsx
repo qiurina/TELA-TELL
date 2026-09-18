@@ -1,6 +1,6 @@
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View , ActivityIndicator } from 'react-native';
+
 
 import { BlendFiberProfileContent } from '@/features/fabrics/components/blend-fiber-profile-content';
 import { FiberProfileContent } from '@/features/fabrics/components/fiber-profile-content';

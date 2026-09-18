@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ActivityIndicator } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View , ActivityIndicator } from 'react-native';
+
 
 import { RecommendationsContent } from '@/features/recommendations/components/recommendations-content';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
