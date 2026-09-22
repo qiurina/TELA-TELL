@@ -51,12 +51,17 @@ async function loadModel(): Promise<TFLiteModel> {
 
 function scoresToCompositions(scores: Float32Array): FabricComposition[] {
   const total = scores.reduce((sum, value) => sum + value, 0) || 1;
-  return MODEL_LABELS.map((material, index) => ({
+  const all = MODEL_LABELS.map((material, index) => ({
     material,
     percentage: Math.round((scores[index] / total) * 100),
-  }))
-    .filter((item) => item.percentage > 0)
-    .sort((a, b) => b.percentage - a.percentage);
+  })).sort((a, b) => b.percentage - a.percentage);
+
+  const significant = all.filter((item) => item.percentage > 0);
+  // A genuinely low-confidence read can round every class down to 0% — that's a real
+  // (if unreliable) inference, not a model failure, so still surface the top guess
+  // rather than letting the caller misreport it as ModelUnavailableError. The UI
+  // already has a dedicated low-confidence warning path for this.
+  return significant.length > 0 ? significant : all.slice(0, 1);
 }
 
 function averageScores(scoreSets: Float32Array[]): Float32Array {
@@ -92,6 +97,13 @@ export async function classifyFabric(imageUris: string[]): Promise<Classificatio
   }
 
   const scores = scoreSets.length > 1 ? averageScores(scoreSets) : scoreSets[0];
+
+  // A NaN/Infinity score (corrupted frame, edge-case hardware output) would otherwise
+  // silently turn into a "NaN%" composition entry instead of a clear failure — treat
+  // it the same as any other unusable model output.
+  if (!scores.every((value) => Number.isFinite(value))) {
+    throw new ModelUnavailableError('Model produced invalid output.');
+  }
 
   const compositions = scoresToCompositions(scores).slice(0, 3);
   const top = compositions[0];

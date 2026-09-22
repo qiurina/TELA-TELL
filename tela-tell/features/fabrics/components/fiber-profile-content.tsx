@@ -132,26 +132,45 @@ function PropertyCell({
   );
 }
 
-function InsightLine({
+const COMFORT_TONE_STYLE: Record<
+  'good' | 'caution' | 'warn',
+  { background: string; border: string; accent: string }
+> = {
+  good: { background: '#F0FDF4', border: '#BBF7D0', accent: '#16A34A' },
+  caution: { background: '#FFFBEB', border: '#FDE68A', accent: '#B45309' },
+  warn: { background: '#FEF2F2', border: '#FECACA', accent: '#DC2626' },
+};
+
+function ComfortInsightRow({
+  label,
   text,
   tone,
 }: {
+  label: string;
   text: string;
   tone: 'good' | 'caution' | 'warn';
 }) {
+  const toneStyle = COMFORT_TONE_STYLE[tone];
   const icon =
     tone === 'good' ? (
-      <CircleCheck size={16} color="#16A34A" strokeWidth={2.25} />
+      <CircleCheck size={15} color={toneStyle.accent} strokeWidth={2.25} />
     ) : tone === 'caution' ? (
-      <TriangleAlert size={16} color="#B45309" strokeWidth={2.25} />
+      <TriangleAlert size={15} color={toneStyle.accent} strokeWidth={2.25} />
     ) : (
-      <CircleX size={16} color="#DC2626" strokeWidth={2.25} />
+      <CircleX size={15} color={toneStyle.accent} strokeWidth={2.25} />
     );
 
   return (
-    <View style={styles.insightLine}>
-      {icon}
-      <Text style={styles.insightText}>{text}</Text>
+    <View
+      style={[
+        styles.comfortRow,
+        { backgroundColor: toneStyle.background, borderColor: toneStyle.border },
+      ]}>
+      <View style={styles.comfortRowHeader}>
+        {icon}
+        <Text style={[styles.comfortRowLabel, { color: toneStyle.accent }]}>{label}</Text>
+      </View>
+      <Text style={styles.comfortRowText}>{text}</Text>
     </View>
   );
 }
@@ -286,21 +305,25 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
       {activeTab === 'health' ? (
         <View style={styles.section}>
           <SectionLabel>Wearing comfort</SectionLabel>
-          <View style={[styles.textCard, faintCardShadow()]}>
-            <InsightLine
-              text={`Breathability: ${comfort.breathability.note}`}
+          <View style={styles.comfortList}>
+            <ComfortInsightRow
+              label="Breathability"
+              text={comfort.breathability.note}
               tone={comfort.breathability.tone}
             />
-            <InsightLine
-              text={`Moisture: ${comfort.moistureManagement.note}`}
+            <ComfortInsightRow
+              label="Moisture"
+              text={comfort.moistureManagement.note}
               tone={comfort.moistureManagement.tone}
             />
-            <InsightLine
-              text={`Heat retention: ${comfort.heatRetention.note}`}
+            <ComfortInsightRow
+              label="Heat retention"
+              text={comfort.heatRetention.note}
               tone={comfort.heatRetention.tone}
             />
-            <InsightLine
-              text={`Feel: ${comfort.mechanicalComfort.note}`}
+            <ComfortInsightRow
+              label="Feel"
+              text={comfort.mechanicalComfort.note}
               tone={comfort.mechanicalComfort.tone}
             />
           </View>
@@ -587,16 +610,28 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.borderLight,
     gap: 12,
   },
-  insightLine: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  comfortList: {
     gap: 10,
   },
-  insightText: {
-    flex: 1,
-    fontFamily: Fonts.medium,
-    fontSize: 14,
-    lineHeight: 20,
+  comfortRow: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    gap: 6,
+  },
+  comfortRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  comfortRowLabel: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+  },
+  comfortRowText: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
     color: BrandColors.text,
   },
   careRow: {

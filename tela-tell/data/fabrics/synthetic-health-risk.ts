@@ -20,20 +20,25 @@ export type SyntheticHealthRisk = {
 };
 
 export const HEALTH_RISK_DISCLAIMER =
-  'Advisory only. Risk level is based on fiber type and published research on synthetic microplastics. The synthetic percentage is the model\'s visual confidence estimate, not a lab-verified fiber measurement. The scan does not detect microplastic particles, chemical additives, dyes, or finishes, and is not medical advice.';
+  'Advisory only. Risk level is based on fiber type and peer-reviewed microplastic research (see Sources in the About screen). This scan cannot detect microplastic particles, chemicals, dyes, or finishes, and it is not medical advice.';
 
 // Deliberately doesn't claim the fiber itself causes skin reactions — most real textile
 // contact-dermatitis cases trace to dyes and finishing chemicals, which this scan can't detect
 // (see HEALTH_RISK_DISCLAIMER below and docs/profile-screen-audit.md).
 const LEVEL_SUMMARIES: Record<HealthRiskLevel, string> = {
   high:
-    'This mix sheds the most microplastic fiber of the materials tracked here, in both wash and everyday wear. If skin reacts to a synthetic-heavy garment, dyes or finishes — not the fiber itself — are the more likely cause, and this scan cannot detect either.',
+    'This fabric sheds more tiny plastic fibers than most other synthetic fabrics, both when washed and worn. If skin irritation happens, it is usually caused by dyes or finishing chemicals, not the fabric fibers themselves.',
   moderate:
-    'This mix can shed some microplastic fiber in wash and wear. As with any synthetic-leaning garment, dyes or finishes are the more likely cause of any skin reaction, not the fiber itself.',
+    'This fabric can shed some tiny plastic fibers when washed and worn. If skin irritation happens, it is usually caused by dyes or finishing chemicals, not the fabric fibers themselves.',
   low:
-    'Synthetic share looks lower here, so shedding is less of a concern. Wash habits still matter for any garment.',
+    'This fabric has a lower amount of synthetic material, so shedding is less of a concern. Good wash habits still help with any fabric.',
 };
 
+// Ranking backed by measured microplastic-shedding rates, not editorial judgment:
+// Napper & Thompson (2016, Marine Pollution Bulletin) and De Falco et al. (2020,
+// Environmental Science & Technology) both found polyester/acrylic shed more fiber
+// per wash than nylon/spandex. See docs/fabric-score-sources.md refs [12]-[15] for
+// the full trail, including two 2025/2026 follow-up studies.
 const FIBER_RISK_LEVELS: Partial<Record<SupportedFabric, HealthRiskLevel>> = {
   Polyester: 'high',
   Acrylic: 'high',
@@ -43,15 +48,15 @@ const FIBER_RISK_LEVELS: Partial<Record<SupportedFabric, HealthRiskLevel>> = {
 
 const PRACTICAL_TIPS: string[] = [
   'Wash in cold water on a gentle cycle when you can.',
-  'Run fuller loads — a lower water-to-fabric ratio means less fiber release per wash.',
+  'Run fuller loads. A lower water-to-fabric ratio means less fiber release per wash.',
   'Skip high heat in the dryer when possible.',
   'For next buys, prefer natural-dominant or recycled tags when the fit still works for you.',
 ];
 
 
 const CONDITION_TIPS: Partial<Record<GarmentCondition, string>> = {
-  Worn: "This piece already shows wear — repeated washing and use loosen more fibers over a garment's life, so gentle care matters more from here on.",
-  Damaged: 'Frayed or torn edges expose cut fiber ends, which shed more readily than intact fabric. Consider mending torn seams or retiring heavily damaged synthetic pieces.',
+  Worn: "This piece already shows wear. Washing and wearing it more will loosen even more fibers, so gentle care matters more from here on.",
+  Damaged: 'Frayed or torn edges expose the fiber ends underneath, which shed more than fabric that is still intact. Consider fixing torn seams or replacing pieces that are badly damaged.',
 };
 
 function buildPracticalTips(condition?: GarmentCondition): string[] {
@@ -98,9 +103,11 @@ export function getSyntheticHealthRisk(
 ): SyntheticHealthRisk | null {
   const syntheticFibers: SupportedFabric[] = [];
 
-  // Shedding research shows low-share synthetics (and blends generally) can still shed
-  // materially — use the noise floor here, not the blend-display heuristic, so a real
-  // detected synthetic isn't silently dropped from the risk assessment.
+  // Low-share synthetics (and blends generally) can still shed materially — a 2023
+  // ScienceDirect study on elastane-blend microfiber release and Zhang et al. (2025,
+  // Environmental Pollution) both found this (see docs/fiber-percentage-methodology.md
+  // §C). Use the noise floor here, not the blend-display heuristic, so a real detected
+  // synthetic isn't silently dropped from the risk assessment.
   for (const item of getSignificantFibers(compositions, TRACE_DETECTION_MIN_PERCENT)) {
     const fiber = resolveFabricAlias(item.material);
     if (fiber && isSyntheticFiber(fiber) && !syntheticFibers.includes(fiber)) {

@@ -38,18 +38,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
 
     void (async () => {
-      const storedSession = await getStoredSession();
+      try {
+        const storedSession = await getStoredSession();
 
-      if (storedSession?.userId) {
-        await hydrateUserPreferences(storedSession.userId);
+        if (storedSession?.userId) {
+          await hydrateUserPreferences(storedSession.userId);
+        }
+
+        if (!active) {
+          return;
+        }
+
+        setSession(storedSession);
+      } catch (error) {
+        // A failed session/preferences read (e.g. a mid-migration database) must not
+        // leave isLoading stuck forever — app/index.tsx blocks all navigation on it.
+        // Falling back to signed-out is safe: the user just re-lands on /welcome.
+        console.error('[TELA-TELL] Auth initialization failed:', error);
+        if (active) {
+          setSession(null);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-
-      if (!active) {
-        return;
-      }
-
-      setSession(storedSession);
-      setIsLoading(false);
     })();
 
     return () => {

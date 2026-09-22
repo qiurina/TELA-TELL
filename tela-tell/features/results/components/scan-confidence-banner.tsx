@@ -1,10 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Info, TriangleAlert } from '@/components/ui/lucide-icons';
+import { TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import {
   LOW_CONFIDENCE_WARNING,
-  MODERATE_CONFIDENCE_NOTE,
   getConfidenceLabel,
   getConfidenceLevel,
 } from '@/data/scans/scan-confidence';
@@ -38,12 +37,7 @@ export function ScanConfidenceBanner({
   }
 
   if (compact) {
-    return level === 'moderate' ? (
-      <View style={styles.moderateNote}>
-        <Info size={14} color="#ca8a04" strokeWidth={2.25} />
-        <Text style={styles.moderateNoteText}>{MODERATE_CONFIDENCE_NOTE}</Text>
-      </View>
-    ) : null;
+    return null;
   }
 
   return (
@@ -64,13 +58,6 @@ export function ScanConfidenceBanner({
         <Text style={styles.dominantValue}>{dominantFabric}</Text>
         <Text style={styles.confidenceLabel}>{getConfidenceLabel(confidence)}</Text>
       </View>
-
-      {level === 'moderate' ? (
-        <View style={styles.moderateNote}>
-          <Info size={14} color="#ca8a04" strokeWidth={2.25} />
-          <Text style={styles.moderateNoteText}>{MODERATE_CONFIDENCE_NOTE}</Text>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -156,18 +143,5 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 13,
     color: BrandColors.textMuted,
-  },
-  moderateNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    paddingHorizontal: 4,
-  },
-  moderateNoteText: {
-    flex: 1,
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#92400e',
   },
 });

@@ -1,18 +1,19 @@
 # Fabric classifier model
 
-`fabric_classifier.tflite` here is a placeholder text file, not a real model — it exists
-so the app always has something to `require()` and bundle without crashing Metro.
+`fabric_classifier.tflite` here is the real trained model (input `[1,224,224,3]` float32,
+output `[1,12]` float32 over the 12 classes in `fabric_classifier.labels.txt`), loaded at
+runtime by `features/scan/lib/ml/model.ts` via `react-native-fast-tflite`.
 
-`features/scan/lib/ml/model.ts` tries to load it at runtime; loading a placeholder fails
-gracefully and the app falls back to mock scan results (see `create-scan-record.ts`).
+There is no mock/placeholder fallback — if the model fails to load or classify, `classifyFabric()`
+throws and `create-scan-record.ts` surfaces "Could not analyze this photo. Please try again."
+to the user.
 
-Once you've trained a real model (see `../../../ml-training/README.md`), replace this
-file with the exported `.tflite` output:
+Class order in the labels file must match `SUPPORTED_FABRICS` in
+`../../data/fabrics/fabrics.ts`.
+
+To replace the model with a newer training run (see `../../../ml-training/README.md`):
 
 ```bash
 cp ../../ml-training/models/fabric_classifier.tflite ./fabric_classifier.tflite
 cp ../../ml-training/models/fabric_classifier.labels.txt ./fabric_classifier.labels.txt
 ```
-
-Class order in the labels file must match `SUPPORTED_FABRICS` in
-`../../data/fabrics/fabrics.ts`.

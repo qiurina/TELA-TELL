@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { showAlert } from '@/components/ui/alert-dialog';
@@ -41,25 +41,39 @@ export default function HistoryScreen() {
 
   const { session } = useAuth();
   const [previews, setPreviews] = useState<RecentScanPreview[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
-    const userId = session?.userId ?? null;
-    const previewList = await getAllScans({ userId });
-    setPreviews(previewList);
+    try {
+      const userId = session?.userId ?? null;
+      const previewList = await getAllScans({ userId });
+      setPreviews(previewList);
+    } catch (error) {
+      console.error('[TELA-TELL] Failed to reload scan history:', error);
+    }
   }, [session?.userId]);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
 
+      setLoading(true);
       void (async () => {
-        const userId = session?.userId ?? null;
-        const previewList = await getAllScans({ userId });
-        if (!active) {
-          return;
+        try {
+          const userId = session?.userId ?? null;
+          const previewList = await getAllScans({ userId });
+          if (!active) {
+            return;
+          }
+          setPreviews(previewList);
+          setPage(1);
+        } catch (error) {
+          console.error('[TELA-TELL] Failed to load scan history:', error);
+        } finally {
+          if (active) {
+            setLoading(false);
+          }
         }
-        setPreviews(previewList);
-        setPage(1);
       })();
 
       return () => {
@@ -320,9 +334,15 @@ export default function HistoryScreen() {
               />
             )}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>
-                No scans yet. Analyze a fabric to start your history.
-              </Text>
+              loading ? (
+                <View style={styles.loading}>
+                  <ActivityIndicator color={BrandColors.primary} />
+                </View>
+              ) : (
+                <Text style={styles.emptyText}>
+                  No scans yet. Analyze a fabric to start your history.
+                </Text>
+              )
             }
             initialNumToRender={HISTORY_PAGE_SIZE}
             windowSize={7}
@@ -532,6 +552,11 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 12,
+  },
+  loading: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
     fontFamily: Fonts.regular,

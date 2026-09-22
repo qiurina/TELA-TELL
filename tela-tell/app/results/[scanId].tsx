@@ -218,7 +218,6 @@ export default function ResultsScreen() {
           scanCaption="Your scan"
           detectedFabric={headline.title}
           detectedSubtitle={headline.isBlend ? undefined : headline.subtitle}
-          confidence={result.confidence}
           referenceImage={primaryReference?.image}
           referenceTitle={primaryReference?.title}
           fiberBadge={fiberBadge}

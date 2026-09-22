@@ -52,13 +52,15 @@ function breathabilityAxis(fiber: FiberProfile): ComfortAxis {
     tone === 'good'
       ? `${level} airflow keeps this cool in warm, humid weather.`
       : tone === 'caution'
-        ? `${level} airflow — reasonable for most everyday wear.`
+        ? `${level} airflow. Reasonable for most everyday wear.`
         : `${level} airflow can trap heat next to skin in hot, humid conditions.`;
   return { label: level, tone, note };
 }
 
 // Wool's moisture behavior is a distinct, well-documented mechanism (hygroscopic fiber core),
-// not just "absorbs" like a plant fiber — handled as a special case below.
+// not just "absorbs" like a plant fiber — handled as a special case below. The ~30% figure
+// comes from The Woolmark Company's published research factsheet "Wool is Naturally
+// Breathable"; see docs/profile-screen-audit.md for the full citation.
 const ABSORBENT_MOISTURE = new Set(['Absorbs', 'Absorbs fast', 'Absorbs easily', 'Light absorb']);
 const REPELLING_MOISTURE = new Set(['Repels']);
 
@@ -68,7 +70,7 @@ function moistureAxis(fiber: FiberProfile): ComfortAxis {
       label: 'Absorbs, stays dry-feeling',
       tone: 'good',
       note:
-        "Wool is hygroscopic — it can absorb roughly 30% of its own weight in moisture into the fiber's core while the surface stays comparatively dry to the touch.",
+        'Wool can soak up about 30% of its own weight in moisture inside the fibers, while the surface stays dry to the touch.',
     };
   }
 
@@ -76,7 +78,7 @@ function moistureAxis(fiber: FiberProfile): ComfortAxis {
     return {
       label: fiber.moisture,
       tone: 'good',
-      note: 'Pulls moisture away from skin, which helps in heat — can feel damp until it fully dries.',
+      note: 'Pulls moisture away from skin, which helps in heat. Can feel damp until it fully dries.',
     };
   }
 
@@ -85,14 +87,16 @@ function moistureAxis(fiber: FiberProfile): ComfortAxis {
       label: fiber.moisture,
       tone: 'warn',
       note:
-        'Moisture stays on the surface rather than being absorbed. In hot, humid conditions with limited airflow, trapped sweat against skin is a known trigger for heat rash (miliaria).',
+        // Heat rash (miliaria) mechanism per DermNet NZ and the Merck Manual; see
+        // docs/profile-screen-audit.md for the full citation.
+        'Moisture stays on the surface instead of soaking in. In hot, humid weather, trapped sweat against skin can lead to heat rash.',
     };
   }
 
   return {
     label: fiber.moisture,
     tone: 'caution',
-    note: 'Limited moisture absorption — more common in structured pieces than sweaty next-to-skin wear.',
+    note: 'Does not absorb much moisture, so it works better for structured pieces than for sweaty, close-to-skin wear.',
   };
 }
 
@@ -105,7 +109,7 @@ function heatRetentionAxis(fiber: FiberProfile): ComfortAxis {
       label: 'High',
       tone: 'caution',
       note:
-        'Traps air well for warmth in cool weather — the trade-off is more heat retention for everyday tropical wear.',
+        'Keeps you warm in cool weather by trapping air. In everyday tropical heat, this same trait can make it feel too warm.',
     };
   }
 
@@ -115,7 +119,7 @@ function heatRetentionAxis(fiber: FiberProfile): ComfortAxis {
       tone: heavy ? 'caution' : 'good',
       note: heavy
         ? 'Breathable fiber, but the heavier weight still holds some warmth.'
-        : 'Lets heat escape rather than trapping it — comfortable for warm climates.',
+        : 'Lets heat escape rather than trapping it. Comfortable for warm climates.',
     };
   }
 
@@ -136,7 +140,7 @@ function mechanicalComfortAxis(fiber: FiberProfile): ComfortAxis {
       label: 'Coarser fiber, may feel textured',
       tone: 'warn',
       note:
-        "Coarser wool (commonly cited above ~30 microns in diameter) can mechanically trigger a 'prickle' sensation against skin — a physical, non-immune reaction, not an allergy. Finer merino-grade wool, well under that range, is not perceived as prickly by most wearers.",
+        'Thicker wool fibers can feel itchy or prickly against skin. This comes from the fiber\'s thickness, not an allergy. Finer wool, like merino, usually does not feel itchy.',
     };
   }
 
@@ -144,14 +148,14 @@ function mechanicalComfortAxis(fiber: FiberProfile): ComfortAxis {
     return {
       label: fiber.texture,
       tone: 'caution',
-      note: `${fiber.texture} texture — firmer or more structured against bare skin, a physical feel rather than a skin-health concern.`,
+      note: `${fiber.texture} texture. Feels firmer or stiffer against bare skin, but that is just texture, not a skin health concern.`,
     };
   }
 
   return {
     label: fiber.texture,
     tone: 'good',
-    note: `${fiber.texture.toLowerCase()} texture, generally low friction against skin.`,
+    note: `${fiber.texture} texture that feels gentle against skin.`,
   };
 }
 

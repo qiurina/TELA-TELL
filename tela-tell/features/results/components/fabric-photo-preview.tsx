@@ -15,7 +15,6 @@ import {
 import { Leaf, ScanLine, ShieldAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { getConfidenceLabel } from '@/data/scans/scan-confidence';
 
 const SLIDE_HEIGHT = 320;
 
@@ -28,7 +27,6 @@ type FabricPhotoPreviewProps = {
   imageUri?: string | null;
   detectedFabric?: string;
   detectedSubtitle?: string;
-  confidence?: number;
   referenceImage?: ImageSourcePropType | null;
   referenceTitle?: string;
   scanCaption?: string;
@@ -39,7 +37,6 @@ export function FabricPhotoPreview({
   imageUri,
   detectedFabric,
   detectedSubtitle,
-  confidence,
   referenceImage,
   referenceTitle,
   scanCaption,
@@ -51,8 +48,6 @@ export function FabricPhotoPreview({
   const showDetection = Boolean(detectedFabric?.trim());
   const detectedLabel = detectedFabric?.trim() ?? '';
   const subtitle = detectedSubtitle?.trim() ?? '';
-  const confidenceLabel =
-    confidence !== undefined ? getConfidenceLabel(confidence) : undefined;
   const hasReference = Boolean(referenceImage);
   const canSwipe = hasReference && slideWidth > 0;
   const referenceLabel = referenceTitle
@@ -157,15 +152,6 @@ export function FabricPhotoPreview({
         scanSlide
       )}
 
-      {showDetection && confidence !== undefined ? (
-        <View style={styles.confidenceBadge} accessibilityLabel={`${confidence}% confidence`}>
-          <Text style={styles.confidenceValue}>{confidence}%</Text>
-          {confidenceLabel ? (
-            <Text style={styles.confidenceCaption}>{confidenceLabel}</Text>
-          ) : null}
-        </View>
-      ) : null}
-
       {hasReference ? (
         <View style={styles.dots} pointerEvents="none">
           <View style={[styles.dot, activeIndex === 0 && styles.dotActive]} />
@@ -222,33 +208,6 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
     textAlign: 'center',
     lineHeight: 18,
-  },
-  confidenceBadge: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    minWidth: 64,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-    alignItems: 'center',
-    gap: 2,
-  },
-  confidenceValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 16,
-    color: BrandColors.primaryDark,
-    lineHeight: 20,
-  },
-  confidenceCaption: {
-    fontFamily: Fonts.medium,
-    fontSize: 9,
-    color: BrandColors.textMuted,
-    textAlign: 'center',
-    lineHeight: 12,
   },
   footerGradient: {
     position: 'absolute',

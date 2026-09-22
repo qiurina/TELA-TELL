@@ -25,13 +25,10 @@ export function getConfidenceLabel(confidence: number): string {
 }
 
 export const LOW_CONFIDENCE_WARNING = {
-  title: 'Low confidence result',
+  title: 'Not sure about this result',
   message:
-    'This result may not be reliable. Get close enough to see individual threads. A clip-on macro lens is recommended for accurate results.',
+    'This result may not be accurate. Try moving closer so you can see the fabric threads clearly. A clip-on macro lens can help too.',
 } as const;
-
-export const MODERATE_CONFIDENCE_NOTE =
-  'For reliable results, get close enough to see individual threads. Use the clip-on macro lens for accurate results.';
 
 export const COMPOSITION_DISCLAIMER =
   "These fiber percentages represent the model's visual confidence scores, not laboratory-verified composition.";

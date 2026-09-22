@@ -116,7 +116,12 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
     ecoAlternatives: [
       {
         name: 'Recycled polyester (rPET)',
-        similarity: 'Durable activewear from plastic bottles. Common in PH secondhand.',
+        // Persson et al. (2026, Env. Sci. & Technology) found mechanically recycled
+        // polyester sheds *more* microplastic than virgin polyester after 2-3 recycling
+        // cycles (see docs/fabric-score-sources.md, ref [14]) - don't recommend it as a
+        // lower-shedding swap, only as a landfill-diversion one.
+        similarity:
+          'Diverts plastic from landfill. Doesn\'t shed less than virgin polyester - some studies found multi-cycle rPET sheds more.',
       },
       {
         name: 'Recycled nylon',
@@ -141,7 +146,8 @@ const ECO_GUIDANCE_BY_FIBER: Record<SupportedFabric, EcoFiberGuide> = {
       },
       {
         name: 'Recycled PET blend',
-        similarity: 'Durable and abrasion-resistant. Good for bags and jackets.',
+        similarity:
+          'Durable and abrasion-resistant, and diverts plastic from landfill - but (same as recycled polyester) doesn\'t shed less than virgin material.',
       },
       {
         name: 'Organic cotton (low-intensity)',
@@ -400,8 +406,10 @@ function buildBlendAlternatives(
   if (hasPolyester) {
     blendFirst.push({
       name: 'Recycled polyester (rPET) blend',
+      // See docs/fabric-score-sources.md ref [14] - rPET isn't a lower-shedding choice,
+      // only a landfill-diversion one; don't imply otherwise here.
       similarity:
-        'If you still need poly performance, look for GRS or rPET tags instead of virgin polyester.',
+        'Cuts virgin plastic use if you still need poly performance, but doesn\'t shed less microplastic than virgin polyester.',
     });
   }
 

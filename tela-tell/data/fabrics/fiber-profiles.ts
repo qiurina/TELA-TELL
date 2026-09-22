@@ -51,7 +51,10 @@ const SLUG_TO_FABRIC = Object.fromEntries(
   Object.entries(FIBER_SLUGS).map(([fabric, slug]) => [slug, fabric]),
 ) as Record<string, SupportedFabric>;
 
-// sustainabilityScore = avg of the 4 breakdown values; normalized from published research, see docs/fabric-score-sources.md
+// sustainabilityScore = avg of the 4 breakdown values; normalized from the peer-reviewed and
+// industry-report sources listed per fiber below (60+ numbered references in full at
+// docs/fabric-score-sources.md — not a vague "research says" claim, each score traces to a
+// specific study or standard).
 export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
   Cotton: {
     fabric: 'Cotton',
@@ -91,7 +94,10 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     sustainabilityScore: 4.9,
     sustainabilityLabel: 'Low',
     sustainabilityRating: 'red',
-    // Worst carbon footprint of any fiber measured here (sheep methane) plus high water use — see docs/fabric-score-sources.md
+    // Worst carbon footprint of any fiber measured here (sheep methane) plus high water use —
+    // Li et al. (2024, Journal of Cleaner Production, DOI 10.1016/j.jclepro.2024.141336) and
+    // Bhatt & Abbassi (2021) both put farm-stage carbon at 20-60 kg CO2e/kg, the highest range
+    // of any fiber in this set — see docs/fabric-score-sources.md refs [5]-[7] for the full trail.
     breakdown: { biodegradability: 8.5, waterEfficiency: 2.5, recyclability: 6.5, lowCarbon: 2 },
     breathability: 'High',
     durability: 'High',
@@ -151,7 +157,10 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     sustainabilityScore: 8.1,
     sustainabilityLabel: 'Sustainable',
     sustainabilityRating: 'green',
-    // Lowest water footprint of any fiber found (rain-fed flax) keeps this the top natural score — see docs/fabric-score-sources.md
+    // Lowest water footprint of any fiber found (rain-fed flax, 15-50 L/kg) keeps this the top
+    // natural score. Weaker evidence than most fibers here: sourced from the Misciano/SELVANE
+    // water-footprint aggregator, an undated secondary source used because no 2016-2026 primary
+    // study was found for linen specifically — see docs/fabric-score-sources.md ref [32].
     breakdown: { biodegradability: 9.5, waterEfficiency: 9, recyclability: 7, lowCarbon: 7 },
     breathability: 'Very high',
     durability: 'High',
@@ -181,7 +190,10 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     sustainabilityScore: 5.5,
     sustainabilityLabel: 'Moderate',
     sustainabilityRating: 'yellow',
-    // Low process water and moderate carbon per kg raise production impact even though it barely biodegrades and sheds the most microplastic of any fiber tested — see docs/fabric-score-sources.md
+    // Low process water and moderate carbon per kg raise production impact even though it
+    // barely biodegrades and sheds the most microplastic of any fiber tested — Napper &
+    // Thompson (2016, Marine Pollution Bulletin) and De Falco et al. (2020, Environmental
+    // Science & Technology); see docs/fabric-score-sources.md refs [12]-[13].
     breakdown: { biodegradability: 1.5, waterEfficiency: 7.5, recyclability: 6.5, lowCarbon: 6.5 },
     breathability: 'Low',
     durability: 'High',
@@ -267,7 +279,11 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     sustainabilityScore: 3.8,
     sustainabilityLabel: 'Low',
     sustainabilityRating: 'red',
-    // Estimated ~200 years to break down in landfill, the most extreme non-biodegradability finding in this set — see docs/fabric-score-sources.md
+    // Estimated ~200 years to break down in landfill, the most extreme non-biodegradability
+    // finding in this set. Weaker evidence than most fibers here: the shedding-rises-with-share
+    // finding traces to Persson et al. (2026), but the specific 200-year landfill estimate comes
+    // from two undated advocacy/secondary sources (Sustainable Review; One Green Planet), not a
+    // peer-reviewed study — see docs/fabric-score-sources.md refs [14], [28]-[29].
     breakdown: { biodegradability: 1, waterEfficiency: 7, recyclability: 4, lowCarbon: 3 },
     breathability: 'Low',
     durability: 'Medium',
@@ -323,7 +339,10 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     sustainabilityScore: 4.6,
     sustainabilityLabel: 'Low',
     sustainabilityRating: 'red',
-    // Chromium tanning is documented to pollute waterways and farmland; ~126L water + 2.83kg chemicals per m² of finished leather — see docs/fabric-score-sources.md
+    // Chromium tanning is documented to pollute waterways and farmland; ~126L water + 2.83kg
+    // chemicals per m² of finished leather — Scientific Reports (2024, DOI
+    // 10.1038/s41598-024-84726-0), Environmental Chemistry Letters (2025), and Water Quality
+    // Research Journal/IWA (2022); see docs/fabric-score-sources.md refs [21]-[23].
     breakdown: { biodegradability: 4, waterEfficiency: 4, recyclability: 6, lowCarbon: 4.5 },
     breathability: 'Medium',
     durability: 'Very high',

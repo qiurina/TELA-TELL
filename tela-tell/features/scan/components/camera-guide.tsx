@@ -137,7 +137,16 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
     state: 'unknown',
     count: 0,
   });
+  // TEMP: on-screen readout for calibrating NOISE_FLOOR/FILL_FRACTION_THRESHOLD/
+  // BLUR_VARIANCE_THRESHOLD against real devices. __DEV__-gated, safe to leave in;
+  // remove once those constants are confirmed tuned.
+  const [debugSignals, setDebugSignals] = useState<{ variance: number; texturedFraction: number } | null>(
+    null,
+  );
   const handleSignalUpdate = useCallback((variance: number, texturedFraction: number) => {
+    if (__DEV__) {
+      setDebugSignals({ variance, texturedFraction });
+    }
     const isReady = texturedFraction >= FILL_FRACTION_THRESHOLD && variance >= BLUR_VARIANCE_THRESHOLD;
     const nextState: LiveReadiness = isReady ? 'good' : 'adjust';
 
@@ -372,6 +381,15 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
             <Text style={styles.permissionHint}>Allow camera</Text>
           </Pressable>
         </View>
+      ) : isFocused && hasPermission && device == null && Platform.OS !== 'web' ? (
+        <View style={[styles.placeholder, { paddingTop: contentTopInset }]}>
+          <ScanLine size={48} color="rgba(255,255,255,0.85)" strokeWidth={1.75} />
+          <Text style={styles.placeholderTitle}>Camera unavailable</Text>
+          <Text style={styles.placeholderText}>
+            The back camera couldn't be reached — it may be in use by another app, or
+            unsupported on this device. You can still upload a photo from your gallery.
+          </Text>
+        </View>
       ) : (
         <View style={[styles.placeholder, { paddingTop: contentTopInset }]}>
           <ScanLine size={48} color="rgba(255,255,255,0.85)" strokeWidth={1.75} />
@@ -408,6 +426,16 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
             end={{ x: 1, y: 0.5 }}
             style={styles.vignetteRight}
           />
+        </View>
+      ) : null}
+
+      {__DEV__ && debugSignals && !hasPreview ? (
+        <View style={styles.debugSignalBadge} pointerEvents="none">
+          <Text style={styles.debugSignalText}>
+            variance {debugSignals.variance.toFixed(1)} (need ≥{BLUR_VARIANCE_THRESHOLD}){'\n'}
+            textured {(debugSignals.texturedFraction * 100).toFixed(1)}% (need ≥
+            {(FILL_FRACTION_THRESHOLD * 100).toFixed(0)}%)
+          </Text>
         </View>
       ) : null}
 
@@ -508,6 +536,20 @@ const styles = StyleSheet.create({
   viewfinder: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#101820',
+  },
+  debugSignalBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    zIndex: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  debugSignalText: {
+    color: '#00ff88',
+    fontSize: 11,
   },
   feed: {
     ...StyleSheet.absoluteFillObject,

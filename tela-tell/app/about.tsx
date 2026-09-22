@@ -69,6 +69,33 @@ export default function AboutScreen() {
         body="For the best results, get your camera close enough to clearly see the fabric's threads. Your scans and settings are saved right on your phone, so you don't need an internet account to use the app."
       />
 
+      <View style={[styles.card, faintCardShadow(), styles.sourcesCard]}>
+        <Text style={styles.cardTitle}>Sources</Text>
+        <Text style={styles.cardBody}>
+          Microplastic-shedding risk levels (Polyester/Acrylic = High, Nylon/Spandex =
+          Moderate) are ranked using measured shedding rates from:
+        </Text>
+        <Text style={styles.sourceItem}>
+          • Napper & Thompson (2016). Release of synthetic microplastic fibres from domestic
+          washing machines. Marine Pollution Bulletin.
+        </Text>
+        <Text style={styles.sourceItem}>
+          • De Falco et al. (2020). Microfiber Release to Water, Via Laundering, and to Air,
+          via Everyday Use. Environmental Science & Technology.
+        </Text>
+        <Text style={styles.sourceItem}>
+          • Persson et al. (2026). Mechanically Recycled Textiles: A Source of Microplastic
+          Fiber Emissions. Environmental Science & Technology.
+        </Text>
+        <Text style={[styles.cardBody, styles.sourcesFootnote]}>
+          Sustainability, comfort, and eco-alternative scoring draw on additional
+          peer-reviewed studies and industry standards (Mekonnen & Hoekstra 2016; The
+          Woolmark Company; PhilFIDA; DermNet NZ; and others). This app&apos;s engineering
+          documentation keeps the full reference list with every score&apos;s source
+          traced individually.
+        </Text>
+      </View>
+
       <Text style={styles.version}>Version {version}</Text>
     </ProfileScreenShell>
   );
@@ -131,6 +158,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: BrandColors.text,
+  },
+  sourcesCard: {
+    flexDirection: 'column',
+    gap: 8,
+  },
+  sourceItem: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: BrandColors.text,
+  },
+  sourcesFootnote: {
+    fontSize: 12,
+    color: BrandColors.textMuted,
   },
   version: {
     fontFamily: Fonts.regular,

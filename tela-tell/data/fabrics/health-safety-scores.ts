@@ -63,6 +63,8 @@ const AXIS_NOTE: Record<ComfortAxisKey, Record<'good' | 'caution' | 'warn', stri
     caution: 'Moderate airflow — reasonable for most everyday wear.',
     warn: 'Lower airflow can trap heat against skin in hot, humid conditions.',
   },
+  // Heat-rash (miliaria) mechanism per DermNet NZ and the Merck Manual — see
+  // data/fabrics/comfort-profile.ts and docs/profile-screen-audit.md for the full citation.
   moistureManagement: {
     good: 'Handles moisture well for warm, humid weather.',
     caution: 'Limited moisture absorption in this mix.',
@@ -73,6 +75,8 @@ const AXIS_NOTE: Record<ComfortAxisKey, Record<'good' | 'caution' | 'warn', stri
     caution: 'Some heat retention — more noticeable in everyday tropical wear.',
     warn: 'Retains more heat, which can feel uncomfortable in everyday tropical wear.',
   },
+  // Mechanical "prickle" is a fiber-diameter effect, not an allergy — Naylor, Stanton &
+  // Speijers (2014); see data/fabrics/comfort-profile.ts for the full citation.
   mechanicalComfort: {
     good: 'Smooth feel with low friction against skin.',
     caution: 'Firmer or more structured texture against bare skin.',
@@ -80,7 +84,12 @@ const AXIS_NOTE: Record<ComfortAxisKey, Record<'good' | 'caution' | 'warn', stri
   },
 };
 
-/** Acrylic & polyester shed more readily than nylon / spandex blends. */
+// Ranking (acrylic/polyester shed more than nylon/spandex) is research-backed — see
+// data/fabrics/synthetic-health-risk.ts's FIBER_RISK_LEVELS comment for the citations
+// (Napper & Thompson 2016; De Falco et al. 2020). The specific percentage cutoffs below
+// (15/50/35) are NOT — no cited study proposes a threshold like this; they're an
+// editorial heuristic for splitting the Low/Medium/High display buckets, same spirit as
+// the disclosed thresholds in data/scans/scan-confidence.ts.
 function sheddingLevelFromComposition(
   syntheticShare: number,
   highShedShare: number,

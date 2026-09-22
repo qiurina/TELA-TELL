@@ -15,26 +15,50 @@ export function migrateDatabase(): Promise<void> {
   return migrationPromise;
 }
 
+/**
+ * Runs one migration step in isolation so a failure in it can't take down every step
+ * after it — in particular, savePreferences() depends on the unique index step below
+ * having run (its ON CONFLICT(user_id) target requires that index to already exist),
+ * so an earlier unrelated step throwing must not prevent it from ever being created.
+ */
+async function runStep(name: string, step: () => Promise<void>): Promise<void> {
+  try {
+    await step();
+  } catch (error) {
+    console.warn(`[TELA-TELL] Migration step "${name}" failed, continuing:`, error);
+  }
+}
+
 async function runMigration(): Promise<void> {
   const db = await getDatabase();
-  await ensureUsernameColumn(db);
+  await runStep('ensureUsernameColumn', () => ensureUsernameColumn(db));
+  // Core schema creation is the one step allowed to abort the whole migration:
+  // nothing below can meaningfully run without the base tables existing.
   await db.execAsync(SCHEMA_SQL);
-  await ensureScanColumn(db, 'isFavorite', 'INTEGER NOT NULL DEFAULT 0');
-  await ensureScanColumn(db, 'deletedAt', 'TEXT');
-  await ensureScanColumn(db, 'createdAt', 'TEXT');
-  await ensureProfileColumn(db, 'colorSeason', 'TEXT');
-  await ensureUserColumn(db, 'avatarUri', 'TEXT');
-  await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)',
+  await runStep('ensureScanColumn:isFavorite', () =>
+    ensureScanColumn(db, 'isFavorite', 'INTEGER NOT NULL DEFAULT 0'),
   );
-  await backfillScanCreatedAt(db);
-  await resyncScanSustainability(db);
-
-  try {
+  await runStep('ensureScanColumn:deletedAt', () => ensureScanColumn(db, 'deletedAt', 'TEXT'));
+  await runStep('ensureScanColumn:createdAt', () => ensureScanColumn(db, 'createdAt', 'TEXT'));
+  await runStep('ensureProfileColumn:colorSeason', () =>
+    ensureProfileColumn(db, 'colorSeason', 'TEXT'),
+  );
+  await runStep('ensureUserColumn:avatarUri', () => ensureUserColumn(db, 'avatarUri', 'TEXT'));
+  await runStep('idx_scan_createdAt', () =>
+    db.execAsync('CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)'),
+  );
+  await runStep('deviceProfile unique index', async () => {
+    await dedupeDeviceProfiles(db);
+    await db.execAsync(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_deviceProfile_user_id ON tblDeviceProfile(user_id)',
+    );
+  });
+  await runStep('backfillScanCreatedAt', () => backfillScanCreatedAt(db));
+  await runStep('resyncScanSustainability', () => resyncScanSustainability(db));
+  await runStep('purgeExpiredDeletedScans', async () => {
     const { purgeExpiredDeletedScans } = await import('@/db/scans');
     await purgeExpiredDeletedScans(30);
-  } catch {
-  }
+  });
 }
 
 /**
@@ -87,6 +111,51 @@ async function resyncScanSustainability(db: Awaited<ReturnType<typeof getDatabas
       );
     } catch {
       continue;
+    }
+  }
+}
+
+/**
+ * Collapses any tblDeviceProfile rows that ended up duplicated per user_id (possible
+ * before the unique index below existed, from a read-then-insert race in savePreferences)
+ * into one, keeping the most recently updated row and moving child rows onto it so a
+ * later CREATE UNIQUE INDEX doesn't fail on pre-existing duplicates.
+ */
+async function dedupeDeviceProfiles(db: Awaited<ReturnType<typeof getDatabase>>) {
+  const duplicated = await db.getAllAsync<{ user_id: string }>(
+    `SELECT user_id FROM tblDeviceProfile
+     WHERE user_id IS NOT NULL
+     GROUP BY user_id
+     HAVING COUNT(*) > 1`,
+  );
+
+  for (const { user_id } of duplicated) {
+    const rows = await db.getAllAsync<{ profile_ID: number }>(
+      'SELECT profile_ID FROM tblDeviceProfile WHERE user_id = ? ORDER BY updatedAt DESC, profile_ID DESC',
+      [user_id],
+    );
+    const [keep, ...extras] = rows;
+    if (!keep) {
+      continue;
+    }
+
+    for (const extra of extras) {
+      await db.runAsync(
+        'UPDATE OR IGNORE tblSensitiveFiber SET profile_ID = ? WHERE profile_ID = ?',
+        [keep.profile_ID, extra.profile_ID],
+      );
+      await db.runAsync(
+        'UPDATE OR IGNORE tblPreferredFiber SET profile_ID = ? WHERE profile_ID = ?',
+        [keep.profile_ID, extra.profile_ID],
+      );
+      await db.runAsync(
+        'UPDATE OR IGNORE tblDressingContext SET profile_ID = ? WHERE profile_ID = ?',
+        [keep.profile_ID, extra.profile_ID],
+      );
+      // Any child rows still pointing at extra.profile_ID lost the OR IGNORE race
+      // against an equivalent row keep.profile_ID already has — cascade-deleting
+      // the duplicate profile here is what actually drops those redundant rows.
+      await db.runAsync('DELETE FROM tblDeviceProfile WHERE profile_ID = ?', [extra.profile_ID]);
     }
   }
 }

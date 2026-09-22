@@ -80,51 +80,35 @@ export async function savePreferences(userId: string, prefs: UserPreferences): P
   const db = await getDatabase();
   const now = new Date().toISOString();
 
-  const existing = await db.getFirstAsync<{ profile_ID: number }>(
+  // A single upsert (backed by the unique index on user_id — see migrate.native.ts)
+  // instead of read-then-branch: two saves firing close together can no longer both
+  // see "no existing row" and insert two profiles for the same user.
+  await db.runAsync(
+    `INSERT INTO tblDeviceProfile (user_id, skinTone, skinUndertone, updatedAt)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       skinTone = excluded.skinTone,
+       skinUndertone = excluded.skinUndertone,
+       updatedAt = excluded.updatedAt`,
+    [userId, prefs.skinTone, prefs.skinUndertone, now],
+  );
+
+  const profile = await db.getFirstAsync<{ profile_ID: number }>(
     'SELECT profile_ID FROM tblDeviceProfile WHERE user_id = ? LIMIT 1',
     [userId],
   );
+  if (!profile) {
+    throw new Error('Failed to create device profile.');
+  }
+  const profileId = profile.profile_ID;
 
-  let profileId: number;
-
-  if (existing) {
-    profileId = existing.profile_ID;
+  try {
     await db.runAsync(
-      `UPDATE tblDeviceProfile
-       SET skinTone = ?, skinUndertone = ?, updatedAt = ?
-       WHERE profile_ID = ?`,
-      [prefs.skinTone, prefs.skinUndertone, now, profileId],
+      'UPDATE tblDeviceProfile SET colorSeason = ? WHERE profile_ID = ?',
+      [prefs.colorSeason ?? null, profileId],
     );
-    try {
-      await db.runAsync(
-        'UPDATE tblDeviceProfile SET colorSeason = ? WHERE profile_ID = ?',
-        [prefs.colorSeason ?? null, profileId],
-      );
-    } catch {
-      // Column may not exist yet.
-    }
-  } else {
-    await db.runAsync(
-      `INSERT INTO tblDeviceProfile (user_id, skinTone, skinUndertone, updatedAt)
-       VALUES (?, ?, ?, ?)`,
-      [userId, prefs.skinTone, prefs.skinUndertone, now],
-    );
-    const created = await db.getFirstAsync<{ profile_ID: number }>(
-      'SELECT profile_ID FROM tblDeviceProfile WHERE user_id = ? LIMIT 1',
-      [userId],
-    );
-    if (!created) {
-      throw new Error('Failed to create device profile.');
-    }
-    profileId = created.profile_ID;
-    try {
-      await db.runAsync(
-        'UPDATE tblDeviceProfile SET colorSeason = ? WHERE profile_ID = ?',
-        [prefs.colorSeason ?? null, profileId],
-      );
-    } catch {
-      // Column may not exist yet.
-    }
+  } catch {
+    // Column may not exist yet.
   }
 
   await db.runAsync('DELETE FROM tblSensitiveFiber WHERE profile_ID = ?', [profileId]);

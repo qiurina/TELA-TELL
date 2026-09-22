@@ -17,8 +17,12 @@ export function useScanResult(rawScanId: string | string[] | undefined): UseScan
   const [isLoading, setIsLoading] = useState(true);
 
   const reload = useCallback(async () => {
-    const loaded = await loadScanResult(scanId);
-    setResult(loaded);
+    try {
+      const loaded = await loadScanResult(scanId);
+      setResult(loaded);
+    } catch (error) {
+      console.error('[TELA-TELL] Failed to reload scan result:', error);
+    }
   }, [scanId]);
 
   useEffect(() => {
@@ -26,12 +30,22 @@ export function useScanResult(rawScanId: string | string[] | undefined): UseScan
 
     setIsLoading(true);
     void (async () => {
-      const loaded = await loadScanResult(scanId);
-      if (!active) {
-        return;
+      try {
+        const loaded = await loadScanResult(scanId);
+        if (!active) {
+          return;
+        }
+        setResult(loaded);
+      } catch (error) {
+        console.error('[TELA-TELL] Failed to load scan result:', error);
+        if (active) {
+          setResult(undefined);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-      setResult(loaded);
-      setIsLoading(false);
     })();
 
     return () => {
