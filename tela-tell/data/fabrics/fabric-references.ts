@@ -18,6 +18,10 @@ const FABRIC_REFERENCE_IMAGES: Record<SupportedFabric, ImageSourcePropType> = {
   Abaca: require('@/assets/images/reference/abaca.jpg'),
 };
 
+// lookFor/textureNote are visual/descriptive identification text (what to look for, how
+// it typically feels) rather than evaluative or scientific claims — the same "descriptive
+// vocabulary, not a citable claim" category as texture/weight in fiber-profiles.ts.
+// Deliberately not cited.
 export type FabricReference = {
   fabric: SupportedFabric;
   title: string;

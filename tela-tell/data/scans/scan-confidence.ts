@@ -45,12 +45,14 @@ export const BLEND_SIGNIFICANT_MIN_PERCENT = 15;
 // CALCULATION NOISE FLOOR — used for label-accuracy checking, shedding/health-risk fiber
 // inclusion, and allergy matching. This is deliberately NOT the FTC's 5% "other fibers" labeling
 // carve-out: that number exists to reduce a manufacturer's disclosure burden, not because sub-5%
-// fiber content is scientifically inert — blend-shedding research shows the opposite (low fiber
-// shares can still shed materially, and blends can shed more than the pure dominant fiber). Using
-// the FTC figure here would be citing a real source for a question it doesn't actually answer.
-// This value is a practical ML-noise floor (is this a real detection or model artifact), the same
-// category of number as the confidence thresholds above — not a cited scientific threshold.
-// See docs/fiber-percentage-methodology.md.
+// fiber content is scientifically inert — a 2023 ScienceDirect study on elastane-blend microfiber
+// release and Zhang et al. (2025, Environmental Pollution) both found the opposite (low fiber
+// shares can still shed materially, and blends can shed more than the pure dominant fiber; see
+// synthetic-health-risk.ts and docs/fiber-percentage-methodology.md §C for the full citation).
+// Using the FTC figure here would be citing a real source for a question it doesn't actually
+// answer. This value itself is a practical ML-noise floor (is this a real detection or model
+// artifact), the same category of number as the confidence thresholds above — not a cited
+// scientific threshold.
 export const TRACE_DETECTION_MIN_PERCENT = 2;
 
 export type CompositionInput = {

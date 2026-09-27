@@ -6,6 +6,42 @@ import {
 } from '@/data/fabrics/fabrics';
 import { getSignificantFibers, isBlendDetected } from '@/data/scans/scan-confidence';
 
+/**
+ * The specific swap-this-for-that RECOMMENDATIONS below (why this alternative is worth
+ * considering for a Philippine secondhand shopper) are hand-authored practical guidance,
+ * not independently verified against research — same category as fabric-allergies.ts's
+ * alternative suggestions. There is no dataset ranking whether Tencel or cotton is the
+ * "better" swap for a given shopper; that judgment call is inherently editorial.
+ *
+ * However, the certifications and named materials referenced within those suggestions
+ * are real, verifiable standards, not invented labels — confirmed directly:
+ * - GOTS (Global Organic Textile Standard) — verifies organic fiber content and
+ *   environmentally/socially responsible processing, from raw material to labeling.
+ * - GRS (Global Recycled Standard) — verifies traceable recycled content (20%+ to
+ *   certify, 50%+ to carry the label) plus labor and chemical-safety criteria.
+ * - ECONYL — Aquafil's real regenerated-nylon product line, chemically recycled from
+ *   fishing nets and other nylon waste since 2011; retains virgin-nylon quality.
+ * - Peace silk / ahimsa silk — a real, named production method (moths allowed to
+ *   emerge before the cocoon is processed, rather than boiled with the pupa inside).
+ * - Tencel / lyocell's "closed-loop processing" and "moisture-wicking" descriptions are
+ *   confirmed directly from Lenzing (the actual manufacturer): TENCEL™ Lyocell recovers
+ *   over 99.8% of its solvent in production, and absorbs ~12-13% of its weight in
+ *   moisture (vs. cotton's ~7-8%) via sub-microscopic fibril channels.
+ * - "European Flax" (Linen entry) is a real certification mark (CELC, created 2012, now
+ *   "Masters of FLAX FIBRE(TM)"), guaranteeing European-grown flax under zero-irrigation,
+ *   zero-GMO, no-chemical-retting standards, third-party verified by Bureau Veritas.
+ * - "Mindanao plant fiber" (Abaca, under Wool's alternatives) — verified: Mindanao
+ *   provinces are a real, significant abaca-growing region (Davao Oriental alone ~8.5% of
+ *   national production per 2025 PSA data), though Bicol/Catanduanes is the larger
+ *   producer overall; the claim is accurate, not the full national picture.
+ * - "Sisal / maguey blends... other PH plant fibers" (Abaca entry) — verified: maguey
+ *   (Agave cantala, "Manila maguey") has been cultivated in the Philippines since 1783 as
+ *   a genuine local fiber-crop industry, distinct from but related to true sisal (Agave
+ *   sisalana).
+ * Where a specific factual claim within a suggestion is research-backed beyond the
+ * standard/product's own definition (e.g. recycled polyester's shedding behavior),
+ * that's cited inline at the relevant entry.
+ */
 export type EcoGuidance = {
   ecoAlternatives: EcoAlternative[];
   reuse: {

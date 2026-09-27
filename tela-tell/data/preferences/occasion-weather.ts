@@ -1,3 +1,27 @@
+/**
+ * Citation basis for OCCASION_WEATHER_GUIDES below:
+ *
+ * - Weather-context reasons (sunny/rainy/windy/cool/etc.) are applications of the same
+ *   breathability/moisture/weight properties already cited per fiber in fiber-profiles.ts
+ *   and comfort-profile.ts (Iftikhar et al. 2025 for breathability; Mandal/Textile Learner
+ *   for moisture regain) — e.g. "Linen stays cool in sun" follows directly from Linen's
+ *   cited "Very high" breathability rating.
+ * - Occasion-context reasons (casual/formal/office_work/sports_gym/etc.) are a genuine
+ *   mix, not uniformly editorial:
+ *   - Reasons citing wrinkling/pilling/moisture-wicking/stretch behavior (e.g. "less
+ *     wrinkling," "can look fuzzy," "wicks sweat," "stretch and recovery") describe real,
+ *     standardized, measurable properties — ASTM D3512/D3511/D3514 (pilling resistance)
+ *     and AATCC TM66 (wrinkle/crease recovery angle) are the real test methods behind
+ *     "wrinkles quickly"/"resists wrinkles" and "can look fuzzy" claims respectively, and
+ *     the moisture/stretch claims trace to the same fiber-profiles.ts citations as above.
+ *   - Reasons about formality/aesthetics/tradition (e.g. "polished look for dressy
+ *     occasions," "can look inexpensive," "heritage Philippine fiber for celebration
+ *     barong details," "too sporty for dress codes") are genuinely fashion/cultural
+ *     convention, not a measurable or citable claim — there is no dataset ranking
+ *     whether silk "looks" more formal than nylon, any more than there's a citation for
+ *     which color reads as "formal." These remain hand-authored practical guidance, same
+ *     category as eco-alternatives.ts's suggestions.
+ */
 export type DressingContext =
   | 'sunny'
   | 'partly_cloudy'
@@ -295,6 +319,12 @@ export const OCCASION_WEATHER_GUIDES: Record<DressingContext, OccasionWeatherGui
     ],
     avoid: [
       { fabric: 'Wool', reason: 'Too heavy and warm near the water' },
+      // Real, verified textile-science claim, not editorial judgment: silk is a protein
+      // fiber uniquely vulnerable among naturals to chlorine (which dissolves protein
+      // fibers), UV/sun (silk is more light-sensitive than other natural fibers, prone to
+      // photodegradation and yellowing), and saltwater mineral residue stiffening the
+      // weave. See Textile Learner, "Physical, Chemical and Mechanical Properties of Silk
+      // Fiber" (same source already cited for moisture-regain data elsewhere in this app).
       { fabric: 'Silk', reason: 'Damaged easily by salt, sun, and chlorine' },
       { fabric: 'Acrylic', reason: 'Can feel hot and sticky in humid beach air' },
     ],

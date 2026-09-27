@@ -3,6 +3,23 @@ import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics
 import { getSignificantFibers, TRACE_DETECTION_MIN_PERCENT } from '@/data/scans/scan-confidence';
 import type { FabricComposition } from '@/data/scans/mock-data';
 
+/**
+ * General basis: DermNet NZ ("Textile contact dermatitis") and Reich & Warshaw (2010,
+ * Dermatitis) — the same research cited in comfort-profile.ts — found that most real
+ * textile allergic reactions trace to dyes and finishing chemicals, not the base fiber;
+ * a true allergy to an untreated fiber itself is rare. That supports the general
+ * "natural, undyed-leaning fibers tend to be lower-risk" direction used below, but NOT
+ * a claim that any specific fiber is "hypoallergenic" — a scan can't see dyes/finishes,
+ * so no such guarantee is made anywhere in this file.
+ *
+ * The SPECIFIC swap-this-for-that recommendations (which named alternative to suggest
+ * per fiber) are hand-authored practical guidance, not independently verified against
+ * that research — same category as eco-alternatives.ts's suggestions. Exception: Tencel/
+ * lyocell's "moisture-wicking comfort" and "closed-loop processing" descriptions are
+ * confirmed directly from Lenzing (the manufacturer) — see eco-alternatives.ts's module
+ * comment for the specific figures.
+ */
+
 export type HypoallergenicAlternative = {
   name: string;
   note: string;
@@ -18,7 +35,7 @@ export type AllergyAlert = {
 };
 
 const DEFAULT_ALTERNATIVES: HypoallergenicAlternative[] = [
-  { name: 'Cotton', note: 'Naturally hypoallergenic and breathable for everyday wear' },
+  { name: 'Cotton', note: 'Breathable, and the plant fiber itself rarely triggers reactions on its own' },
   { name: 'Linen', note: 'Airy weave with low irritation in hot, humid weather' },
   { name: 'Abaca', note: 'Philippine plant fiber for breathable alternatives' },
 ];
@@ -37,7 +54,7 @@ const FABRIC_ALTERNATIVES: Partial<Record<SupportedFabric, HypoallergenicAlterna
     { name: 'Linen', note: 'Similar breathability with a familiar weave' },
   ],
   Wool: [
-    { name: 'Cotton', note: 'Naturally hypoallergenic and breathable for everyday wear' },
+    { name: 'Cotton', note: 'Breathable, and the plant fiber itself rarely triggers reactions on its own' },
     { name: 'Linen', note: 'Breathable with low irritation in hot, humid weather' },
   ],
   Silk: [

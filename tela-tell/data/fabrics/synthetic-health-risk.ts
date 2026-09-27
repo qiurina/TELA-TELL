@@ -46,6 +46,17 @@ const FIBER_RISK_LEVELS: Partial<Record<SupportedFabric, HealthRiskLevel>> = {
   Spandex: 'moderate',
 };
 
+// These tips are research-backed, not generic laundry assumptions:
+// - Fuller loads / lower water-to-fabric ratio: Kelly, M.R., Lant, N.J., Kurr, M., &
+//   Burgess, J.G. (2019). Importance of Water-Volume on the Release of Microplastic
+//   Fibers from Laundry. Environmental Science & Technology, 53(20), 11735-11744.
+//   Found water-to-fabric ratio (not agitation, as previously assumed) is the dominant
+//   factor - a high-water-volume "delicate" cycle shed more than a full, low-ratio load.
+// - Cold water / lower heat: Lant, N.J., Hayward, A.S., Peththawadu, M.M.D., Sheridan,
+//   K.J., & Dean, J.R. (2020). Microfiber release from real soiled consumer laundry and
+//   the impact of fabric care products and washing conditions. PLoS ONE, 15(6),
+//   e0233332. Hotter washes weaken fiber bonds and increase release; colder, shorter
+//   cycles reduced microfiber generation by roughly 30% in this study.
 const PRACTICAL_TIPS: string[] = [
   'Wash in cold water on a gentle cycle when you can.',
   'Run fuller loads. A lower water-to-fabric ratio means less fiber release per wash.',
@@ -54,6 +65,10 @@ const PRACTICAL_TIPS: string[] = [
 ];
 
 
+// "Worn fabrics shed more" is a direct finding of Napper & Thompson (2016) - not an
+// assumption; see FIBER_RISK_LEVELS above for the full citation. "Damaged" extends the
+// same loose-fiber-ends mechanism to frayed/torn edges specifically, which is a
+// reasonable physical inference from that finding rather than a separately-cited claim.
 const CONDITION_TIPS: Partial<Record<GarmentCondition, string>> = {
   Worn: "This piece already shows wear. Washing and wearing it more will loosen even more fibers, so gentle care matters more from here on.",
   Damaged: 'Frayed or torn edges expose the fiber ends underneath, which shed more than fabric that is still intact. Consider fixing torn seams or replacing pieces that are badly damaged.',
@@ -104,10 +119,13 @@ export function getSyntheticHealthRisk(
   const syntheticFibers: SupportedFabric[] = [];
 
   // Low-share synthetics (and blends generally) can still shed materially — a 2023
-  // ScienceDirect study on elastane-blend microfiber release and Zhang et al. (2025,
-  // Environmental Pollution) both found this (see docs/fiber-percentage-methodology.md
-  // §C). Use the noise floor here, not the blend-display heuristic, so a real detected
-  // synthetic isn't silently dropped from the risk assessment.
+  // ScienceDirect study on elastane-blend microfiber release found this for elastane
+  // specifically, and Zhang et al. (2025, Environmental Pollution) directly confirmed it
+  // for cotton/polyester: "All polyester-cotton blends shed more total fibre than the
+  // pure polyester control under standardised conditions" (see
+  // docs/fiber-percentage-methodology.md §C). Use the noise floor here, not the
+  // blend-display heuristic, so a real detected synthetic isn't silently dropped from the
+  // risk assessment.
   for (const item of getSignificantFibers(compositions, TRACE_DETECTION_MIN_PERCENT)) {
     const fiber = resolveFabricAlias(item.material);
     if (fiber && isSyntheticFiber(fiber) && !syntheticFibers.includes(fiber)) {

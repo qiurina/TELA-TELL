@@ -89,7 +89,7 @@ export default function AboutScreen() {
         </Text>
         <Text style={[styles.cardBody, styles.sourcesFootnote]}>
           Sustainability, comfort, and eco-alternative scoring draw on additional
-          peer-reviewed studies and industry standards (Mekonnen & Hoekstra 2016; The
+          peer-reviewed studies and industry standards (Mekonnen & Hoekstra 2011; The
           Woolmark Company; PhilFIDA; DermNet NZ; and others). This app&apos;s engineering
           documentation keeps the full reference list with every score&apos;s source
           traced individually.

@@ -27,6 +27,14 @@ export type ComfortAxisKey =
 
 export type ComfortProfile = Record<ComfortAxisKey, ComfortAxis>;
 
+// The natural-fibers-breathe-better-than-synthetics ranking behind fiber-profiles.ts's
+// per-fiber `breathability` ratings is grounded in Iftikhar, F. et al. (2025). "Comparative
+// Assessment of Sensory Comfort Properties Across Eco-Friendly Textile Materials for
+// Apparel." Journal of Natural Fibers, 23(1). This is a general tendency, not an absolute
+// rule: the same study found a lightweight recycled-polyester sample outperformed some
+// natural fibers in raw air permeability, since weave openness and fabric weight matter
+// too — this app's per-fiber ratings reflect typical garment-weight construction for each
+// fiber, not a lab-controlled single-variable comparison.
 const BREATHABILITY_SCORE: Record<string, number> = {
   'Very high': 9,
   High: 7.5,

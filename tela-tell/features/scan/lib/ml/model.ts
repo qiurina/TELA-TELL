@@ -32,16 +32,12 @@ async function loadModel(): Promise<TFLiteModel> {
 
       try {
         const asset = require('@/assets/models/fabric_classifier.tflite');
-        // The native side requires an actual array here (an empty array means
-        // "use the default CPU delegate") — passing undefined throws a native
-        // error with no readable JS message.
         return await loadTensorflowModel(asset, []);
       } catch (error) {
         console.error('[TELA-TELL] loadTensorflowModel failed:', error);
         throw new ModelUnavailableError();
       }
     })().catch((error) => {
-      // Let the next scan attempt retry instead of replaying this same failure forever.
       modelPromise = null;
       throw error;
     });
@@ -57,10 +53,6 @@ function scoresToCompositions(scores: Float32Array): FabricComposition[] {
   })).sort((a, b) => b.percentage - a.percentage);
 
   const significant = all.filter((item) => item.percentage > 0);
-  // A genuinely low-confidence read can round every class down to 0% — that's a real
-  // (if unreliable) inference, not a model failure, so still surface the top guess
-  // rather than letting the caller misreport it as ModelUnavailableError. The UI
-  // already has a dedicated low-confidence warning path for this.
   return significant.length > 0 ? significant : all.slice(0, 1);
 }
 

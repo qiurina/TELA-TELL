@@ -51,9 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setSession(storedSession);
       } catch (error) {
-        // A failed session/preferences read (e.g. a mid-migration database) must not
-        // leave isLoading stuck forever — app/index.tsx blocks all navigation on it.
-        // Falling back to signed-out is safe: the user just re-lands on /welcome.
         console.error('[TELA-TELL] Auth initialization failed:', error);
         if (active) {
           setSession(null);

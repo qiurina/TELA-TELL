@@ -1,4 +1,17 @@
-/** Twelve supported fiber / material types */
+/**
+ * Twelve supported fiber / material types.
+ *
+ * The Synthetic/Semi-synthetic split follows ISO 2076 ("Textiles — Man-made fibres —
+ * Generic names"), the international standard defining man-made fibre categories and
+ * distinguishing them from naturally-occurring fibrous materials — the same standard
+ * that underlies the FTC's Textile Fiber Products Identification Act categories already
+ * cited in scan-confidence.ts. Rayon (regenerated cellulose) is "Semi-synthetic" because
+ * ISO 2076 classifies regenerated/man-made cellulosic fibres distinctly from fully
+ * synthetic (petroleum-polymer) ones like polyester or nylon. Abaca's "Philippine native"
+ * categorization reflects its status as an indigenous Philippine plant fiber (Musa
+ * textilis), documented by PhilFIDA (see fiber-profiles.ts's Abaca entry for the full
+ * citation).
+ */
 
 export type FabricCategory =
   | 'Natural'
