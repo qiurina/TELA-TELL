@@ -1,6 +1,7 @@
 import type { FabricComposition } from '@/data/scans/mock-data';
 import { MODEL_LABELS } from '@/features/scan/lib/ml/constants';
 import { imageToInputTensor } from '@/features/scan/lib/ml/preprocess';
+import { scoresToCompositions } from '@/features/scan/lib/ml/scores';
 
 export type ClassificationResult = {
   dominantFabric: string;
@@ -9,7 +10,7 @@ export type ClassificationResult = {
 };
 
 export class ModelUnavailableError extends Error {
-  constructor(message = 'Fabric classification model is not bundled yet.') {
+  constructor(message = 'Fabric classification model could not be loaded.') {
     super(message);
     this.name = 'ModelUnavailableError';
   }
@@ -43,17 +44,6 @@ async function loadModel(): Promise<TFLiteModel> {
     });
   }
   return modelPromise;
-}
-
-function scoresToCompositions(scores: Float32Array): FabricComposition[] {
-  const total = scores.reduce((sum, value) => sum + value, 0) || 1;
-  const all = MODEL_LABELS.map((material, index) => ({
-    material,
-    percentage: Math.round((scores[index] / total) * 100),
-  })).sort((a, b) => b.percentage - a.percentage);
-
-  const significant = all.filter((item) => item.percentage > 0);
-  return significant.length > 0 ? significant : all.slice(0, 1);
 }
 
 function averageScores(scoreSets: Float32Array[]): Float32Array {
@@ -90,14 +80,13 @@ export async function classifyFabric(imageUris: string[]): Promise<Classificatio
 
   const scores = scoreSets.length > 1 ? averageScores(scoreSets) : scoreSets[0];
 
-  // A NaN/Infinity score (corrupted frame, edge-case hardware output) would otherwise
-  // silently turn into a "NaN%" composition entry instead of a clear failure — treat
-  // it the same as any other unusable model output.
   if (!scores.every((value) => Number.isFinite(value))) {
     throw new ModelUnavailableError('Model produced invalid output.');
   }
 
-  const compositions = scoresToCompositions(scores).slice(0, 3);
+  // Throws if the model's output count or shape does not fit MODEL_LABELS (see scores.ts), so a
+  // wrongly sized model fails loudly instead of mislabelling every scan.
+  const compositions = scoresToCompositions(scores, MODEL_LABELS).slice(0, 3);
   const top = compositions[0];
   if (!top) {
     throw new ModelUnavailableError('Model produced no classification output.');

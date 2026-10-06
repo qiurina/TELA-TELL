@@ -27,7 +27,7 @@ export function CompositionCard({ compositions }: CompositionCardProps) {
       <ScanConfirmSheet
         visible={showDisclaimer}
         variant="info"
-        title="Estimated fiber composition"
+        title="About these percentages"
         message={COMPOSITION_DISCLAIMER}
         confirmLabel="Got it"
         onConfirm={() => setShowDisclaimer(false)}
@@ -35,13 +35,13 @@ export function CompositionCard({ compositions }: CompositionCardProps) {
       />
 
       <View style={styles.headerRow}>
-        <Text style={styles.sectionLabel}>ESTIMATED FIBER COMPOSITION</Text>
+        <Text style={styles.sectionLabel}>MOST LIKELY FIBERS</Text>
         <Pressable
           style={styles.infoButton}
           onPress={() => setShowDisclaimer(true)}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="About estimated fiber composition">
+          accessibilityLabel="About these percentages">
           <Info size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
         </Pressable>
       </View>

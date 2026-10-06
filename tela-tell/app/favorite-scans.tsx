@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showAlert } from '@/components/ui/alert-dialog';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { ScanGalleryGrid } from '@/features/profile/components/scan-gallery-grid';
-import { useAuth } from '@/features/auth/context/auth-provider';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import type { RecentScanPreview } from '@/data/scans/mock-data';
@@ -15,7 +14,6 @@ import { getFavoriteScans, setScanFavorite } from '@/db/scans';
 export default function FavoriteScansScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
   const [scans, setScans] = useState<RecentScanPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -25,12 +23,12 @@ export default function FavoriteScansScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const next = await getFavoriteScans({ userId: session?.userId ?? null });
+      const next = await getFavoriteScans();
       setScans(next);
     } finally {
       setLoading(false);
     }
-  }, [session?.userId]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {

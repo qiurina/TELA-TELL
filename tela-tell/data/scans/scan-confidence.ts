@@ -31,16 +31,16 @@ export const LOW_CONFIDENCE_WARNING = {
 } as const;
 
 export const COMPOSITION_DISCLAIMER =
-  "These fiber percentages represent the model's visual confidence scores, not laboratory-verified composition.";
+  "These percentages show how confident the model is that each fiber is the one in your photo. TELA-TELL cannot measure how much of each fiber is in a garment, and this is not a laboratory result. Check the care tag for the real composition.";
 
-// UI-DISPLAY HEURISTIC ONLY — decides blend headline phrasing ("Cotton-Polyester blend" vs
-// "Mostly Cotton") and which canned eco-guidance copy to show. NOT used for any sustainability,
-// health-risk, or label-accuracy calculation (see TRACE_DETECTION_MIN_PERCENT below for those).
-// No sustainability/health-significance research supports 15% specifically; the closest real
-// standard (ISO 14044's LCA cut-off rule, ~1% of mass/impact) argues a calculation-facing cutoff
-// should be far lower. Deliberately left as an acknowledged, uncited display heuristic rather
-// than dressed up as a scientific or regulatory number. See docs/fiber-percentage-methodology.md.
-export const BLEND_SIGNIFICANT_MIN_PERCENT = 15;
+// A "clear share" of the scan's confidence: a candidate at or above this is more than a stray
+// score. Used to tell a clearly supported declared fiber from a faintly supported one
+// (declared-label.ts) and to list the candidate fibers considered for personalized insights.
+// It is NOT a fiber proportion: the classifier is single-label, so these percentages are
+// confidence, not a measured blend. No sustainability/health research supports 15% specifically;
+// it is an acknowledged, uncited display heuristic (see TRACE_DETECTION_MIN_PERCENT below for
+// the floor used for health-risk and label checks).
+export const CLEAR_SHARE_MIN_PERCENT = 15;
 
 // CALCULATION NOISE FLOOR — used for label-accuracy checking, shedding/health-risk fiber
 // inclusion, and allergy matching. This is deliberately NOT the FTC's 5% "other fibers" labeling
@@ -62,13 +62,9 @@ export type CompositionInput = {
 
 export function getSignificantFibers(
   compositions: CompositionInput[],
-  minPercent = BLEND_SIGNIFICANT_MIN_PERCENT,
+  minPercent = CLEAR_SHARE_MIN_PERCENT,
 ): CompositionInput[] {
   return [...compositions]
     .filter((item) => item.percentage >= minPercent)
     .sort((a, b) => b.percentage - a.percentage);
-}
-
-export function isBlendDetected(compositions: CompositionInput[]): boolean {
-  return getSignificantFibers(compositions).length >= 2;
 }

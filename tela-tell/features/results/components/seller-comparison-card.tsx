@@ -1,23 +1,34 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CircleCheck, Tag, TriangleAlert } from '@/components/ui/lucide-icons';
+import { CircleCheck, Info, Tag, TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
+import type { DeclaredLabelCheck } from '@/features/scan/lib/declared-label';
 
 type SellerComparisonCardProps = {
   sellerLabel: string | null;
   detectedLabel: string;
-  mislabelingDetected: boolean;
-  mislabelMessage?: string;
+  check: DeclaredLabelCheck;
   onAddLabel?: () => void;
 };
+
+const STATUS_STYLE = {
+  mismatch: { border: '#fecaca', background: '#fef2f2', accent: '#dc2626', text: '#991b1b' },
+  weak: { border: '#fde68a', background: '#fffbeb', accent: '#b45309', text: '#92400e' },
+  unreadable: {
+    border: BrandColors.border,
+    background: BrandColors.inputBackground,
+    accent: BrandColors.textMuted,
+    text: BrandColors.textMuted,
+  },
+  match: { border: '#bbf7d0', background: '#f0fdf4', accent: '#15803d', text: '#166534' },
+} as const;
 
 export function SellerComparisonCard({
   sellerLabel,
   detectedLabel,
-  mislabelingDetected,
-  mislabelMessage,
+  check,
   onAddLabel,
 }: SellerComparisonCardProps) {
   const trimmedLabel = sellerLabel?.trim() ?? '';
@@ -42,25 +53,38 @@ export function SellerComparisonCard({
     );
   }
 
-  const isConflict = mislabelingDetected;
-  const detail = mislabelMessage?.trim();
+  const tone = STATUS_STYLE[check.status === 'none' ? 'unreadable' : check.status];
+  const heading =
+    check.status === 'mismatch'
+      ? 'Possible mislabel'
+      : check.status === 'weak'
+        ? 'Label only partly confirmed'
+        : check.status === 'match'
+          ? 'Label matches'
+          : "Can't check this label";
+  const detail = check.message.trim();
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={onAddLabel}
+      disabled={!onAddLabel}
+      accessibilityRole="button"
+      accessibilityLabel={`${heading}. Edit stated label`}
+      style={({ pressed }) => [
         styles.card,
-        isConflict ? styles.cardConflict : styles.cardClear,
+        { borderColor: tone.border, backgroundColor: tone.background },
         faintCardShadow(),
+        pressed && styles.pressed,
       ]}>
       <View style={styles.header}>
-        {isConflict ? (
-          <TriangleAlert size={16} color="#dc2626" strokeWidth={2.5} />
+        {check.status === 'mismatch' ? (
+          <TriangleAlert size={16} color={tone.accent} strokeWidth={2.5} />
+        ) : check.status === 'match' ? (
+          <CircleCheck size={16} color={tone.accent} strokeWidth={2.25} />
         ) : (
-          <CircleCheck size={16} color="#15803d" strokeWidth={2.25} />
+          <Info size={16} color={tone.accent} strokeWidth={2.25} />
         )}
-        <Text style={[styles.headerTitle, isConflict ? styles.headerConflict : styles.headerClear]}>
-          {isConflict ? 'Possible mislabel' : 'Label matches'}
-        </Text>
+        <Text style={[styles.headerTitle, { color: tone.accent }]}>{heading}</Text>
       </View>
 
       <View style={styles.compareRow}>
@@ -75,8 +99,8 @@ export function SellerComparisonCard({
         </View>
       </View>
 
-      {isConflict && detail ? <Text style={styles.message}>{detail}</Text> : null}
-    </View>
+      {detail ? <Text style={[styles.message, { color: tone.text }]}>{detail}</Text> : null}
+    </Pressable>
   );
 }
 
@@ -121,14 +145,6 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1,
   },
-  cardConflict: {
-    borderColor: '#fecaca',
-    backgroundColor: '#fef2f2',
-  },
-  cardClear: {
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -138,12 +154,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
     fontSize: 13,
     letterSpacing: 0.2,
-  },
-  headerConflict: {
-    color: '#dc2626',
-  },
-  headerClear: {
-    color: '#15803d',
   },
   compareRow: {
     flexDirection: 'row',
@@ -169,7 +179,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     fontSize: 12,
     lineHeight: 17,
-    color: '#991b1b',
   },
   divider: {
     width: 1,

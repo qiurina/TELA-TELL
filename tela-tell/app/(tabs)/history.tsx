@@ -23,7 +23,6 @@ import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import { SUSTAINABILITY_DOT, type RecentScanPreview } from '@/data/scans/mock-data';
 import { deleteScan, getAllScans, setScanFavorite } from '@/db/scans';
-import { useAuth } from '@/features/auth/context/auth-provider';
 
 const HISTORY_PAGE_SIZE = 5;
 
@@ -39,19 +38,17 @@ export default function HistoryScreen() {
   const [page, setPage] = useState(1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const { session } = useAuth();
   const [previews, setPreviews] = useState<RecentScanPreview[]>([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     try {
-      const userId = session?.userId ?? null;
-      const previewList = await getAllScans({ userId });
+      const previewList = await getAllScans();
       setPreviews(previewList);
     } catch (error) {
       console.error('[TELA-TELL] Failed to reload scan history:', error);
     }
-  }, [session?.userId]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -60,8 +57,7 @@ export default function HistoryScreen() {
       setLoading(true);
       void (async () => {
         try {
-          const userId = session?.userId ?? null;
-          const previewList = await getAllScans({ userId });
+          const previewList = await getAllScans();
           if (!active) {
             return;
           }
@@ -79,7 +75,7 @@ export default function HistoryScreen() {
       return () => {
         active = false;
       };
-    }, [session?.userId]),
+    }, []),
   );
 
   const exitSelectionMode = useCallback(() => {

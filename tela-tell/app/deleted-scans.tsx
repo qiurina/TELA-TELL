@@ -13,7 +13,6 @@ import { showAlert } from '@/components/ui/alert-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { ScanGalleryGrid } from '@/features/profile/components/scan-gallery-grid';
-import { useAuth } from '@/features/auth/context/auth-provider';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import type { RecentScanPreview } from '@/data/scans/mock-data';
@@ -29,7 +28,6 @@ const DELETE_RED = '#DC2626';
 export default function DeletedScansScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
   const [scans, setScans] = useState<RecentScanPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -41,7 +39,7 @@ export default function DeletedScansScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const next = await getDeletedScans({ userId: session?.userId ?? null });
+      const next = await getDeletedScans();
       setScans(next);
       setSelectedIds((prev) => {
         const valid = new Set([...prev].filter((id) => next.some((scan) => scan.id === id)));
@@ -50,7 +48,7 @@ export default function DeletedScansScreen() {
     } finally {
       setLoading(false);
     }
-  }, [session?.userId]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -148,7 +146,7 @@ export default function DeletedScansScreen() {
     setBusy(true);
     void (async () => {
       try {
-        await permanentlyDeleteAllDeletedScans({ userId: session?.userId ?? null });
+        await permanentlyDeleteAllDeletedScans();
         exitSelectionMode();
         await load();
       } catch {

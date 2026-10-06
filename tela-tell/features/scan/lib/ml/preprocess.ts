@@ -1,8 +1,7 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import jpeg from 'jpeg-js';
 import { IMAGE_SIZE } from '@/features/scan/lib/ml/constants';
-import { applyClaheLuminance } from '@/features/scan/lib/ml/color/clahe';
-import { applyGrayWorldWhiteBalance } from '@/features/scan/lib/ml/color/white-balance';
+import { preprocessRgbaForModel } from '@/features/scan/lib/ml/model-input';
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
@@ -29,10 +28,13 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
+/** White balance and CLAHE run at twice the model size and are then area-averaged down (see model-input.ts). */
+const WORKING_SIZE = IMAGE_SIZE * 2;
+
 export async function imageToInputTensor(uri: string): Promise<Float32Array> {
   const resized = await ImageManipulator.manipulateAsync(
     uri,
-    [{ resize: { width: IMAGE_SIZE, height: IMAGE_SIZE } }],
+    [{ resize: { width: WORKING_SIZE, height: WORKING_SIZE } }],
     { base64: true, compress: 1, format: ImageManipulator.SaveFormat.JPEG },
   );
 
@@ -43,20 +45,19 @@ export async function imageToInputTensor(uri: string): Promise<Float32Array> {
   const jpegBytes = base64ToUint8Array(resized.base64);
   const decoded = jpeg.decode(jpegBytes, { useTArray: true });
 
-  applyGrayWorldWhiteBalance(decoded.data, decoded.width, decoded.height);
-  applyClaheLuminance(decoded.data, decoded.width, decoded.height, {
-    clipLimit: 2.0,
-    tilesX: 8,
-    tilesY: 8,
-  });
-
-  const tensor = new Float32Array(IMAGE_SIZE * IMAGE_SIZE * 3);
-  let tensorIndex = 0;
-  for (let i = 0; i < decoded.data.length; i += 4) {
-    tensor[tensorIndex++] = (decoded.data[i] - 127.0) / 128.0;
-    tensor[tensorIndex++] = (decoded.data[i + 1] - 127.0) / 128.0;
-    tensor[tensorIndex++] = (decoded.data[i + 2] - 127.0) / 128.0;
+  if (decoded.width !== WORKING_SIZE || decoded.height !== WORKING_SIZE) {
+    throw new Error(`Unexpected working image size ${decoded.width}x${decoded.height}.`);
   }
 
-  return tensor;
+  // White balance, CLAHE, then the 2:1 area downscale to IMAGE_SIZE, in training order.
+  // Deliberately NOT normalized here. Both ml-training/train.py (MobileNetV2's
+  // preprocess_input, x/127.5 - 1) and train_efficientnet_lite0.py (Rescaling,
+  // (x-127)/128) bake their pixel normalization into the model graph itself, as
+  // the first op on the raw Input layer -- it survives TFLite conversion, so the
+  // exported model already expects raw [0,255] values and normalizes internally.
+  // Normalizing again here would double-apply it and corrupt every prediction.
+  // Feeding raw pixels also keeps this file correct regardless of which of the
+  // three backbones (MobileNetV2 / EfficientNet-Lite0 / MobileNetV3) gets bundled,
+  // since each can bake in its own correct formula without this file changing.
+  return preprocessRgbaForModel(decoded.data, decoded.width, decoded.height);
 }

@@ -8,7 +8,7 @@ import type {
   SuitabilityLevel,
   SustainabilityRating,
 } from '@/data/scans/mock-data';
-import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import type { SupportedFabric } from '@/data/fabrics/fabrics';
 import {
   getFiberProfile,
   type FiberProfile,
@@ -16,6 +16,12 @@ import {
 } from '@/data/fabrics/fiber-profiles';
 import { getEcoGuidance } from '@/data/fabrics/eco-alternatives';
 import { OCCASION_CONTEXT_OPTIONS } from '@/data/preferences/occasion-weather';
+
+/**
+ * Bump when the scoring or recommendation logic here changes. The startup migration re-derives
+ * stored scans only when this or the fiber data changes (see db/migrate.native.ts).
+ */
+export const SCAN_PROFILE_LOGIC_VERSION = 2;
 
 function getOccasionLabel(id: string): string {
   return OCCASION_CONTEXT_OPTIONS.find((option) => option.id === id)?.label ?? id;
@@ -30,49 +36,6 @@ function buildProfile(fiber: FiberProfile): FabricProfile {
     stretch: fiber.stretch,
     careInstructions: fiber.careInstructions.map((item: CareInstruction) => ({ ...item })),
     useCases: fiber.bestOccasion.slice(0, 4).map(getOccasionLabel),
-  };
-}
-
-type WeightedFiber = { fiber: FiberProfile; weight: number };
-
-/**
- * Mass-fraction weighting across every resolved fiber in the composition, matching the Higg
- * MSI's own documented approach to blended-fabric scoring (weighted average by blend
- * proportion) rather than scoring the whole garment off the dominant fiber alone. Falls back to
- * the primary fiber alone when nothing in `compositions` resolves. See
- * docs/fiber-percentage-methodology.md.
- */
-function resolveWeightedFibers(
-  primaryFiber: FiberProfile,
-  compositions: FabricComposition[],
-): WeightedFiber[] {
-  const resolved: { fiber: FiberProfile; percentage: number }[] = [];
-
-  for (const item of compositions) {
-    const fabric = resolveFabricAlias(item.material);
-    if (!fabric) {
-      continue;
-    }
-    resolved.push({ fiber: getFiberProfile(fabric), percentage: item.percentage });
-  }
-
-  const total = resolved.reduce((sum, item) => sum + item.percentage, 0);
-  if (total <= 0) {
-    return [{ fiber: primaryFiber, weight: 1 }];
-  }
-
-  return resolved.map((item) => ({ fiber: item.fiber, weight: item.percentage / total }));
-}
-
-function weightedBreakdown(weighted: WeightedFiber[]): SustainabilityBreakdown {
-  const weightedSum = (key: keyof SustainabilityBreakdown) =>
-    weighted.reduce((sum, { fiber, weight }) => sum + fiber.breakdown[key] * weight, 0);
-
-  return {
-    biodegradability: weightedSum('biodegradability'),
-    waterEfficiency: weightedSum('waterEfficiency'),
-    recyclability: weightedSum('recyclability'),
-    lowCarbon: weightedSum('lowCarbon'),
   };
 }
 
@@ -109,13 +72,12 @@ function labelForRating(rating: SustainabilityRating): string {
 function buildSustainabilityFactors(
   primaryFiber: FiberProfile,
   breakdown: SustainabilityBreakdown,
-  isBlend: boolean,
 ): ScanResult['sustainability']['factors'] {
   const factors: ScanResult['sustainability']['factors'] = [];
-  const subject = isBlend ? 'This blend' : primaryFiber.fabric;
+  const subject = primaryFiber.fabric;
 
   factors.push({
-    text: `${primaryFiber.fabric} is the dominant fiber (${primaryFiber.fiberType.toLowerCase()})`,
+    text: `${primaryFiber.fabric} is the most likely fiber (${primaryFiber.fiberType.toLowerCase()})`,
     positive: primaryFiber.sustainabilityRating !== 'red',
   });
 
@@ -131,14 +93,7 @@ function buildSustainabilityFactors(
     factors.push({ text: `${subject} is commonly recyclable`, positive: true });
   }
 
-  if (isBlend) {
-    factors.push({
-      text: 'Blended composition detected, which can complicate recycling',
-      positive: false,
-    });
-  } else {
-    factors.push({ text: 'Suitable for everyday reuse and donation', positive: true });
-  }
+  factors.push({ text: 'Suitable for everyday reuse and donation', positive: true });
 
   return factors;
 }
@@ -173,17 +128,14 @@ export function buildScanProfile(
   primaryFiber: SupportedFabric,
   dominantFabric: string,
   compositions: FabricComposition[],
-  isBlend: boolean,
 ): Pick<ScanResult, 'profile' | 'sustainability' | 'recommendations'> {
   const fiber = getFiberProfile(primaryFiber);
   const ecoGuidance = getEcoGuidance(dominantFabric, compositions);
 
-  // Sustainability is weighted across the full detected composition (see
-  // resolveWeightedFibers), not just the dominant fiber — profile/recommendations below stay
-  // keyed to the dominant fiber, since care instructions and use-case guidance describe one
-  // representative fiber rather than something meaningful to blend-average.
-  const weighted = resolveWeightedFibers(fiber, compositions);
-  const breakdown = weightedBreakdown(weighted);
+  // Everything is scored from the single most likely fiber. The top-3 percentages are the
+  // model's confidence, not a measured blend, so they are not used as mixing weights (an earlier
+  // version averaged scores across them, which presented model uncertainty as a composition).
+  const breakdown = fiber.breakdown;
   const score = overallScore(breakdown);
   const rating = ratingForScore(score);
 
@@ -199,7 +151,7 @@ export function buildScanProfile(
       rating,
       label: labelForRating(rating),
       score,
-      factors: buildSustainabilityFactors(fiber, breakdown, isBlend),
+      factors: buildSustainabilityFactors(fiber, breakdown),
     },
     recommendations,
   };

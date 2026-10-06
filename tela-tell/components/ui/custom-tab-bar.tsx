@@ -4,11 +4,11 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { History as HistoryIcon, Home, Layers, ScanLine, User } from '@/components/ui/lucide-icons';
+import { History as HistoryIcon, Home, Layers, ScanLine, Settings } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { fabShadow } from '@/constants/shadows';
 
-type TabRoute = 'index' | 'fabrics' | 'scan' | 'history' | 'profile';
+type TabRoute = 'index' | 'fabrics' | 'scan' | 'history' | 'settings';
 
 function TabIconButton({
   route,
@@ -104,17 +104,17 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             />
           </TabIconButton>
           <TabIconButton
-            route="profile"
+            route="settings"
             currentRoute={currentRoute}
             onPress={() =>
-              navigation.navigate('profile', {
+              navigation.navigate('settings', {
                 screen: 'index',
               })
             }
-            label="Profile">
-            <User
+            label="Settings">
+            <Settings
               size={24}
-              color={currentRoute === 'profile' ? BrandColors.primary : BrandColors.textMuted}
+              color={currentRoute === 'settings' ? BrandColors.primary : BrandColors.textMuted}
               strokeWidth={2}
             />
           </TabIconButton>

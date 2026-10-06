@@ -11,7 +11,6 @@ import {
 
 export type ExportPayload = {
   exportedAt: string;
-  username: string;
   scans: ScanResult[];
   favoriteScanIds: string[];
   preferences: UserPreferences;
@@ -31,32 +30,25 @@ export class ImportInvalidFileError extends Error {
   }
 }
 
-export async function buildExportPayload(options: {
-  userId: string | null;
-  username: string;
-}): Promise<ExportPayload> {
-  const entries = await getAllScansForExport({ userId: options.userId });
+export async function buildExportPayload(): Promise<ExportPayload> {
+  const entries = await getAllScansForExport();
   const preferences = getUserPreferencesSnapshot();
 
   return {
     exportedAt: new Date().toISOString(),
-    username: options.username,
     scans: entries.map((entry) => entry.scan),
     favoriteScanIds: entries.filter((entry) => entry.isFavorite).map((entry) => entry.scan.id),
     preferences,
   };
 }
 
-export async function exportUserData(options: {
-  userId: string | null;
-  username: string;
-}): Promise<void> {
+export async function exportUserData(): Promise<void> {
   const isAvailable = await Sharing.isAvailableAsync();
   if (!isAvailable) {
     throw new ExportUnavailableError();
   }
 
-  const payload = await buildExportPayload(options);
+  const payload = await buildExportPayload();
   const file = new File(Paths.cache, `tela-tell-export-${Date.now()}.json`);
   file.create({ overwrite: true });
   file.write(JSON.stringify(payload, null, 2));
@@ -118,13 +110,11 @@ export async function pickAndParseExportFile(): Promise<ExportPayload | null> {
 export async function importScans(
   scans: ScanResult[],
   favoriteScanIds: string[],
-  userId: string | null,
 ): Promise<number> {
   const favoriteIds = new Set(favoriteScanIds);
   let imported = 0;
   for (const scan of scans) {
     await saveScan(scan, {
-      userId,
       garmentCondition: scan.garmentCondition,
       imageUri: null,
     });

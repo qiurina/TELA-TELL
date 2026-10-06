@@ -7,7 +7,6 @@ import { Check, CircleCheck, Plus, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { SUPPORTED_FABRICS, type SupportedFabric } from '@/data/fabrics/fabrics';
 import { Fonts } from '@/constants/fonts';
-import { useAuth } from '@/features/auth/context/auth-provider';
 import {
   getUserPreferencesSnapshot,
   hydrateUserPreferences,
@@ -385,8 +384,6 @@ export function UserPreferencesPanel({
   scope = 'full',
   hideAutoSaveHint = false,
 }: UserPreferencesPanelProps) {
-  const { session } = useAuth();
-  const userId = session?.userId ?? null;
   const prefs = useSyncExternalStore(
     subscribeUserPreferences,
     getUserPreferencesSnapshot,
@@ -401,7 +398,7 @@ export function UserPreferencesPanel({
     hasEditedRef.current = false;
 
     void (async () => {
-      const loaded = await hydrateUserPreferences(userId, { apply: false });
+      const loaded = await hydrateUserPreferences({ apply: false });
       if (!active || hasEditedRef.current) {
         return;
       }
@@ -411,12 +408,12 @@ export function UserPreferencesPanel({
     return () => {
       active = false;
     };
-  }, [userId]);
+  }, []);
 
   const commitPrefs = (next: UserPreferences) => {
     hasEditedRef.current = true;
     setUserPreferences(next);
-    void persistUserPreferences(userId);
+    void persistUserPreferences();
     onChange?.();
   };
 
@@ -427,7 +424,7 @@ export function UserPreferencesPanel({
   const applyPrefsUpdate = (mutate: () => void) => {
     hasEditedRef.current = true;
     mutate();
-    void persistUserPreferences(userId);
+    void persistUserPreferences();
     onChange?.();
   };
 

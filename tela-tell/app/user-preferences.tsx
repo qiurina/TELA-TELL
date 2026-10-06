@@ -16,7 +16,6 @@ import { X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
-import { useAuth } from '@/features/auth/context/auth-provider';
 import { clearLastGarmentCondition } from '@/features/scan/lib/garment-condition';
 import {
   clearUserPreferences,
@@ -25,7 +24,6 @@ import {
 
 export default function UserPreferencesScreen() {
   const router = useRouter();
-  const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.92, 780);
@@ -49,7 +47,7 @@ export default function UserPreferencesScreen() {
   const handleClear = () => {
     clearUserPreferences();
     clearLastGarmentCondition();
-    void persistUserPreferences(session?.userId);
+    void persistUserPreferences();
     setFormKey((current) => current + 1);
   };
 

@@ -1,28 +1,23 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import {
   Bookmark,
   Calendar,
-  Camera,
+  CircleHelp,
   Download,
   Heart,
   Info,
-  LogOut,
   Share2,
   Sun,
   Trash2,
   TriangleAlert,
-  User,
 } from '@/components/ui/lucide-icons';
 import { showAlert } from '@/components/ui/alert-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BrandColors } from '@/constants/brand';
-import { Fonts } from '@/constants/fonts';
-import { faintCardShadow } from '@/constants/shadows';
-import { useAuth } from '@/features/auth/context/auth-provider';
-import { DeleteAccountSheet } from '@/features/profile/components/delete-account-sheet';
+import { deleteAllScans } from '@/db/scans';
 import { ProfileSectionLabel } from '@/features/profile/components/profile-section-label';
 import {
   ProfileGroupedCard,
@@ -34,15 +29,14 @@ import {
   pickAndParseExportFile,
 } from '@/features/profile/lib/data-export';
 import {
-  formatProfileDisplayName,
   getOccasionDisplay,
   getPreferredFabricsDisplay,
-  getProfileInitial,
   getSensitiveFabricsDisplay,
   getSkinToneDisplay,
   getWeatherDisplay,
 } from '@/features/profile/lib/profile-display';
 import {
+  clearUserPreferences,
   getUserPreferencesSnapshot,
   hydrateUserPreferences,
   persistUserPreferences,
@@ -50,6 +44,9 @@ import {
   subscribeUserPreferences,
   type UserPreferences,
 } from '@/features/profile/lib/user-preferences';
+import { clearLastGarmentCondition } from '@/features/scan/lib/garment-condition';
+import { clearLastSellerLabel } from '@/features/scan/lib/last-seller-label';
+
 /** Root-stack routes (siblings of tabs) — tab bar stays under the push, no mid-anim hide. */
 const PROFILE_SKIN_TONE_HREF = '/skin-tone' as Href;
 const PROFILE_ALLERGIES_HREF = '/fabric-allergies' as Href;
@@ -57,26 +54,19 @@ const PROFILE_PREFERRED_HREF = '/preferred-fabrics' as Href;
 const PROFILE_WEATHER_HREF = '/weather' as Href;
 const PROFILE_OCCASION_HREF = '/occasion' as Href;
 const PROFILE_ABOUT_HREF = '/about' as Href;
-const PROFILE_EDIT_HREF = '/edit-profile' as Href;
+const TUTORIAL_HREF = '/onboarding' as Href;
 const PROFILE_FAVORITES_HREF = '/favorite-scans' as Href;
 const PROFILE_DELETED_HREF = '/deleted-scans' as Href;
 
-export function ProfileSignedInView() {
+export function ProfileView() {
   const router = useRouter();
-  const { session, signOut } = useAuth();
-  const [isDeleteSheetVisible, setIsDeleteSheetVisible] = useState(false);
-  const [isLogoutSheetVisible, setIsLogoutSheetVisible] = useState(false);
+  const [isResetVisible, setIsResetVisible] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [pendingImport, setPendingImport] = useState<{
     count: number;
     preferences: UserPreferences;
   } | null>(null);
-  const username = session?.username ?? '';
-  const displayName = session
-    ? formatProfileDisplayName(session)
-    : formatProfileDisplayName(username);
-  const initial = session ? getProfileInitial(session) : getProfileInitial(username);
 
   const prefs = useSyncExternalStore(
     subscribeUserPreferences,
@@ -86,33 +76,12 @@ export function ProfileSignedInView() {
 
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-
-      void (async () => {
-        await hydrateUserPreferences(session?.userId ?? null);
-        if (!active) {
-          return;
-        }
-      })();
-
-      return () => {
-        active = false;
-      };
-    }, [session?.userId]),
+      void hydrateUserPreferences();
+    }, []),
   );
 
   const openNested = (href: Href) => {
     router.push(href);
-  };
-
-  const endSession = async () => {
-    await signOut();
-    router.replace('/welcome' as Href);
-  };
-
-  const handleConfirmLogout = () => {
-    setIsLogoutSheetVisible(false);
-    void endSession();
   };
 
   const handleExportData = async () => {
@@ -122,7 +91,7 @@ export function ProfileSignedInView() {
 
     setIsExporting(true);
     try {
-      await exportUserData({ userId: session?.userId ?? null, username });
+      await exportUserData();
     } catch (error) {
       showAlert(
         'Could not export data',
@@ -145,11 +114,7 @@ export function ProfileSignedInView() {
         return;
       }
 
-      const count = await importScans(
-        payload.scans,
-        payload.favoriteScanIds,
-        session?.userId ?? null,
-      );
+      const count = await importScans(payload.scans, payload.favoriteScanIds);
 
       if (payload.preferences) {
         setPendingImport({ count, preferences: payload.preferences });
@@ -175,8 +140,24 @@ export function ProfileSignedInView() {
       return;
     }
     setUserPreferences(pendingImport.preferences);
-    void persistUserPreferences(session?.userId ?? null);
+    void persistUserPreferences();
     setPendingImport(null);
+  };
+
+  const handleConfirmReset = () => {
+    setIsResetVisible(false);
+    void (async () => {
+      try {
+        await deleteAllScans();
+        clearUserPreferences();
+        await persistUserPreferences();
+        clearLastSellerLabel();
+        clearLastGarmentCondition();
+        showAlert('Data reset', 'All scans and preferences were removed from this device.', 'success');
+      } catch {
+        showAlert('Could not reset data', 'Please try again.');
+      }
+    })();
   };
 
   const skinTone = getSkinToneDisplay(prefs);
@@ -187,39 +168,6 @@ export function ProfileSignedInView() {
 
   return (
     <>
-      <Pressable
-        style={styles.identity}
-        onPress={() => openNested(PROFILE_EDIT_HREF)}
-        accessibilityRole="button"
-        accessibilityLabel="Edit Profile">
-        <View style={styles.avatarWrap}>
-          <View style={styles.avatar}>
-            {session?.avatarUri ? (
-              <Image source={{ uri: session.avatarUri }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarText}>{initial}</Text>
-            )}
-          </View>
-          <View style={styles.avatarBadge}>
-            <Camera size={12} color={BrandColors.white} strokeWidth={2.5} />
-          </View>
-        </View>
-        <Text style={styles.name}>{displayName}</Text>
-        <Text style={styles.email}>@{username}</Text>
-      </Pressable>
-
-      <View style={styles.section}>
-        <ProfileSectionLabel title="Profile" />
-        <ProfileGroupedCard>
-          <ProfilePreferenceRow
-            title="Edit Profile"
-            icon={<User size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
-            onPress={() => openNested(PROFILE_EDIT_HREF)}
-            isLast
-          />
-        </ProfileGroupedCard>
-      </View>
-
       <View style={styles.section}>
         <ProfileSectionLabel title="My preferences" />
         <ProfileGroupedCard>
@@ -285,6 +233,11 @@ export function ProfileSignedInView() {
         <ProfileSectionLabel title="App settings" />
         <ProfileGroupedCard>
           <ProfilePreferenceRow
+            title="Replay tutorial"
+            icon={<CircleHelp size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
+            onPress={() => openNested(TUTORIAL_HREF)}
+          />
+          <ProfilePreferenceRow
             title="About TELA-TELL"
             icon={<Info size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
             onPress={() => openNested(PROFILE_ABOUT_HREF)}
@@ -302,39 +255,25 @@ export function ProfileSignedInView() {
             onPress={() => void handleImportData()}
           />
           <ProfilePreferenceRow
-            title="Delete Account"
+            title="Reset My Data"
+            value="Delete all scans and preferences"
             icon={<Trash2 size={18} color="#DC2626" strokeWidth={2.25} />}
             titleColor="#DC2626"
-            onPress={() => setIsDeleteSheetVisible(true)}
+            onPress={() => setIsResetVisible(true)}
             isLast
           />
         </ProfileGroupedCard>
       </View>
 
-      <Pressable
-        style={({ pressed }) => [styles.logoutButton, faintCardShadow(), pressed && styles.pressed]}
-        onPress={() => setIsLogoutSheetVisible(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Log out">
-        <LogOut size={18} color={BrandColors.textMuted} strokeWidth={2.25} />
-        <Text style={styles.logoutText}>Log out</Text>
-      </Pressable>
-
-      <DeleteAccountSheet
-        visible={isDeleteSheetVisible}
-        username={username}
-        userId={session?.userId ?? ''}
-        onCancel={() => setIsDeleteSheetVisible(false)}
-        onDeleted={() => void endSession()}
-      />
-
       <ConfirmDialog
-        visible={isLogoutSheetVisible}
-        title="Are you sure you want to log out?"
-        confirmLabel="Log out"
+        visible={isResetVisible}
+        title="Reset all data?"
+        message="This permanently deletes every scan (including favorites and Recently deleted) and clears your preferences on this device. Export first if you want a backup."
+        confirmLabel="Reset"
         cancelLabel="Cancel"
-        onConfirm={handleConfirmLogout}
-        onCancel={() => setIsLogoutSheetVisible(false)}
+        destructive
+        onConfirm={handleConfirmReset}
+        onCancel={() => setIsResetVisible(false)}
       />
 
       <ConfirmDialog
@@ -355,59 +294,6 @@ export function ProfileSignedInView() {
 }
 
 const styles = StyleSheet.create({
-  identity: {
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    marginBottom: 4,
-  },
-  avatarWrap: {
-    width: 72,
-    height: 72,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: BrandColors.lavenderCard,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: BrandColors.border,
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: BrandColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: BrandColors.white,
-  },
-  avatarText: {
-    fontFamily: Fonts.bold,
-    fontSize: 28,
-    color: BrandColors.primary,
-  },
-  name: {
-    fontFamily: Fonts.bold,
-    fontSize: 18,
-    color: BrandColors.text,
-  },
-  email: {
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    color: BrandColors.textMuted,
-  },
   section: {
     marginTop: 8,
   },
@@ -425,25 +311,5 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: BrandColors.border,
     backgroundColor: BrandColors.inputBackground,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 16,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: BrandColors.white,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-  },
-  logoutText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.textMuted,
-  },
-  pressed: {
-    opacity: 0.9,
   },
 });

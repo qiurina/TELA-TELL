@@ -181,12 +181,11 @@ async function waitForPreferencesSave(): Promise<void> {
   }
 }
 
-export async function hydrateUserPreferences(
-  userId: string | null | undefined,
-  options?: { apply?: boolean },
-): Promise<UserPreferences> {
+export async function hydrateUserPreferences(options?: {
+  apply?: boolean;
+}): Promise<UserPreferences> {
   await waitForPreferencesSave();
-  const loaded = normalizePreferences(await getPreferences(userId));
+  const loaded = normalizePreferences(await getPreferences());
   if (options?.apply !== false) {
     const localHasData = hasActiveUserPreferences();
     const loadedHasData = Boolean(
@@ -208,17 +207,12 @@ export async function hydrateUserPreferences(
   return loaded;
 }
 
-export function persistUserPreferences(userId: string | null | undefined): Promise<void> {
-  if (!userId) {
-    console.warn('persistUserPreferences skipped: no userId');
-    return Promise.resolve();
-  }
-
+export function persistUserPreferences(): Promise<void> {
   const snapshot = getUserPreferences();
 
   pendingPreferencesSave = waitForPreferencesSave().then(async () => {
     try {
-      await savePreferences(userId, snapshot);
+      await savePreferences(snapshot);
     } catch (error) {
       console.error('Failed to save preferences', error);
       throw error;

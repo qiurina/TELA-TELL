@@ -13,29 +13,27 @@ import { ScanConfidenceBanner } from '@/features/results/components/scan-confide
 import { SellerComparisonCard } from '@/features/results/components/seller-comparison-card';
 import { StatusBadges } from '@/features/results/components/status-badges';
 import { SyntheticHealthRiskCard } from '@/features/results/components/synthetic-health-risk-card';
-import { useAuth } from '@/features/auth/context/auth-provider';
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { deleteScan, isScanFavorite, setScanFavorite } from '@/db/scans';
 import { useScanResult } from '@/features/results/hooks/use-scan-result';
 import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 import { getFabricReference } from '@/data/fabrics/fabric-references';
+import { getFabricCategory, resolveFabricAlias } from '@/data/fabrics/fabrics';
 import { getScanResultHeadline } from '@/features/results/lib/scan-result-headline';
-import { buildMislabeling } from '@/features/scan/lib/create-scan-record';
-import { clearLastCaptureUri, getLastCaptureUri } from '@/features/scan/lib/last-capture';
+import { evaluateDeclaredLabel } from '@/features/scan/lib/declared-label';
 import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 
 export default function ResultsScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
   const router = useRouter();
-  const { isSignedIn } = useAuth();
-  const [showInsightsLocked, setShowInsightsLocked] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isActionBusy, setIsActionBusy] = useState(false);
   const { scanId: resolvedScanId, result, isLoading, reload } = useScanResult(scanId);
-  const capturedPhotoUri = getLastCaptureUri() ?? result?.imageUri ?? null;
+  // Always this scan's own saved photo. (A module-level "last capture" used to take priority here,
+  // which showed the most recent scan's photo on every older scan opened afterwards.)
+  const capturedPhotoUri = result?.imageUri ?? null;
 
   useFocusEffect(
     useCallback(() => {
@@ -92,7 +90,6 @@ export default function ResultsScreen() {
     void (async () => {
       try {
         await deleteScan(resolvedScanId);
-        clearLastCaptureUri();
         if (router.canGoBack()) {
           router.back();
         } else {
@@ -126,8 +123,7 @@ export default function ResultsScreen() {
   }
 
   const sellerLabel = result.sellerLabel?.trim() || null;
-  const hasSellerLabel = Boolean(sellerLabel);
-  const liveMislabel = buildMislabeling(
+  const labelCheck = evaluateDeclaredLabel(
     result.dominantFabric,
     sellerLabel,
     result.compositions ?? [],
@@ -167,7 +163,12 @@ export default function ResultsScreen() {
 
   const fiberBadge = healthRisk
     ? {
-        label: healthRisk.fibers.length > 1 ? 'Synthetic Blend Detected' : 'Synthetic Fiber Detected',
+        // "Detected" only when the most likely fiber itself is synthetic; a synthetic that only
+        // appears further down the top 3 is a possibility, not a finding.
+        label:
+          getFabricCategory(resolveFabricAlias(result.dominantFabric) ?? '') === 'Synthetic'
+            ? 'Synthetic Fiber Detected'
+            : 'Possible Synthetic Fiber',
         tone: 'synthetic' as const,
       }
     : { label: 'No Synthetic Detected', tone: 'clear' as const };
@@ -176,24 +177,10 @@ export default function ResultsScreen() {
 
   return (
     <View style={styles.root}>
-      <ScanConfirmSheet
-        visible={showInsightsLocked}
-        variant="info"
-        title="Personalized insights locked"
-        message="Sign in to see color, fit, and allergy tips tailored to your preferences."
-        confirmLabel="Log in"
-        cancelLabel="Not now"
-        onConfirm={() => {
-          setShowInsightsLocked(false);
-          router.push('/login' as Href);
-        }}
-        onCancel={() => setShowInsightsLocked(false)}
-      />
-
       <ConfirmDialog
         visible={showDeleteConfirm}
         title="Delete this scan?"
-        message="This moves the scan to Recently Deleted for 30 days. You can restore it from Profile."
+        message="This moves the scan to Recently Deleted for 30 days. You can restore it from Settings."
         confirmLabel="Move to trash"
         cancelLabel="Keep scan"
         destructive
@@ -217,7 +204,7 @@ export default function ResultsScreen() {
           imageUri={capturedPhotoUri}
           scanCaption="Your scan"
           detectedFabric={headline.title}
-          detectedSubtitle={headline.isBlend ? undefined : headline.subtitle}
+          detectedSubtitle={headline.subtitle}
           referenceImage={primaryReference?.image}
           referenceTitle={primaryReference?.title}
           fiberBadge={fiberBadge}
@@ -238,8 +225,7 @@ export default function ResultsScreen() {
         <SellerComparisonCard
           sellerLabel={sellerLabel}
           detectedLabel={headline.title}
-          mislabelingDetected={hasSellerLabel && liveMislabel.detected}
-          mislabelMessage={liveMislabel.message}
+          check={labelCheck}
           onAddLabel={handleAddLabel}
         />
 
@@ -247,9 +233,6 @@ export default function ResultsScreen() {
           onProfile={handleViewProfile}
           onEcoTips={handleEcoTips}
           onPersonalizedInsights={handlePersonalizedInsights}
-          personalizedInsightsLocked={!isSignedIn}
-          onLockedPersonalizedInsights={() => setShowInsightsLocked(true)}
-          isBlend={headline.isBlend}
           onScanAgain={handleScanAnother}
         />
       </ScrollView>

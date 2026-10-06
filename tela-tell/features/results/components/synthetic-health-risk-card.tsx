@@ -57,7 +57,7 @@ export function SyntheticHealthRiskCard({ risk }: SyntheticHealthRiskCardProps) 
               {risk.syntheticPercent}%
             </Text>
             <Text style={[styles.percentCaption, { color: levelStyle.accent }]}>
-              est. synthetic
+              synthetic match
             </Text>
           </View>
           <Pressable

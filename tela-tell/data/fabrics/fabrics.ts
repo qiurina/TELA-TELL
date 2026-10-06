@@ -65,7 +65,59 @@ export const FABRIC_ALIASES: Record<string, SupportedFabric> = {
   lycra: 'Spandex',
   suede: 'Suede',
   leather: 'Leather',
+  // Names that appear on care tags for fibers the model knows under another name.
+  viscose: 'Rayon',
+  lyocell: 'Rayon',
+  tencel: 'Rayon',
+  modal: 'Rayon',
+  flax: 'Linen',
+  polyamide: 'Nylon',
+  abaka: 'Abaca',
 };
+
+/**
+ * Fibers that show up on tags but that the model cannot recognize. A label naming only these
+ * cannot be checked, and must not be reported as "matching" the scan.
+ */
+const UNSUPPORTED_FIBER_TERMS = [
+  'cashmere',
+  'mohair',
+  'angora',
+  'alpaca',
+  'hemp',
+  'jute',
+  'ramie',
+  'bamboo',
+  'cupro',
+  'acetate',
+  'triacetate',
+  'polypropylene',
+  'microfiber',
+  'microfibre',
+] as const;
+
+/** "Faux leather", "PU leather", "pleather" ... are plastic, not the animal-hide fibers. */
+const IMITATION_LEATHER_PATTERN =
+  /\b(?:faux|synthetic|vegan|artificial|pu|pvc)\s+(?:leather|suede)\b|\bleatherette\b|\bpleather\b/g;
+
+function stripImitationLeather(normalized: string): { text: string; imitations: string[] } {
+  const imitations = normalized.match(IMITATION_LEATHER_PATTERN) ?? [];
+  return { text: normalized.replace(IMITATION_LEATHER_PATTERN, ' '), imitations };
+}
+
+/** Fiber names in a label that TELA-TELL cannot check (see UNSUPPORTED_FIBER_TERMS). */
+export function findUnsupportedFibers(text: string): string[] {
+  const { text: withoutImitations, imitations } = stripImitationLeather(text.trim().toLowerCase());
+  const found = [...new Set(imitations)];
+
+  for (const term of UNSUPPORTED_FIBER_TERMS) {
+    if (new RegExp(`\\b${term}\\b`).test(withoutImitations) && !found.includes(term)) {
+      found.push(term);
+    }
+  }
+
+  return found;
+}
 
 const FABRIC_CATEGORY_MAP = Object.fromEntries(
   FABRIC_REGISTRY.map((fabric) => [fabric.name, fabric.category]),
@@ -86,7 +138,7 @@ export function resolveFabricAlias(text: string): SupportedFabric | null {
 
 /** Every supported fiber named in a seller tag or scan string (order preserved). */
 export function resolveAllFabricAliases(text: string): SupportedFabric[] {
-  const normalized = text.trim().toLowerCase();
+  const normalized = stripImitationLeather(text.trim().toLowerCase()).text.trim();
   if (!normalized) {
     return [];
   }

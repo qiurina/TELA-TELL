@@ -4,7 +4,6 @@ import {
   getConfidenceLabel,
   getConfidenceLevel,
   getSignificantFibers,
-  isBlendDetected,
 } from '@/data/scans/scan-confidence';
 
 describe('getConfidenceLevel', () => {
@@ -70,23 +69,3 @@ describe('getSignificantFibers', () => {
   });
 });
 
-describe('isBlendDetected', () => {
-  it('is false with fewer than two significant fibers', () => {
-    expect(isBlendDetected([{ material: 'Cotton', percentage: 90 }])).toBe(false);
-    expect(
-      isBlendDetected([
-        { material: 'Cotton', percentage: 90 },
-        { material: 'Polyester', percentage: 5 },
-      ]),
-    ).toBe(false);
-  });
-
-  it('is true with two or more significant fibers', () => {
-    expect(
-      isBlendDetected([
-        { material: 'Cotton', percentage: 60 },
-        { material: 'Polyester', percentage: 40 },
-      ]),
-    ).toBe(true);
-  });
-});

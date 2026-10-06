@@ -3,7 +3,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View , ActivityIndicator } fro
 
 
 import { PersonalizedInsightsContent } from '@/features/recommendations/components/personalized-insights-content';
-import { ProfilePreferencesGate } from '@/features/profile/components/profile-preferences-gate';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -40,12 +39,10 @@ export default function PersonalizedInsightsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
-        <ProfilePreferencesGate>
-          <PersonalizedInsightsContent
-            dominantFabric={result.dominantFabric}
-            detectedCompositions={result.compositions ?? []}
-          />
-        </ProfilePreferencesGate>
+        <PersonalizedInsightsContent
+          dominantFabric={result.dominantFabric}
+          detectedCompositions={result.compositions ?? []}
+        />
       </ScrollView>
     </View>
   );

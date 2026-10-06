@@ -28,22 +28,20 @@ import { DEFAULT_GARMENT_CONDITION, type GarmentCondition } from '@/data/scans/g
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
-import { clearLastCaptureUri, setLastCaptureUri } from '@/features/scan/lib/last-capture';
+import { persistScanImage } from '@/features/scan/lib/scan-image-storage';
 import { optimizeScanImage } from '@/features/scan/lib/crop-to-guide';
-import { getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
+import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 import {
   clearLastGarmentCondition,
   getLastGarmentCondition,
   setLastGarmentCondition,
 } from '@/features/scan/lib/garment-condition';
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
-import { useAuth } from '@/features/auth/context/auth-provider';
 import { saveScan } from '@/db/scans';
 import { createScanRecord } from '@/features/scan/lib/create-scan-record';
 
 export default function ScanScreen() {
   const router = useRouter();
-  const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const cameraGuideRef = useRef<CameraGuideHandle>(null);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
@@ -65,7 +63,6 @@ export default function ScanScreen() {
       if (consumeFreshScan()) {
         setPreviewUri(null);
         setBurstUris([]);
-        clearLastCaptureUri();
         clearLastGarmentCondition();
         setGarmentCondition(DEFAULT_GARMENT_CONDITION);
         setDetailsExpanded(true);
@@ -76,30 +73,18 @@ export default function ScanScreen() {
   );
 
   const commitPreviewUri = (photoUri: string, allUris: string[] = [photoUri]) => {
-    setLastCaptureUri(photoUri);
     setPreviewUri(photoUri);
     setBurstUris(allUris);
     setDetailsExpanded(true);
   };
 
   const runAnalysis = (photoUri?: string | null, photoUris: string[] = photoUri ? [photoUri] : []) => {
-    if (photoUri) {
-      setLastCaptureUri(photoUri);
-    } else {
-      clearLastCaptureUri();
-    }
-
-    const ANALYSIS_MS = 1500;
-
     setIsAnalyzing(true);
 
     void (async () => {
-      const startedAt = Date.now();
+      let step: 'analyze' | 'save' = 'analyze';
       try {
         const optimizedUri = photoUri ? await optimizeScanImage(photoUri) : null;
-        if (optimizedUri) {
-          setLastCaptureUri(optimizedUri);
-        }
 
         const result = await createScanRecord({
           sellerLabel: getLastSellerLabel(),
@@ -107,21 +92,24 @@ export default function ScanScreen() {
         });
         result.garmentCondition = garmentCondition;
 
+        step = 'save';
+        const storedImageUri = optimizedUri
+          ? await persistScanImage(optimizedUri, result.id)
+          : null;
         await saveScan(result, {
-          userId: session?.userId ?? null,
           garmentCondition,
-          imageUri: optimizedUri,
+          imageUri: storedImageUri,
         });
 
-        const remaining = Math.max(0, ANALYSIS_MS - (Date.now() - startedAt));
-        await new Promise((resolve) => setTimeout(resolve, remaining));
+        // The stated label belongs to the garment just scanned; the next scan starts without one.
+        clearLastSellerLabel();
 
         setIsAnalyzing(false);
         router.push(`/results/${result.id}` as Href);
       } catch (error) {
         setIsAnalyzing(false);
         showAlert(
-          'Could not save scan',
+          step === 'analyze' ? 'Could not analyze photo' : 'Could not save scan',
           error instanceof Error ? error.message : 'Please try again.',
         );
       }
@@ -199,7 +187,6 @@ export default function ScanScreen() {
 
     setPreviewUri(null);
     setBurstUris([]);
-    clearLastCaptureUri();
     setDetailsExpanded(true);
     clearLastGarmentCondition();
     setGarmentCondition(DEFAULT_GARMENT_CONDITION);

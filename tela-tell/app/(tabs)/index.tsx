@@ -11,28 +11,30 @@ import { Fonts } from '@/constants/fonts';
 import { heroCardShadow, primaryButtonShadow } from '@/constants/shadows';
 import { type RecentScanPreview } from '@/data/scans/mock-data';
 import { getRecentScans } from '@/db/scans';
-import { useAuth } from '@/features/auth/context/auth-provider';
 import { useCallback, useState } from 'react';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const { session } = useAuth();
   const [recentScans, setRecentScans] = useState<RecentScanPreview[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       void (async () => {
-        const list = await getRecentScans(5, { userId: session?.userId ?? null });
-        if (!active) return;
-        setRecentScans(list);
+        try {
+          const list = await getRecentScans(5);
+          if (!active) return;
+          setRecentScans(list);
+        } catch (error) {
+          console.error('[TELA-TELL] Failed to load recent scans:', error);
+        }
       })();
       return () => {
         active = false;
       };
-    }, [session?.userId]),
+    }, []),
   );
 
   return (

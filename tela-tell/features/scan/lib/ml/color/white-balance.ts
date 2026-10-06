@@ -1,5 +1,5 @@
 /**
- * Gray World white balance — direct port of ml-training/opencv_preprocess.py's
+ * Gray World white balance — direct port of ml-training/common/opencv_preprocess.py's
  * white_balance_gray_world(), so on-device inference sees the same color-corrected
  * input the model was trained on. Scales each channel so its mean matches the
  * overall gray mean, correcting lighting color casts.

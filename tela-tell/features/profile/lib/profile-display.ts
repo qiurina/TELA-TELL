@@ -4,7 +4,6 @@ import {
   WEATHER_CONTEXT_OPTIONS,
   type DressingContext,
 } from '@/data/preferences/occasion-weather';
-import type { AuthSession } from '@/features/auth/lib/auth-session';
 import {
   getUserPreferences,
   type SkinTone,
@@ -19,40 +18,6 @@ export const SKIN_TONE_SWATCHES: Record<SkinTone, string> = {
   Tan: '#A67B4E',
   'Deep Dark': '#4A3228',
 };
-
-/** Prefers registered name; falls back to a formatted username. */
-export function formatProfileDisplayName(
-  usernameOrSession:
-    | string
-    | Pick<AuthSession, 'username' | 'firstName' | 'lastName' | 'middleInitial'>,
-): string {
-  if (typeof usernameOrSession !== 'string') {
-    const { firstName, lastName, middleInitial, username } = usernameOrSession;
-    const parts = [firstName, middleInitial?.trim(), lastName].filter(Boolean);
-    if (parts.length > 0) {
-      return parts.join(' ');
-    }
-    return formatProfileDisplayName(username);
-  }
-
-  return usernameOrSession
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-export function getProfileInitial(
-  usernameOrSession:
-    | string
-    | Pick<AuthSession, 'username' | 'firstName' | 'lastName' | 'middleInitial'>,
-): string {
-  if (typeof usernameOrSession !== 'string' && usernameOrSession.firstName) {
-    return usernameOrSession.firstName.charAt(0).toUpperCase() || '?';
-  }
-  const name = formatProfileDisplayName(usernameOrSession);
-  return name.charAt(0).toUpperCase() || '?';
-}
 
 function formatContextList(contexts: DressingContext[], category: 'weather' | 'occasion'): string {
   const allowed = new Set(

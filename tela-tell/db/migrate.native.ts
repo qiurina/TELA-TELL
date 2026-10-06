@@ -1,6 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+
 import { getDatabase } from '@/db/client';
+import { DEVICE_PROFILE_ID } from '@/db/preferences';
 import { SCHEMA_SQL } from '@/db/schema';
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
+import {
+  isPersistedScanImage,
+  persistScanImage,
+  scanImageExists,
+} from '@/features/scan/lib/scan-image-storage';
 
 let migrationPromise: Promise<void> | null = null;
 
@@ -17,9 +26,7 @@ export function migrateDatabase(): Promise<void> {
 
 /**
  * Runs one migration step in isolation so a failure in it can't take down every step
- * after it — in particular, savePreferences() depends on the unique index step below
- * having run (its ON CONFLICT(user_id) target requires that index to already exist),
- * so an earlier unrelated step throwing must not prevent it from ever being created.
+ * after it.
  */
 async function runStep(name: string, step: () => Promise<void>): Promise<void> {
   try {
@@ -31,7 +38,6 @@ async function runStep(name: string, step: () => Promise<void>): Promise<void> {
 
 async function runMigration(): Promise<void> {
   const db = await getDatabase();
-  await runStep('ensureUsernameColumn', () => ensureUsernameColumn(db));
   // Core schema creation is the one step allowed to abort the whole migration:
   // nothing below can meaningfully run without the base tables existing.
   await db.execAsync(SCHEMA_SQL);
@@ -43,16 +49,12 @@ async function runMigration(): Promise<void> {
   await runStep('ensureProfileColumn:colorSeason', () =>
     ensureProfileColumn(db, 'colorSeason', 'TEXT'),
   );
-  await runStep('ensureUserColumn:avatarUri', () => ensureUserColumn(db, 'avatarUri', 'TEXT'));
   await runStep('idx_scan_createdAt', () =>
     db.execAsync('CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)'),
   );
-  await runStep('deviceProfile unique index', async () => {
-    await dedupeDeviceProfiles(db);
-    await db.execAsync(
-      'CREATE UNIQUE INDEX IF NOT EXISTS idx_deviceProfile_user_id ON tblDeviceProfile(user_id)',
-    );
-  });
+  await runStep('removeLegacyAccounts', () => removeLegacyAccounts(db));
+  await runStep('dropUnusedScanStorage', () => dropUnusedScanStorage(db));
+  await runStep('persistLegacyScanImages', () => persistLegacyScanImages(db));
   await runStep('backfillScanCreatedAt', () => backfillScanCreatedAt(db));
   await runStep('resyncScanSustainability', () => resyncScanSustainability(db));
   await runStep('purgeExpiredDeletedScans', async () => {
@@ -63,101 +65,217 @@ async function runMigration(): Promise<void> {
 
 /**
  * Re-derives sustainability (and profile/recommendations) for every stored scan from the
- * current fiber-profiles.ts data, since saveScan() snapshots these at scan time rather than
- * computing them live on read. Safe to run on every launch — recompute is pure/cheap, and a
- * fiber-profiles.ts update should retroactively fix history, not just new scans.
+ * current fiber and eco data, since saveScan() snapshots these at scan time rather than
+ * computing them live on read. A fiber-profiles.ts update should retroactively fix history, not
+ * just new scans -- but rewriting every scan on every launch gets slower as history grows, so it
+ * only runs when a fingerprint of that data (plus SCAN_PROFILE_LOGIC_VERSION) has changed since
+ * the last run.
  */
-async function resyncScanSustainability(db: Awaited<ReturnType<typeof getDatabase>>) {
-  const { buildScanProfile } = await import('@/features/scan/lib/build-scan-profile');
-  const { resolveFabricAlias } = await import('@/data/fabrics/fabrics');
-  const { isBlendDetected } = await import('@/data/scans/scan-confidence');
+const SCAN_PROFILE_FINGERPRINT_KEY = '@tela-tell/scan-profile-fingerprint';
+
+function hashString(text: string): string {
+  let hash = 5381;
+  for (let i = 0; i < text.length; i++) {
+    hash = ((hash << 5) + hash + text.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+
+async function resyncScanSustainability(db: Database) {
+  const { buildScanProfile, SCAN_PROFILE_LOGIC_VERSION } = await import(
+    '@/features/scan/lib/build-scan-profile'
+  );
+  const { resolveFabricAlias, SUPPORTED_FABRICS } = await import('@/data/fabrics/fabrics');
+  const { FIBER_PROFILES } = await import('@/data/fabrics/fiber-profiles');
+  const { getEcoGuidance } = await import('@/data/fabrics/eco-alternatives');
+
+  const fingerprint = hashString(
+    JSON.stringify([
+      SCAN_PROFILE_LOGIC_VERSION,
+      FIBER_PROFILES,
+      SUPPORTED_FABRICS.map((fabric) => getEcoGuidance(fabric)),
+    ]),
+  );
+  if ((await AsyncStorage.getItem(SCAN_PROFILE_FINGERPRINT_KEY)) === fingerprint) {
+    return;
+  }
 
   const rows = await db.getAllAsync<{ scan_ID: string; resultJson: string | null }>(
     'SELECT scan_ID, resultJson FROM tblScan',
   );
 
-  for (const row of rows) {
-    if (!row.resultJson) {
-      continue;
+  await db.withTransactionAsync(async () => {
+    for (const row of rows) {
+      if (!row.resultJson) {
+        continue;
+      }
+
+      try {
+        const parsed = JSON.parse(row.resultJson);
+        const compositions = parsed.compositions ?? [];
+        const primary = (resolveFabricAlias(parsed.dominantFabric) ??
+          parsed.dominantFabric) as SupportedFabric;
+
+        const { profile, sustainability, recommendations } = buildScanProfile(
+          primary,
+          parsed.dominantFabric,
+          compositions,
+        );
+
+        const next = { ...parsed, profile, sustainability, recommendations };
+
+        await db.runAsync(
+          `UPDATE tblScan
+           SET sustainabilityRating = ?, sustainabilityLabel = ?, sustainabilityScore = ?, resultJson = ?
+           WHERE scan_ID = ?`,
+          [
+            sustainability.rating,
+            sustainability.label,
+            sustainability.score,
+            JSON.stringify(next),
+            row.scan_ID,
+          ],
+        );
+      } catch {
+        continue;
+      }
     }
+  });
 
-    try {
-      const parsed = JSON.parse(row.resultJson);
-      const compositions = parsed.compositions ?? [];
-      const primary = (resolveFabricAlias(parsed.dominantFabric) ??
-        parsed.dominantFabric) as SupportedFabric;
-      const isBlend = isBlendDetected(compositions);
+  await AsyncStorage.setItem(SCAN_PROFILE_FINGERPRINT_KEY, fingerprint);
+}
 
-      const { profile, sustainability, recommendations } = buildScanProfile(
-        primary,
-        parsed.dominantFabric,
-        compositions,
-        isBlend,
-      );
+type Database = Awaited<ReturnType<typeof getDatabase>>;
 
-      const next = { ...parsed, profile, sustainability, recommendations };
+/**
+ * The app used to have local accounts (tblUser, a user_id on scans and preferences). It is now
+ * a single-user, on-device app. For databases created by an older build this:
+ *  - moves the most recently saved account's preferences onto the one device profile
+ *    (only if the device profile is still empty), then drops the per-account profiles;
+ *  - drops tblUser (and with it the stored password hashes) and the user_id columns;
+ *  - clears the stored session and the old avatar files.
+ * Scans keep all their data; they were only ever filtered by user_id, which is no longer read.
+ */
+async function removeLegacyAccounts(db: Database) {
+  const profileColumns = await tableColumns(db, 'tblDeviceProfile');
+  const scanColumns = await tableColumns(db, 'tblScan');
 
-      await db.runAsync(
-        `UPDATE tblScan
-         SET sustainabilityRating = ?, sustainabilityLabel = ?, sustainabilityScore = ?, resultJson = ?
-         WHERE scan_ID = ?`,
-        [
-          sustainability.rating,
-          sustainability.label,
-          sustainability.score,
-          JSON.stringify(next),
-          row.scan_ID,
-        ],
-      );
-    } catch {
-      continue;
-    }
+  if (profileColumns.includes('user_id')) {
+    await adoptLegacyPreferences(db);
+    await db.execAsync('DROP INDEX IF EXISTS idx_deviceProfile_user_id');
+    await db.execAsync('ALTER TABLE tblDeviceProfile DROP COLUMN user_id');
+  }
+
+  if (scanColumns.includes('user_id')) {
+    await db.execAsync('DROP INDEX IF EXISTS idx_scan_user');
+    await db.execAsync('ALTER TABLE tblScan DROP COLUMN user_id');
+  }
+
+  await db.execAsync('DROP INDEX IF EXISTS idx_user_username');
+  await db.execAsync('DROP INDEX IF EXISTS idx_user_email');
+  await db.execAsync('DROP TABLE IF EXISTS tblUser');
+
+  await AsyncStorage.multiRemove(['@tela-tell/auth-session', '@tela-tell/remembered-username']);
+  if (FileSystem.documentDirectory) {
+    await FileSystem.deleteAsync(`${FileSystem.documentDirectory}avatars/`, { idempotent: true });
   }
 }
 
 /**
- * Collapses any tblDeviceProfile rows that ended up duplicated per user_id (possible
- * before the unique index below existed, from a read-then-insert race in savePreferences)
- * into one, keeping the most recently updated row and moving child rows onto it so a
- * later CREATE UNIQUE INDEX doesn't fail on pre-existing duplicates.
+ * tblScanComposition was written on every save but never read (the full result lives in
+ * tblScan.resultJson), and tblScan.syncStatus was always 'local'. Both are dropped.
  */
-async function dedupeDeviceProfiles(db: Awaited<ReturnType<typeof getDatabase>>) {
-  const duplicated = await db.getAllAsync<{ user_id: string }>(
-    `SELECT user_id FROM tblDeviceProfile
-     WHERE user_id IS NOT NULL
-     GROUP BY user_id
-     HAVING COUNT(*) > 1`,
+async function dropUnusedScanStorage(db: Database) {
+  await db.execAsync('DROP INDEX IF EXISTS idx_composition_scan');
+  await db.execAsync('DROP TABLE IF EXISTS tblScanComposition');
+
+  if ((await tableColumns(db, 'tblScan')).includes('syncStatus')) {
+    await db.execAsync('ALTER TABLE tblScan DROP COLUMN syncStatus');
+  }
+}
+
+/**
+ * Scans saved before photos were kept in permanent storage point at the cache folder, which
+ * Android can clear at any time. Copy the ones still there into scan-images/; for the ones already
+ * gone, clear the path so History shows the placeholder instead of a broken image.
+ */
+async function persistLegacyScanImages(db: Database) {
+  const rows = await db.getAllAsync<{ scan_ID: string; imageUri: string }>(
+    `SELECT scan_ID, imageUri FROM tblScan WHERE imageUri IS NOT NULL AND imageUri != ''`,
   );
 
-  for (const { user_id } of duplicated) {
-    const rows = await db.getAllAsync<{ profile_ID: number }>(
-      'SELECT profile_ID FROM tblDeviceProfile WHERE user_id = ? ORDER BY updatedAt DESC, profile_ID DESC',
-      [user_id],
-    );
-    const [keep, ...extras] = rows;
-    if (!keep) {
+  for (const row of rows) {
+    if (isPersistedScanImage(row.imageUri)) {
       continue;
     }
 
-    for (const extra of extras) {
-      await db.runAsync(
-        'UPDATE OR IGNORE tblSensitiveFiber SET profile_ID = ? WHERE profile_ID = ?',
-        [keep.profile_ID, extra.profile_ID],
-      );
-      await db.runAsync(
-        'UPDATE OR IGNORE tblPreferredFiber SET profile_ID = ? WHERE profile_ID = ?',
-        [keep.profile_ID, extra.profile_ID],
-      );
-      await db.runAsync(
-        'UPDATE OR IGNORE tblDressingContext SET profile_ID = ? WHERE profile_ID = ?',
-        [keep.profile_ID, extra.profile_ID],
-      );
-      // Any child rows still pointing at extra.profile_ID lost the OR IGNORE race
-      // against an equivalent row keep.profile_ID already has — cascade-deleting
-      // the duplicate profile here is what actually drops those redundant rows.
-      await db.runAsync('DELETE FROM tblDeviceProfile WHERE profile_ID = ?', [extra.profile_ID]);
+    const nextUri = (await scanImageExists(row.imageUri))
+      ? await persistScanImage(row.imageUri, row.scan_ID)
+      : null;
+    if (nextUri !== row.imageUri) {
+      await db.runAsync('UPDATE tblScan SET imageUri = ? WHERE scan_ID = ?', [nextUri, row.scan_ID]);
     }
   }
+}
+
+async function adoptLegacyPreferences(db: Database) {
+  const device = await db.getFirstAsync<{
+    skinTone: string | null;
+    skinUndertone: string | null;
+    colorSeason: string | null;
+    childRows: number;
+  }>(
+    `SELECT skinTone, skinUndertone, colorSeason,
+       (SELECT COUNT(*) FROM tblSensitiveFiber WHERE profile_ID = ?)
+       + (SELECT COUNT(*) FROM tblPreferredFiber WHERE profile_ID = ?)
+       + (SELECT COUNT(*) FROM tblDressingContext WHERE profile_ID = ?) AS childRows
+     FROM tblDeviceProfile WHERE profile_ID = ?`,
+    [DEVICE_PROFILE_ID, DEVICE_PROFILE_ID, DEVICE_PROFILE_ID, DEVICE_PROFILE_ID],
+  );
+  const deviceIsEmpty =
+    !device || (!device.skinTone && !device.skinUndertone && !device.colorSeason && !device.childRows);
+
+  const legacy = await db.getFirstAsync<{
+    profile_ID: number;
+    skinTone: string | null;
+    skinUndertone: string | null;
+    colorSeason: string | null;
+  }>(
+    `SELECT profile_ID, skinTone, skinUndertone, colorSeason FROM tblDeviceProfile
+     WHERE user_id IS NOT NULL
+     ORDER BY updatedAt DESC, profile_ID DESC
+     LIMIT 1`,
+  );
+
+  await db.withTransactionAsync(async () => {
+    if (legacy && deviceIsEmpty) {
+      await db.runAsync(
+        `UPDATE tblDeviceProfile
+         SET skinTone = ?, skinUndertone = ?, colorSeason = ?, updatedAt = ?
+         WHERE profile_ID = ?`,
+        [
+          legacy.skinTone,
+          legacy.skinUndertone,
+          legacy.colorSeason,
+          new Date().toISOString(),
+          DEVICE_PROFILE_ID,
+        ],
+      );
+      for (const table of ['tblSensitiveFiber', 'tblPreferredFiber', 'tblDressingContext']) {
+        await db.runAsync(`UPDATE OR IGNORE ${table} SET profile_ID = ? WHERE profile_ID = ?`, [
+          DEVICE_PROFILE_ID,
+          legacy.profile_ID,
+        ]);
+      }
+    }
+    // Cascades to any child rows that were not moved above.
+    await db.runAsync('DELETE FROM tblDeviceProfile WHERE user_id IS NOT NULL');
+  });
+}
+
+async function tableColumns(db: Database, table: string): Promise<string[]> {
+  const columns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  return columns.map((column) => column.name);
 }
 
 function createdAtFromScanId(scanId: string): string {
@@ -204,31 +322,5 @@ async function ensureProfileColumn(
   const exists = columns.some((column) => column.name === name);
   if (!exists) {
     await db.execAsync(`ALTER TABLE tblDeviceProfile ADD COLUMN ${name} ${definition}`);
-  }
-}
-
-async function ensureUserColumn(
-  db: Awaited<ReturnType<typeof getDatabase>>,
-  name: string,
-  definition: string,
-) {
-  const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(tblUser)');
-  const exists = columns.some((column) => column.name === name);
-  if (!exists) {
-    await db.execAsync(`ALTER TABLE tblUser ADD COLUMN ${name} ${definition}`);
-  }
-}
-
-async function ensureUsernameColumn(db: Awaited<ReturnType<typeof getDatabase>>) {
-  const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(tblUser)');
-  if (columns.length === 0) {
-    return;
-  }
-
-  const hasUsername = columns.some((column) => column.name === 'username');
-  const hasEmail = columns.some((column) => column.name === 'email');
-  if (!hasUsername && hasEmail) {
-    await db.execAsync('ALTER TABLE tblUser RENAME COLUMN email TO username');
-    await db.execAsync('DROP INDEX IF EXISTS idx_user_email');
   }
 }

@@ -66,7 +66,7 @@ export default function AboutScreen() {
         icon={<Shield size={20} color="#2563eb" strokeWidth={2} />}
         iconBackground="#eff6ff"
         title="Good to know"
-        body="For the best results, get your camera close enough to clearly see the fabric's threads. Your scans and settings are saved right on your phone, so you don't need an internet account to use the app."
+        body="For the best results, get your camera close enough to clearly see the fabric's threads. Your scans and preferences are saved right on your phone. There is no account to create and no internet connection needed to scan."
       />
 
       <View style={[styles.card, faintCardShadow(), styles.sourcesCard]}>

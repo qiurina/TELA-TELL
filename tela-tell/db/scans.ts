@@ -11,6 +11,7 @@ import type {
   SustainabilityRating,
 } from '@/data/scans/mock-data';
 import { buildMislabeling } from '@/features/scan/lib/create-scan-record';
+import { deleteAllScanImages, deleteScanImages } from '@/features/scan/lib/scan-image-storage';
 import {
   formatScanDisplayTime,
   formatScannedAtDate,
@@ -20,7 +21,6 @@ import {
 const SCAN_THUMBNAIL = require('@/assets/images/testfabric.jpg') as ImageSourcePropType;
 
 export type SaveScanOptions = {
-  userId?: string | null;
   garmentCondition?: GarmentCondition;
   imageUri?: string | null;
 };
@@ -66,22 +66,20 @@ export async function saveScan(
   }
 
   const db = await getDatabase();
-  const userId = options?.userId ?? null;
   const garmentCondition = options?.garmentCondition ?? DEFAULT_GARMENT_CONDITION;
   const imageUri = options?.imageUri ?? null;
 
   await db.withTransactionAsync(async () => {
     await db.runAsync(
       `INSERT OR REPLACE INTO tblScan (
-        scan_ID, user_id, dominantFabric, confidence,
+        scan_ID, dominantFabric, confidence,
         scannedAt, scannedAtDate, createdAt, sellerLabel, garmentCondition, imageUri,
         sustainabilityRating, sustainabilityLabel, sustainabilityScore,
         mislabelDetected, mislabelTitle, mislabelMessage,
-        resultJson, syncStatus
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local')`,
+        resultJson
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         result.id,
-        userId,
         result.dominantFabric,
         result.confidence,
         result.scannedAt,
@@ -99,17 +97,6 @@ export async function saveScan(
         JSON.stringify(result),
       ],
     );
-
-    await db.runAsync('DELETE FROM tblScanComposition WHERE scan_ID = ?', [result.id]);
-
-    for (let index = 0; index < result.compositions.length; index += 1) {
-      const item = result.compositions[index];
-      await db.runAsync(
-        `INSERT INTO tblScanComposition (scan_ID, material, percentage, sortOrder)
-         VALUES (?, ?, ?, ?)`,
-        [result.id, item.material, item.percentage, index],
-      );
-    }
   });
 }
 export type ScanExportEntry = {
@@ -117,28 +104,18 @@ export type ScanExportEntry = {
   isFavorite: boolean;
 };
 
-export async function getAllScansForExport(
-  options?: { userId?: string | null },
-): Promise<ScanExportEntry[]> {
+export async function getAllScansForExport(): Promise<ScanExportEntry[]> {
   if (!isDatabaseAvailable()) {
     return [];
   }
 
   const db = await getDatabase();
-  const userId = options?.userId ?? null;
 
-  const rows = userId
-    ? await db.getAllAsync<{ resultJson: string | null; isFavorite: number | null }>(
-        `SELECT resultJson, isFavorite FROM tblScan
-         WHERE user_id = ? AND ${ACTIVE_SCAN_FILTER}
-         ${SCAN_LIST_ORDER}`,
-        [userId],
-      )
-    : await db.getAllAsync<{ resultJson: string | null; isFavorite: number | null }>(
-        `SELECT resultJson, isFavorite FROM tblScan
-         WHERE ${ACTIVE_SCAN_FILTER}
-         ${SCAN_LIST_ORDER}`,
-      );
+  const rows = await db.getAllAsync<{ resultJson: string | null; isFavorite: number | null }>(
+    `SELECT resultJson, isFavorite FROM tblScan
+     WHERE ${ACTIVE_SCAN_FILTER}
+     ${SCAN_LIST_ORDER}`,
+  );
 
   const results: ScanExportEntry[] = [];
   for (const row of rows) {
@@ -183,94 +160,56 @@ export async function getScanById(scanId: string): Promise<ScanResult | undefine
     return undefined;
   }
 }
-export async function getAllScans(
-  options?: { userId?: string | null },
-): Promise<RecentScanPreview[]> {
+export async function getAllScans(): Promise<RecentScanPreview[]> {
   if (!isDatabaseAvailable()) {
     return [];
   }
 
   const db = await getDatabase();
-  const userId = options?.userId ?? null;
-
-  const rows = userId
-    ? await db.getAllAsync<ScanRow>(
-        `SELECT ${SCAN_PREVIEW_COLUMNS}
-         FROM tblScan
-         WHERE user_id = ? AND ${ACTIVE_SCAN_FILTER}
-         ${SCAN_LIST_ORDER}`,
-        [userId],
-      )
-    : await db.getAllAsync<ScanRow>(
-        `SELECT ${SCAN_PREVIEW_COLUMNS}
-         FROM tblScan
-         WHERE ${ACTIVE_SCAN_FILTER}
-         ${SCAN_LIST_ORDER}`,
-      );
+  const rows = await db.getAllAsync<ScanRow>(
+    `SELECT ${SCAN_PREVIEW_COLUMNS}
+     FROM tblScan
+     WHERE ${ACTIVE_SCAN_FILTER}
+     ${SCAN_LIST_ORDER}`,
+  );
 
   return rows.map((row) => rowToPreview(row));
 }
-export async function getRecentScans(
-  limit = 5,
-  options?: { userId?: string | null },
-): Promise<RecentScanPreview[]> {
+export async function getRecentScans(limit = 5): Promise<RecentScanPreview[]> {
   if (!isDatabaseAvailable()) {
     return [];
   }
 
   const safeLimit = Math.max(1, Math.min(limit, 50));
   const db = await getDatabase();
-  const userId = options?.userId ?? null;
-
-  const rows = userId
-    ? await db.getAllAsync<ScanRow>(
-        `SELECT ${SCAN_PREVIEW_COLUMNS}
-         FROM tblScan
-         WHERE user_id = ? AND ${ACTIVE_SCAN_FILTER}
-         ${SCAN_LIST_ORDER}
-         LIMIT ?`,
-        [userId, safeLimit],
-      )
-    : await db.getAllAsync<ScanRow>(
-        `SELECT ${SCAN_PREVIEW_COLUMNS}
-         FROM tblScan
-         WHERE ${ACTIVE_SCAN_FILTER}
-         ${SCAN_LIST_ORDER}
-         LIMIT ?`,
-        [safeLimit],
-      );
+  const rows = await db.getAllAsync<ScanRow>(
+    `SELECT ${SCAN_PREVIEW_COLUMNS}
+     FROM tblScan
+     WHERE ${ACTIVE_SCAN_FILTER}
+     ${SCAN_LIST_ORDER}
+     LIMIT ?`,
+    [safeLimit],
+  );
 
   return rows.map((row) => rowToPreview(row));
 }
-export async function getFavoriteScans(
-  options?: { userId?: string | null },
-): Promise<RecentScanPreview[]> {
+export async function getFavoriteScans(): Promise<RecentScanPreview[]> {
   if (!isDatabaseAvailable()) {
     return [];
   }
 
   const db = await getDatabase();
-  const userId = options?.userId ?? null;
-
-  const rows = userId
-    ? await db.getAllAsync<ScanRow>(
-        `SELECT ${SCAN_PREVIEW_COLUMNS}
-         FROM tblScan
-         WHERE user_id = ? AND isFavorite = 1 AND ${ACTIVE_SCAN_FILTER}
-         ${SCAN_LIST_ORDER}`,
-        [userId],
-      )
-    : await db.getAllAsync<ScanRow>(
-        `SELECT ${SCAN_PREVIEW_COLUMNS}
-         FROM tblScan
-         WHERE isFavorite = 1 AND ${ACTIVE_SCAN_FILTER}
-         ${SCAN_LIST_ORDER}`,
-      );
+  const rows = await db.getAllAsync<ScanRow>(
+    `SELECT ${SCAN_PREVIEW_COLUMNS}
+     FROM tblScan
+     WHERE isFavorite = 1 AND ${ACTIVE_SCAN_FILTER}
+     ${SCAN_LIST_ORDER}`,
+  );
 
   return rows.map((row) => rowToPreview(row));
 }
 export async function getDeletedScans(
-  options?: { userId?: string | null; retentionDays?: number },
+  options?: { retentionDays?: number },
 ): Promise<RecentScanPreview[]> {
   if (!isDatabaseAvailable()) {
     return [];
@@ -280,22 +219,12 @@ export async function getDeletedScans(
   await purgeExpiredDeletedScans(retentionDays);
 
   const db = await getDatabase();
-  const userId = options?.userId ?? null;
-
-  const rows = userId
-    ? await db.getAllAsync<ScanRow>(
-        `SELECT ${SCAN_PREVIEW_COLUMNS}
-         FROM tblScan
-         WHERE user_id = ? AND ${DELETED_SCAN_FILTER}
-         ORDER BY deletedAt DESC`,
-        [userId],
-      )
-    : await db.getAllAsync<ScanRow>(
-        `SELECT ${SCAN_PREVIEW_COLUMNS}
-         FROM tblScan
-         WHERE ${DELETED_SCAN_FILTER}
-         ORDER BY deletedAt DESC`,
-      );
+  const rows = await db.getAllAsync<ScanRow>(
+    `SELECT ${SCAN_PREVIEW_COLUMNS}
+     FROM tblScan
+     WHERE ${DELETED_SCAN_FILTER}
+     ORDER BY deletedAt DESC`,
+  );
 
   return rows.map((row) => rowToPreview(row, retentionDays));
 }
@@ -330,7 +259,7 @@ function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
 
   return {
     id: row.scan_ID,
-    primaryFabric: row.dominantFabric.replace(' dominant', ' Blend'),
+    primaryFabric: row.dominantFabric,
     composition: compositionText,
     scannedAt: resolvedDate ? formatScanDisplayTime(resolvedDate) : row.scannedAt,
     scannedAtDate: resolvedDate ? formatScannedAtDate(resolvedDate) : row.scannedAtDate,
@@ -465,10 +394,16 @@ export async function restoreScans(scanIds: string[]): Promise<number> {
 }
 
 async function hardDeleteScanIds(db: Awaited<ReturnType<typeof getDatabase>>, scanIds: string[]) {
+  const imageUris: (string | null)[] = [];
   for (const scanId of scanIds) {
-    await db.runAsync('DELETE FROM tblScanComposition WHERE scan_ID = ?', [scanId]);
+    const row = await db.getFirstAsync<{ imageUri: string | null }>(
+      'SELECT imageUri FROM tblScan WHERE scan_ID = ?',
+      [scanId],
+    );
+    imageUris.push(row?.imageUri ?? null);
     await db.runAsync('DELETE FROM tblScan WHERE scan_ID = ?', [scanId]);
   }
+  return imageUris;
 }
 export async function permanentlyDeleteScans(scanIds: string[]): Promise<number> {
   if (!isDatabaseAvailable() || scanIds.length === 0) {
@@ -476,28 +411,23 @@ export async function permanentlyDeleteScans(scanIds: string[]): Promise<number>
   }
 
   const db = await getDatabase();
+  let imageUris: (string | null)[] = [];
   await db.withTransactionAsync(async () => {
-    await hardDeleteScanIds(db, scanIds);
+    imageUris = await hardDeleteScanIds(db, scanIds);
   });
+  // Photos go only after the rows are gone, so a failed transaction never orphans a scan record.
+  await deleteScanImages(imageUris);
   return scanIds.length;
 }
-export async function permanentlyDeleteAllDeletedScans(
-  options?: { userId?: string | null },
-): Promise<number> {
+export async function permanentlyDeleteAllDeletedScans(): Promise<number> {
   if (!isDatabaseAvailable()) {
     return 0;
   }
 
   const db = await getDatabase();
-  const userId = options?.userId ?? null;
-  const rows = userId
-    ? await db.getAllAsync<{ scan_ID: string }>(
-        `SELECT scan_ID FROM tblScan WHERE user_id = ? AND ${DELETED_SCAN_FILTER}`,
-        [userId],
-      )
-    : await db.getAllAsync<{ scan_ID: string }>(
-        `SELECT scan_ID FROM tblScan WHERE ${DELETED_SCAN_FILTER}`,
-      );
+  const rows = await db.getAllAsync<{ scan_ID: string }>(
+    `SELECT scan_ID FROM tblScan WHERE ${DELETED_SCAN_FILTER}`,
+  );
 
   const ids = rows.map((row) => row.scan_ID);
   if (ids.length === 0) {
@@ -527,4 +457,14 @@ export async function purgeExpiredDeletedScans(retentionDays = 30): Promise<numb
 
   await permanentlyDeleteScans(ids);
   return ids.length;
+}
+/** Permanently removes every scan, including favorites and the trash. */
+export async function deleteAllScans(): Promise<void> {
+  if (!isDatabaseAvailable()) {
+    return;
+  }
+
+  const db = await getDatabase();
+  await db.runAsync('DELETE FROM tblScan');
+  await deleteAllScanImages();
 }

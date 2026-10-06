@@ -48,7 +48,9 @@ export default function SellerLabelModal() {
   const params = useLocalSearchParams<{ scanId?: string | string[] }>();
   const scanIdParam = params.scanId;
   const scanId = Array.isArray(scanIdParam) ? scanIdParam[0] : scanIdParam;
-  const [sellerLabel, setSellerLabel] = useState(() => getLastSellerLabel() ?? '');
+  // Opened for a saved scan (scanId): start from that scan's own label, never from the draft that
+  // was typed for the previous garment. Opened from the camera screen: start from the pending draft.
+  const [sellerLabel, setSellerLabel] = useState(() => (scanId ? '' : (getLastSellerLabel() ?? '')));
   const sheetHeight = Math.min(windowHeight * 0.72, 620);
   const keyboardVerticalOffset = Platform.select({
     ios: 0,
@@ -100,14 +102,18 @@ export default function SellerLabelModal() {
   const commitLabel = (next: string) => {
     setSellerLabel(next);
     const trimmed = next.trim();
+
+    if (scanId) {
+      // Editing a saved scan: only that scan changes. Writing the shared draft here as well is
+      // what made one garment's label carry over to the next scan.
+      void updateScanSellerLabel(scanId, trimmed.length > 0 ? trimmed : null);
+      return;
+    }
+
     if (trimmed.length > 0) {
       setLastSellerLabel(trimmed);
     } else {
       clearLastSellerLabel();
-    }
-
-    if (scanId) {
-      void updateScanSellerLabel(scanId, trimmed.length > 0 ? trimmed : null);
     }
   };
 

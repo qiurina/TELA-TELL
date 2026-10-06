@@ -1,76 +1,32 @@
-import {
-  getSignificantFibers,
-  isBlendDetected,
-  type CompositionInput,
-} from '@/data/scans/scan-confidence';
-import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import { resolveFabricAlias } from '@/data/fabrics/fabrics';
+import type { CompositionInput } from '@/data/scans/scan-confidence';
 
 export type ScanResultHeadline = {
   title: string;
   subtitle?: string;
-  isBlend: boolean;
 };
 
-function resolveSignificant(
-  compositions: CompositionInput[],
-): { fabric: SupportedFabric; percentage: number }[] {
-  const significant = getSignificantFibers(compositions);
-  const resolved: { fabric: SupportedFabric; percentage: number }[] = [];
-
-  for (const item of significant) {
-    const fabric = resolveFabricAlias(item.material);
-    if (!fabric) {
-      continue;
-    }
-    if (resolved.some((entry) => entry.fabric === fabric)) {
-      continue;
-    }
-    resolved.push({ fabric, percentage: item.percentage });
-  }
-
-  return resolved;
-}
-
-function blendTitle(fibers: SupportedFabric[]): string {
-  if (fibers.length >= 2) {
-    return `${fibers[0]}-${fibers[1]} blend`;
-  }
-  if (fibers.length === 1) {
-    return `${fibers[0]} blend`;
-  }
-  return 'Fiber blend';
-}
-
+/**
+ * The classifier picks one most-likely fiber; its other top-3 entries are confidence scores, not
+ * a measured blend. So the headline always names the single most likely fiber and its confidence,
+ * and never claims a blend (the app cannot measure one).
+ */
 export function getScanResultHeadline(
   dominantFabric: string,
   compositions: CompositionInput[] = [],
 ): ScanResultHeadline {
   const items = compositions ?? [];
-  const significant = resolveSignificant(items);
-  const blend = isBlendDetected(items) && significant.length >= 2;
+  const ranked = [...items].sort((a, b) => b.percentage - a.percentage);
+  const fabric = resolveFabricAlias(dominantFabric) ?? resolveFabricAlias(ranked[0]?.material ?? '');
 
-  if (blend) {
-    return {
-      title: blendTitle(significant.map((item) => item.fabric)),
-      subtitle: significant.map((item) => `${item.fabric} ${item.percentage}%`).join(' · '),
-      isBlend: true,
-    };
+  if (!fabric) {
+    return { title: dominantFabric.replace(/\s*dominant\s*/i, '').trim() || 'Detected fabric' };
   }
 
-  const top = significant[0];
-  const aliased = resolveFabricAlias(dominantFabric);
-  const primaryName = aliased ?? top?.fabric ?? dominantFabric.replace(/\s*dominant\s*/i, '').trim();
-
-  if (top) {
-    return {
-      title: `Mostly ${top.fabric}`,
-      subtitle: `${top.fabric} ${top.percentage}%`,
-      isBlend: false,
-    };
-  }
+  const entry = items.find((item) => resolveFabricAlias(item.material) === fabric) ?? ranked[0];
 
   return {
-    title: primaryName || 'Detected fabric',
-    isBlend: false,
+    title: `Likely ${fabric}`,
+    subtitle: entry ? `${entry.percentage}% confidence` : undefined,
   };
 }

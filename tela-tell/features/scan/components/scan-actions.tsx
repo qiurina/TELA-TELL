@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -8,12 +8,10 @@ import {
   GarmentConditionSheet,
   getGarmentConditionLabel,
 } from '@/features/scan/components/garment-condition-picker';
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 import {
   Camera,
   ChevronRight,
   ImagePlus,
-  Lock,
   Plus,
   Settings,
   Tag,
@@ -26,7 +24,6 @@ import {
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow, primaryButtonShadow } from '@/constants/shadows';
-import { useAuth } from '@/features/auth/context/auth-provider';
 import {
   getUserPreferencesSummary,
   hasActiveUserPreferences,
@@ -122,7 +119,6 @@ function DetailActionRow({
   isSet,
   onPress,
   disabled,
-  locked,
   accessibilityLabel,
   isLast = false,
 }: {
@@ -132,7 +128,6 @@ function DetailActionRow({
   isSet: boolean;
   onPress: () => void;
   disabled?: boolean;
-  locked?: boolean;
   accessibilityLabel: string;
   isLast?: boolean;
 }) {
@@ -141,8 +136,7 @@ function DetailActionRow({
       style={({ pressed }) => [
         styles.detailRow,
         isLast && styles.detailRowLast,
-        locked && styles.detailRowLocked,
-        pressed && !locked && styles.pressed,
+        pressed && styles.pressed,
         disabled && styles.disabled,
       ]}
       onPress={onPress}
@@ -151,24 +145,16 @@ function DetailActionRow({
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: Boolean(disabled) }}>
       <View style={styles.detailRowIcon}>{icon}</View>
-      <Text style={[styles.detailRowLabel, locked && styles.detailRowLabelLocked]}>{label}</Text>
+      <Text style={styles.detailRowLabel}>{label}</Text>
       <Text
         style={[
           styles.detailRowValue,
-          locked
-            ? styles.detailRowValueLocked
-            : isSet
-              ? styles.detailRowValueSet
-              : styles.detailRowValueEmpty,
+          isSet ? styles.detailRowValueSet : styles.detailRowValueEmpty,
         ]}
         numberOfLines={1}>
         {value}
       </Text>
-      {locked ? (
-        <Lock size={14} color="#C27803" strokeWidth={2.25} />
-      ) : (
-        <ChevronRight size={16} color={BrandColors.textMuted} strokeWidth={2.25} />
-      )}
+      <ChevronRight size={16} color={BrandColors.textMuted} strokeWidth={2.25} />
     </Pressable>
   );
 }
@@ -184,14 +170,10 @@ export function ScanDetailsPanel({
   onExpandedChange,
   variant = 'chip',
 }: ScanDetailsPanelProps) {
-  const router = useRouter();
-  const { isSignedIn } = useAuth();
-  const [showPreferencesLocked, setShowPreferencesLocked] = useState(false);
   const [showConditionSheet, setShowConditionSheet] = useState(false);
   const [hasPreferences, setHasPreferences] = useState(() => hasActiveUserPreferences());
   const trimmedLabel = savedSellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
-  const preferencesLocked = !isSignedIn;
   const hasCustomCondition = garmentCondition !== DEFAULT_GARMENT_CONDITION;
 
   useFocusEffect(
@@ -207,37 +189,19 @@ export function ScanDetailsPanel({
   if (hasSellerLabel) {
     summaryParts.push(trimmedLabel);
   }
-  if (hasPreferences && !preferencesLocked) {
+  if (hasPreferences) {
     summaryParts.push('Prefs set');
   }
   const hasAnyDetails = summaryParts.length > 0;
   const chipLabel = hasAnyDetails ? summaryParts.join(' · ') : 'Add details';
 
   const preferencesSummary = getUserPreferencesSummary();
-  const preferencesStatus = preferencesLocked
-    ? 'Sign in required'
-    : !hasPreferences
-      ? 'Not set'
-      : preferencesSummary ?? 'Set';
+  const preferencesStatus = !hasPreferences ? 'Not set' : preferencesSummary ?? 'Set';
 
   const useSheet = variant === 'sheet';
 
   return (
     <View>
-      <ScanConfirmSheet
-        visible={showPreferencesLocked}
-        variant="info"
-        title="Preferences locked"
-        message="Sign in to save skin tone, allergies, and fabric preferences."
-        confirmLabel="Log in"
-        cancelLabel="Not now"
-        onConfirm={() => {
-          setShowPreferencesLocked(false);
-          router.push('/login' as Href);
-        }}
-        onCancel={() => setShowPreferencesLocked(false)}
-      />
-
       {!expanded && !useSheet ? (
         <Pressable
           style={({ pressed }) => [styles.detailsChip, pressed && styles.pressed]}
@@ -295,30 +259,17 @@ export function ScanDetailsPanel({
             />
 
             <DetailActionRow
-              icon={
-                preferencesLocked ? (
-                  <Lock size={16} color="#C27803" strokeWidth={2.25} />
-                ) : (
-                  <Settings size={16} color={BrandColors.primary} strokeWidth={2.25} />
-                )
-              }
+              icon={<Settings size={16} color={BrandColors.primary} strokeWidth={2.25} />}
               label="Preferences"
               value={preferencesStatus}
-              isSet={hasPreferences && !preferencesLocked}
-              locked={preferencesLocked}
-              onPress={
-                preferencesLocked
-                  ? () => setShowPreferencesLocked(true)
-                  : onOpenPreferences ?? (() => {})
-              }
+              isSet={hasPreferences}
+              onPress={onOpenPreferences ?? (() => {})}
               disabled={isAnalyzing}
               isLast
               accessibilityLabel={
-                preferencesLocked
-                  ? 'Preferences locked. Sign in required'
-                  : hasPreferences
-                    ? `Preferences, ${preferencesStatus}. Edit`
-                    : 'Preferences, not set. Set'
+                hasPreferences
+                  ? `Preferences, ${preferencesStatus}. Edit`
+                  : 'Preferences, not set. Set'
               }
             />
           </View>
@@ -378,30 +329,17 @@ export function ScanDetailsPanel({
               />
 
               <DetailActionRow
-                icon={
-                  preferencesLocked ? (
-                    <Lock size={16} color="#C27803" strokeWidth={2.25} />
-                  ) : (
-                    <Settings size={16} color={BrandColors.primary} strokeWidth={2.25} />
-                  )
-                }
+                icon={<Settings size={16} color={BrandColors.primary} strokeWidth={2.25} />}
                 label="Preferences"
                 value={preferencesStatus}
-                isSet={hasPreferences && !preferencesLocked}
-                locked={preferencesLocked}
-                onPress={
-                  preferencesLocked
-                    ? () => setShowPreferencesLocked(true)
-                    : onOpenPreferences ?? (() => {})
-                }
+                isSet={hasPreferences}
+                onPress={onOpenPreferences ?? (() => {})}
                 disabled={isAnalyzing}
                 isLast
                 accessibilityLabel={
-                  preferencesLocked
-                    ? 'Preferences locked. Sign in required'
-                    : hasPreferences
-                      ? `Preferences, ${preferencesStatus}. Edit`
-                      : 'Preferences, not set. Set'
+                  hasPreferences
+                    ? `Preferences, ${preferencesStatus}. Edit`
+                    : 'Preferences, not set. Set'
                 }
               />
             </View>
@@ -583,16 +521,6 @@ const styles = StyleSheet.create({
   },
   detailRowValueSet: {
     color: BrandColors.primary,
-    fontFamily: Fonts.medium,
-  },
-  detailRowLocked: {
-    backgroundColor: '#FFFBF5',
-  },
-  detailRowLabelLocked: {
-    color: BrandColors.textMuted,
-  },
-  detailRowValueLocked: {
-    color: '#9A6700',
     fontFamily: Fonts.medium,
   },
   pressed: {

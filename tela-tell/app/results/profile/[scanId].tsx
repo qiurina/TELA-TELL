@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View , ActivityIndicator } from 'react-native';
 
 
-import { BlendFiberProfileContent } from '@/features/fabrics/components/blend-fiber-profile-content';
 import { FiberProfileContent } from '@/features/fabrics/components/fiber-profile-content';
 import { FabricReferenceComparison } from '@/features/results/components/fabric-reference-comparison';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
@@ -14,9 +13,7 @@ import {
   resolveSupportedFabric,
 } from '@/data/fabrics/fabric-references';
 import { getFiberProfile } from '@/data/fabrics/fiber-profiles';
-import { isBlendDetected } from '@/data/scans/scan-confidence';
 import { getScanResultHeadline } from '@/features/results/lib/scan-result-headline';
-import { getLastCaptureUri } from '@/features/scan/lib/last-capture';
 
 export default function FabricProfileScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
@@ -43,10 +40,9 @@ export default function FabricProfileScreen() {
   }
 
   const compositions = result.compositions ?? [];
-  const isBlend = isBlendDetected(compositions);
   const supportedFabric = resolveSupportedFabric(result.dominantFabric, compositions);
   const fabricReference = getFabricReference(result.dominantFabric, compositions);
-  const capturedPhotoUri = getLastCaptureUri() ?? result.imageUri ?? null;
+  const capturedPhotoUri = result.imageUri ?? null;
   const fiberProfile = supportedFabric ? getFiberProfile(supportedFabric) : null;
   const headline = getScanResultHeadline(result.dominantFabric, compositions);
 
@@ -67,9 +63,7 @@ export default function FabricProfileScreen() {
           />
         ) : null}
 
-        {isBlend ? (
-          <BlendFiberProfileContent compositions={compositions} />
-        ) : fiberProfile ? (
+        {fiberProfile ? (
           <FiberProfileContent profile={fiberProfile} showHero={false} />
         ) : (
           <View style={styles.missingCard}>

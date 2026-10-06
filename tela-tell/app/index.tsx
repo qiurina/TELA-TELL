@@ -1,32 +1,15 @@
 import { Redirect, type Href } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
-import { useAuth } from '@/features/auth/context/auth-provider';
 import { BrandColors } from '@/constants/brand';
+import { useIntroState } from '@/features/onboarding/lib/intro-state';
 
 export default function IndexScreen() {
-  const { isLoading, isSignedIn } = useAuth();
+  const { loaded, introSeen } = useIntroState();
 
-  if (isLoading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={BrandColors.primary} />
-      </View>
-    );
+  if (!loaded) {
+    return <View style={{ flex: 1, backgroundColor: BrandColors.white }} />;
   }
 
-  if (!isSignedIn) {
-    return <Redirect href={'/welcome' as Href} />;
-  }
-
-  return <Redirect href={'/(tabs)' as Href} />;
+  return <Redirect href={(introSeen ? '/(tabs)' : '/onboarding') as Href} />;
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BrandColors.splashGradientTop,
-  },
-});

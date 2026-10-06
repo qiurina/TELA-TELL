@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react';
 import {
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -375,10 +376,24 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           <ScanLine size={48} color="rgba(255,255,255,0.85)" strokeWidth={1.75} />
           <Text style={styles.placeholderTitle}>Camera access needed</Text>
           <Text style={styles.placeholderText}>
-            Allow camera access for a live preview, or upload from gallery.
+            {canRequestPermission
+              ? 'Allow camera access for a live preview, or upload from gallery.'
+              : 'Camera access is turned off for TELA-TELL. Turn it on in your phone settings, or upload from gallery.'}
           </Text>
-          <Pressable onPress={() => void requestPermission()}>
-            <Text style={styles.permissionHint}>Allow camera</Text>
+          {/* Once Android stops showing the permission prompt, only the system settings can grant it. */}
+          <Pressable
+            onPress={() => {
+              if (canRequestPermission) {
+                void requestPermission();
+              } else {
+                void Linking.openSettings();
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={canRequestPermission ? 'Allow camera' : 'Open settings'}>
+            <Text style={styles.permissionHint}>
+              {canRequestPermission ? 'Allow camera' : 'Open settings'}
+            </Text>
           </Pressable>
         </View>
       ) : isFocused && hasPermission && device == null && Platform.OS !== 'web' ? (
@@ -386,7 +401,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           <ScanLine size={48} color="rgba(255,255,255,0.85)" strokeWidth={1.75} />
           <Text style={styles.placeholderTitle}>Camera unavailable</Text>
           <Text style={styles.placeholderText}>
-            The back camera couldn't be reached — it may be in use by another app, or
+            The back camera could not be reached — it may be in use by another app, or
             unsupported on this device. You can still upload a photo from your gallery.
           </Text>
         </View>

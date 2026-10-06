@@ -2,7 +2,7 @@
  * sRGB <-> CIELAB conversion using OpenCV's 8-bit LAB convention (L in [0,255]
  * scaled from L* in [0,100]; a,b in [0,255] offset from CIE's +-127), D65 white
  * point. Needed so CLAHE can run on the same luminance channel OpenCV's
- * normalize_contrast() operates on in ml-training/opencv_preprocess.py.
+ * normalize_contrast() operates on in ml-training/common/opencv_preprocess.py.
  */
 
 const EPS = 0.008856; // (6/29)^3
@@ -11,9 +11,15 @@ const XN = 0.950456;
 const YN = 1.0;
 const ZN = 1.088754;
 
-function srgbToLinear(c: number): number {
+// 8-bit input only, so a 256-entry table replaces ~3 Math.pow calls per pixel (the working image
+// is 448x448, and a scan processes a burst of three).
+const SRGB_TO_LINEAR = Float64Array.from({ length: 256 }, (_, c) => {
   const v = c / 255;
   return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+});
+
+function srgbToLinear(c: number): number {
+  return SRGB_TO_LINEAR[c];
 }
 
 function linearToSrgb(v: number): number {

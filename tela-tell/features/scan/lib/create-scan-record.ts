@@ -1,14 +1,6 @@
 import type { ScanResult } from '@/data/scans/mock-data';
-import {
-  resolveAllFabricAliases,
-  resolveFabricAlias,
-  type SupportedFabric,
-} from '@/data/fabrics/fabrics';
-import {
-  getSignificantFibers,
-  isBlendDetected,
-  TRACE_DETECTION_MIN_PERCENT,
-} from '@/data/scans/scan-confidence';
+import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import { evaluateDeclaredLabel } from '@/features/scan/lib/declared-label';
 import { formatScanDisplayTime, formatScannedAtDate } from '@/features/scan/lib/scan-timestamp';
 import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
 import { classifyFabric, type ClassificationResult } from '@/features/scan/lib/ml/model';
@@ -22,87 +14,30 @@ function createScanId(): string {
   return `scan_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-type CompositionLike = { material: string; percentage: number };
-
-function resolveScanFibers(
-  dominantFabric: string,
-  compositions: CompositionLike[] = [],
-): SupportedFabric[] {
-  const fibers: SupportedFabric[] = [];
-
-  // Label-accuracy check: does the scan detect this fiber at all, not "is it blend-significant".
-  for (const item of getSignificantFibers(compositions, TRACE_DETECTION_MIN_PERCENT)) {
-    const fabric = resolveFabricAlias(item.material);
-    if (fabric && !fibers.includes(fabric)) {
-      fibers.push(fabric);
-    }
-  }
-
-  const dominant = resolveFabricAlias(dominantFabric);
-  if (dominant && !fibers.includes(dominant)) {
-    fibers.push(dominant);
-  }
-
-  return fibers;
-}
-
+/**
+ * The shape stored with a scan. `detected` is true only for a real mismatch (see
+ * evaluateDeclaredLabel); the results screen re-evaluates the label live, so edits to the stated
+ * label or to the matching rules apply to old scans without touching the database.
+ */
 export function buildMislabeling(
   dominantFabric: string,
   sellerLabel: string | null,
-  compositions: CompositionLike[] = [],
+  compositions: { material: string; percentage: number }[] = [],
 ): ScanResult['mislabeling'] {
-  const trimmed = sellerLabel?.trim() || null;
-  if (!trimmed) {
-    return {
-      detected: false,
-      title: '',
-      message: '',
-    };
+  const check = evaluateDeclaredLabel(dominantFabric, sellerLabel, compositions);
+  if (check.status !== 'mismatch') {
+    return { detected: false, title: '', message: '' };
   }
-
-  const sellerFibers = resolveAllFabricAliases(trimmed);
-  if (sellerFibers.length === 0) {
-    return {
-      detected: false,
-      title: '',
-      message: '',
-    };
-  }
-
-  const scanFibers = resolveScanFibers(dominantFabric, compositions);
-  if (scanFibers.length === 0) {
-    return {
-      detected: false,
-      title: '',
-      message: '',
-    };
-  }
-
-  const missingFromScan = sellerFibers.filter((fiber) => !scanFibers.includes(fiber));
-  if (missingFromScan.length === 0) {
-    return {
-      detected: false,
-      title: '',
-      message: '',
-    };
-  }
-
-  return {
-    detected: true,
-    title: 'Possible Mislabeling Detected',
-    message: "Doesn't match what the seller listed. Consider negotiating the price.",
-  };
+  return { detected: true, title: check.title, message: check.message };
 }
 
 function buildResultFromClassification(classification: ClassificationResult): ScanResult {
   const primary = (resolveFabricAlias(classification.dominantFabric) ??
     classification.dominantFabric) as SupportedFabric;
-  const blend = isBlendDetected(classification.compositions);
   const { profile, sustainability, recommendations } = buildScanProfile(
     primary,
     classification.dominantFabric,
     classification.compositions,
-    blend,
   );
 
   return {

@@ -20,7 +20,8 @@ import { AppSplash } from '@/components/splash/app-splash';
 import { AlertHost } from '@/components/ui/alert-dialog';
 import { BrandColors } from '@/constants/brand';
 import { migrateDatabase } from '@/db/migrate';
-import { AuthProvider } from '@/features/auth/context/auth-provider';
+import { loadIntroState } from '@/features/onboarding/lib/intro-state';
+import { hydrateUserPreferences } from '@/features/profile/lib/user-preferences';
 import { hydrateLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
 SplashScreen.preventAutoHideAsync();
@@ -54,6 +55,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 export default function RootLayout() {
   const [showSplashOverlay, setShowSplashOverlay] = useState(true);
   const [splashMinTimeElapsed, setSplashMinTimeElapsed] = useState(false);
+  const [databaseReady, setDatabaseReady] = useState(false);
   const splashOpacity = useState(() => new Animated.Value(1))[0];
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -78,7 +80,7 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   useEffect(() => {
-    if (!fontsLoaded || !splashMinTimeElapsed) {
+    if (!fontsLoaded || !splashMinTimeElapsed || !databaseReady) {
       return;
     }
 
@@ -91,19 +93,24 @@ export default function RootLayout() {
         setShowSplashOverlay(false);
       }
     });
-  }, [fontsLoaded, splashMinTimeElapsed, splashOpacity]);
+  }, [fontsLoaded, splashMinTimeElapsed, databaseReady, splashOpacity]);
 
+  // Screens read SQLite as soon as they mount, so nothing renders until the migration has settled.
   useEffect(() => {
-    void migrateDatabase().catch((error: unknown) => {
-      console.warn('[TELA-TELL] SQLite migration failed:', error);
-    });
+    void migrateDatabase()
+      .then(() => hydrateUserPreferences())
+      .catch((error: unknown) => {
+        console.warn('[TELA-TELL] SQLite migration failed:', error);
+      })
+      .finally(() => setDatabaseReady(true));
     void hydrateLastSellerLabel();
+    void loadIntroState();
   }, []);
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      {fontsLoaded ? (
-        <AuthProvider>
+      {fontsLoaded && databaseReady ? (
+        <>
           <ThemeProvider value={AppNavigationTheme}>
             <Stack
               screenOptions={{
@@ -112,11 +119,9 @@ export default function RootLayout() {
               }}>
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen
-                name="welcome"
+                name="onboarding"
                 options={{ headerShown: false, animation: 'fade', animationDuration: 280 }}
               />
-              <Stack.Screen name="login" options={{ headerShown: false, animation: 'slide_from_right' }} />
-              <Stack.Screen name="register" options={{ headerShown: false, animation: 'slide_from_right' }} />
               <Stack.Screen
                 name="(tabs)"
                 options={{ headerShown: false, animation: 'fade', animationDuration: 280 }}
@@ -170,22 +175,6 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
-                name="edit-profile"
-                options={{
-                  headerShown: false,
-                  animation: 'slide_from_right',
-                  contentStyle: { backgroundColor: BrandColors.white },
-                }}
-              />
-              <Stack.Screen
-                name="fiber/[fabricId]"
-                options={{
-                  headerShown: false,
-                  animation: 'slide_from_right',
-                  contentStyle: { backgroundColor: BrandColors.white },
-                }}
-              />
-              <Stack.Screen
                 name="favorite-scans"
                 options={{
                   headerShown: false,
@@ -230,12 +219,12 @@ export default function RootLayout() {
             </Stack>
             <StatusBar style="dark" />
           </ThemeProvider>
-        </AuthProvider>
+        </>
       ) : null}
 
       {showSplashOverlay ? (
         <Animated.View
-          pointerEvents={fontsLoaded && splashMinTimeElapsed ? 'none' : 'auto'}
+          pointerEvents={fontsLoaded && splashMinTimeElapsed && databaseReady ? 'none' : 'auto'}
           style={[styles.splashOverlay, { opacity: splashOpacity }]}>
           <AppSplash fontsLoaded={fontsLoaded} />
         </Animated.View>

@@ -1,7 +1,7 @@
 import { labToRgb8u, rgbToLab8u } from '@/features/scan/lib/ml/color/color-space';
 
 /**
- * CLAHE on the LAB luminance channel, matching ml-training/opencv_preprocess.py's
+ * CLAHE on the LAB luminance channel, matching ml-training/common/opencv_preprocess.py's
  * normalize_contrast() (cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))).
  * Real CLAHE, not naive per-tile equalization: tile histograms with clip +
  * redistribute, then bilinear interpolation between the 4 nearest tile LUTs per
@@ -17,24 +17,14 @@ export type ClaheOptions = {
 
 const HIST_BINS = 256;
 
-export function applyClaheLuminance(
-  rgba: Uint8Array,
+/** CLAHE on a single 8-bit channel (OpenCV `clahe.apply`). Exported so it can be tested alone. */
+export function claheChannel(
+  L: ArrayLike<number>,
   width: number,
   height: number,
   { clipLimit = 2.0, tilesX = 8, tilesY = 8 }: ClaheOptions = {},
-): void {
+): Uint8ClampedArray {
   const numPixels = width * height;
-  const L = new Uint8ClampedArray(numPixels);
-  const A = new Uint8ClampedArray(numPixels);
-  const B = new Uint8ClampedArray(numPixels);
-
-  for (let p = 0, i = 0; p < numPixels; p++, i += 4) {
-    const [l, a, b] = rgbToLab8u(rgba[i], rgba[i + 1], rgba[i + 2]);
-    L[p] = l;
-    A[p] = a;
-    B[p] = b;
-  }
-
   const tileW = Math.ceil(width / tilesX);
   const tileH = Math.ceil(height / tilesY);
 
@@ -57,7 +47,8 @@ export function applyClaheLuminance(
       const actualTileH = Math.min(tileH, height - ty * tileH);
       const tilePixels = actualTileW * actualTileH;
 
-      const clipAbs = Math.max(1, Math.round((clipLimit * tilePixels) / HIST_BINS));
+      // OpenCV truncates (static_cast<int>) here rather than rounding.
+      const clipAbs = Math.max(1, Math.trunc((clipLimit * tilePixels) / HIST_BINS));
 
       let clipped = 0;
       const tileHist = new Int32Array(HIST_BINS);
@@ -92,17 +83,23 @@ export function applyClaheLuminance(
   }
 
   const newL = new Uint8ClampedArray(numPixels);
+  // Interpolation indices follow OpenCV's CLAHE_Impl::Interpolation_Body: the weight comes from the
+  // unclamped floor, and only then are both tile indices clamped. Clamping first (as an earlier
+  // version did) blends tile 0 with tile 1 across the first half-tile of the image, where OpenCV
+  // uses tile 0 alone.
   for (let y = 0; y < height; y++) {
-    const fy = (y - tileH / 2) / tileH;
-    const ty0 = clampInt(Math.floor(fy), 0, tilesY - 1);
-    const ty1 = clampInt(ty0 + 1, 0, tilesY - 1);
-    const wy = clamp01(fy - Math.floor(fy));
+    const fy = y / tileH - 0.5;
+    const floorY = Math.floor(fy);
+    const wy = fy - floorY;
+    const ty0 = Math.max(floorY, 0);
+    const ty1 = Math.min(floorY + 1, tilesY - 1);
 
     for (let x = 0; x < width; x++) {
-      const fx = (x - tileW / 2) / tileW;
-      const tx0 = clampInt(Math.floor(fx), 0, tilesX - 1);
-      const tx1 = clampInt(tx0 + 1, 0, tilesX - 1);
-      const wx = clamp01(fx - Math.floor(fx));
+      const fx = x / tileW - 0.5;
+      const floorX = Math.floor(fx);
+      const wx = fx - floorX;
+      const tx0 = Math.max(floorX, 0);
+      const tx1 = Math.min(floorX + 1, tilesX - 1);
 
       const v = L[y * width + x];
       const lut00 = luts[(ty0 * tilesX + tx0) * HIST_BINS + v];
@@ -116,18 +113,33 @@ export function applyClaheLuminance(
     }
   }
 
+  return newL;
+}
+
+export function applyClaheLuminance(
+  rgba: Uint8Array,
+  width: number,
+  height: number,
+  options: ClaheOptions = {},
+): void {
+  const numPixels = width * height;
+  const L = new Uint8ClampedArray(numPixels);
+  const A = new Uint8ClampedArray(numPixels);
+  const B = new Uint8ClampedArray(numPixels);
+
+  for (let p = 0, i = 0; p < numPixels; p++, i += 4) {
+    const [l, a, b] = rgbToLab8u(rgba[i], rgba[i + 1], rgba[i + 2]);
+    L[p] = l;
+    A[p] = a;
+    B[p] = b;
+  }
+
+  const newL = claheChannel(L, width, height, options);
+
   for (let p = 0, i = 0; p < numPixels; p++, i += 4) {
     const [r, g, b] = labToRgb8u(newL[p], A[p], B[p]);
     rgba[i] = r;
     rgba[i + 1] = g;
     rgba[i + 2] = b;
   }
-}
-
-function clampInt(v: number, lo: number, hi: number): number {
-  return v < lo ? lo : v > hi ? hi : v;
-}
-
-function clamp01(v: number): number {
-  return v < 0 ? 0 : v > 1 ? 1 : v;
 }
