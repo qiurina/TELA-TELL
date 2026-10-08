@@ -268,8 +268,14 @@ async function adoptLegacyPreferences(db: Database) {
         ]);
       }
     }
-    // Cascades to any child rows that were not moved above.
-    await db.runAsync('DELETE FROM tblDeviceProfile WHERE user_id IS NOT NULL');
+    // Cascades to any child rows that were not moved above. Excludes DEVICE_PROFILE_ID:
+    // if the legacy account's profile row was already at profile_ID = DEVICE_PROFILE_ID
+    // (the common case, since this was a single-account app), deviceIsEmpty above is
+    // false and the copy branch never runs -- deleting unconditionally here would wipe
+    // that row (and cascade-delete its preferences) instead of leaving it in place.
+    await db.runAsync('DELETE FROM tblDeviceProfile WHERE user_id IS NOT NULL AND profile_ID != ?', [
+      DEVICE_PROFILE_ID,
+    ]);
   });
 }
 
