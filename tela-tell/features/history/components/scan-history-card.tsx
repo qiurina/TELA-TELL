@@ -6,12 +6,7 @@ import { Check, Eye, Bookmark } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
-import {
-  SUSTAINABILITY_BG,
-  SUSTAINABILITY_BORDER,
-  SUSTAINABILITY_DOT,
-  type RecentScanPreview,
-} from '@/data/scans/mock-data';
+import type { RecentScanPreview } from '@/data/scans/mock-data';
 
 const FAVORITE_BOOKMARK = '#EAB308';
 
@@ -22,12 +17,6 @@ type ScanHistoryCardProps = {
   selectionMode?: boolean;
   selected?: boolean;
 };
-
-const SUSTAINABILITY_PILL_LABEL = {
-  green: 'Sustainable',
-  yellow: 'Moderate',
-  red: 'Low impact',
-} as const;
 
 const MISLABEL_PILL_LABEL = {
   true: 'Mislabeled',
@@ -41,8 +30,6 @@ export function ScanHistoryCard({
   selectionMode = false,
   selected = false,
 }: ScanHistoryCardProps) {
-  const sustainColor = SUSTAINABILITY_DOT[scan.sustainability];
-
   return (
     <Pressable
       style={({ pressed }) => [
@@ -78,7 +65,9 @@ export function ScanHistoryCard({
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.fabric}>{scan.primaryFabric}</Text>
+        <Text style={styles.fabric}>
+          {scan.unsure ? `Unsure (closest: ${scan.primaryFabric})` : scan.primaryFabric}
+        </Text>
         <Text style={styles.composition} numberOfLines={2}>
           {scan.composition}
         </Text>
@@ -96,19 +85,6 @@ export function ScanHistoryCard({
                 scan.mislabeling ? styles.mislabelTextAlert : styles.mislabelTextOk,
               ]}>
               {scan.mislabeling ? MISLABEL_PILL_LABEL.true : MISLABEL_PILL_LABEL.false}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.statusPill,
-              {
-                borderColor: SUSTAINABILITY_BORDER[scan.sustainability],
-                backgroundColor: SUSTAINABILITY_BG[scan.sustainability],
-              },
-            ]}>
-            <View style={[styles.sustainDot, { backgroundColor: sustainColor }]} />
-            <Text numberOfLines={1} style={[styles.statusPillText, { color: sustainColor }]}>
-              {SUSTAINABILITY_PILL_LABEL[scan.sustainability]}
             </Text>
           </View>
         </View>
@@ -226,12 +202,6 @@ const styles = StyleSheet.create({
   },
   mislabelTextOk: {
     color: '#16a34a',
-  },
-  sustainDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    flexShrink: 0,
   },
   eyeButton: {
     width: 34,

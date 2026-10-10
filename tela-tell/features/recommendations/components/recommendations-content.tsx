@@ -1,23 +1,25 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
+import { InfoSheet } from '@/components/ui/info-sheet';
+import { InfoButton } from '@/components/ui/info-button';
+import { BasisSheet } from '@/features/recommendations/components/basis-sheet';
 import { HealthSafetyScores } from '@/features/recommendations/components/health-safety-scores';
 import { SyntheticMicroplasticGuide } from '@/features/recommendations/components/synthetic-microplastic-guide';
 import {
   Heart,
-  Leaf,
   Scissors,
+  Shirt,
   Tag,
 } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { faintCardShadow } from '@/constants/shadows';
-import {
-  getEcoGuidance,
-  getEcoAlternativeText,
-} from '@/data/fabrics/eco-alternatives';
+import { getEcoGuidance, getEcoAlternativeText } from '@/data/fabrics/eco-alternatives';
 import { getHealthSafetyMetrics } from '@/data/fabrics/health-safety-scores';
+import { getFiberInformation } from '@/data/fabrics/shedding-why';
 import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
+import { assessScanReliability } from '@/data/scans/scan-confidence';
+import { FiberInformationCard } from '@/features/results/components/fiber-information-card';
 import { Fonts } from '@/constants/fonts';
 import { type FabricComposition } from '@/data/scans/mock-data';
 import type { GarmentCondition } from '@/data/scans/garment-condition';
@@ -26,32 +28,119 @@ function SectionLabel({ title }: { title: string }) {
   return <Text style={styles.sectionLabel}>{title}</Text>;
 }
 
+function SectionHeader({ title, onBasisPress }: { title: string; onBasisPress?: () => void }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <SectionLabel title={title} />
+      {onBasisPress ? (
+        <InfoButton onPress={onBasisPress} accessibilityLabel={`About ${title.toLowerCase()}`} />
+      ) : null}
+    </View>
+  );
+}
+
+function AlternativeCard({
+  item,
+}: {
+  item: ReturnType<typeof getEcoGuidance>['ecoAlternatives'][number];
+}) {
+  const [basisVisible, setBasisVisible] = useState(false);
+
+  return (
+    <View style={[styles.ecoCard, faintCardShadow()]}>
+      <BasisSheet
+        visible={basisVisible}
+        title={`About ${item.name}`}
+        claims={item.claims ?? []}
+        onClose={() => setBasisVisible(false)}
+      />
+      <View style={styles.ecoIconWrap}>
+        <Shirt size={18} color={BrandColors.primary} strokeWidth={2.25} />
+      </View>
+      <View style={styles.ecoTextBlock}>
+        <Text style={styles.ecoName}>{item.name}</Text>
+        <Text style={styles.ecoDescription}>{getEcoAlternativeText(item)}</Text>
+      </View>
+      <InfoButton
+        onPress={() => setBasisVisible(true)}
+        accessibilityLabel={`About ${item.name}`}
+      />
+    </View>
+  );
+}
+
+const NOTES_BASIS_NOTE =
+  'These notes say what the research did and did not show. They are not a recommendation.';
+
+/** Shown when no source we could read supports a swap: what we checked, never a suggestion. */
+function NoSwapCard({
+  title,
+  notes,
+}: {
+  title: string;
+  notes: ReturnType<typeof getEcoGuidance>['evidenceNotes'];
+}) {
+  const [basisVisible, setBasisVisible] = useState(false);
+  const summary = notes
+    .filter((note) => note.kind === 'fact' && (note.sourceIds ?? []).length === 0)
+    .map((note) => note.text)
+    .join(' ');
+  const hasSources = notes.some((note) => (note.sourceIds ?? []).length > 0);
+
+  return (
+    <View style={[styles.ecoCard, faintCardShadow()]}>
+      <BasisSheet
+        visible={basisVisible}
+        title={title}
+        claims={notes}
+        editorialNote={NOTES_BASIS_NOTE}
+        onClose={() => setBasisVisible(false)}
+      />
+      <View style={styles.ecoIconWrap}>
+        <Shirt size={18} color={BrandColors.primary} strokeWidth={2.25} />
+      </View>
+      <View style={styles.ecoTextBlock}>
+        <Text style={styles.ecoName}>{title}</Text>
+        <Text style={styles.ecoDescription}>{summary}</Text>
+      </View>
+      {hasSources ? (
+        <InfoButton onPress={() => setBasisVisible(true)} accessibilityLabel={`About ${title}`} />
+      ) : null}
+    </View>
+  );
+}
+
 function EcoAlternativesSection({
   alternatives,
+  notes,
+  emptyTitle,
 }: {
   alternatives: ReturnType<typeof getEcoGuidance>['ecoAlternatives'];
+  notes: ReturnType<typeof getEcoGuidance>['evidenceNotes'];
+  emptyTitle: string;
 }) {
   return (
     <View style={styles.section}>
-      <SectionLabel title="ECO-FRIENDLY ALTERNATIVES" />
+      <SectionHeader title="OTHER FABRICS TO CONSIDER" />
       <View style={styles.list}>
-        {alternatives.map((item) => (
-          <View key={item.name} style={[styles.ecoCard, faintCardShadow()]}>
-            <View style={styles.ecoIconWrap}>
-              <Leaf size={18} color="#15803D" strokeWidth={2.25} />
-            </View>
-            <View style={styles.ecoTextBlock}>
-              <Text style={styles.ecoName}>{item.name}</Text>
-              <Text style={styles.ecoDescription}>{getEcoAlternativeText(item)}</Text>
-            </View>
-          </View>
-        ))}
+        {alternatives.length > 0 ? (
+          alternatives.map((item) => <AlternativeCard key={item.name} item={item} />)
+        ) : (
+          <NoSwapCard title={emptyTitle} notes={notes} />
+        )}
       </View>
     </View>
   );
 }
 
-function GarmentActionsSection({ reuse }: { reuse: ReturnType<typeof getEcoGuidance>['reuse'] }) {
+function GarmentActionsSection({
+  reuse,
+  reuseClaims,
+}: {
+  reuse: ReturnType<typeof getEcoGuidance>['reuse'];
+  reuseClaims: ReturnType<typeof getEcoGuidance>['reuseClaims'];
+}) {
+  const [basisVisible, setBasisVisible] = useState(false);
   const [activeAction, setActiveAction] = useState<{
     label: string;
     message: string;
@@ -65,17 +154,24 @@ function GarmentActionsSection({ reuse }: { reuse: ReturnType<typeof getEcoGuida
 
   return (
     <View style={styles.section}>
-      <ScanConfirmSheet
+      <InfoSheet
         visible={activeAction !== null}
-        variant="info"
         title={activeAction?.label ?? ''}
         message={activeAction?.message ?? ''}
-        confirmLabel="Got it"
-        onConfirm={() => setActiveAction(null)}
-        onCancel={() => setActiveAction(null)}
+        onClose={() => setActiveAction(null)}
       />
 
-      <SectionLabel title="WHAT TO DO WITH THIS GARMENT" />
+      <BasisSheet
+        visible={basisVisible}
+        title="About resale and donate tips"
+        claims={reuseClaims}
+        editorialNote="These tips are the app authors' practical ideas. Repair and upcycling tips are not shown to reduce environmental impact."
+        onClose={() => setBasisVisible(false)}
+      />
+      <SectionHeader
+        title="WHAT TO DO WITH THIS GARMENT"
+        onBasisPress={() => setBasisVisible(true)}
+      />
       <View style={styles.actionRow}>
         {actions.map((action) => {
           const Icon = action.icon;
@@ -111,16 +207,27 @@ export function RecommendationsContent({
   const compositions = detectedCompositions ?? [];
   const ecoGuidance = getEcoGuidance(dominantFabric, compositions);
   const healthRisk = getSyntheticHealthRisk(dominantFabric, compositions, garmentCondition);
+  // Information (no rating) when the most likely fiber is not one of the four rated synthetics.
+  // Not shown for an Unsure scan, which names no reliable fiber.
+  const fiberInfo =
+    healthRisk || !assessScanReliability(compositions).reliable ? null : getFiberInformation(dominantFabric);
   const healthMetrics = getHealthSafetyMetrics(dominantFabric, compositions);
 
   return (
     <View style={styles.container}>
       {healthRisk ? <SyntheticMicroplasticGuide risk={healthRisk} /> : null}
+      {fiberInfo ? <FiberInformationCard info={fiberInfo} /> : null}
 
       <HealthSafetyScores metrics={healthMetrics} />
 
-      <EcoAlternativesSection alternatives={ecoGuidance.ecoAlternatives} />
-      <GarmentActionsSection reuse={ecoGuidance.reuse} />
+      <EcoAlternativesSection
+        alternatives={ecoGuidance.ecoAlternatives}
+        notes={ecoGuidance.evidenceNotes}
+        emptyTitle={
+          ecoGuidance.context.kind === 'mixed' ? ecoGuidance.context.title : 'No better-supported swap found'
+        }
+      />
+      <GarmentActionsSection reuse={ecoGuidance.reuse} reuseClaims={ecoGuidance.reuseClaims} />
     </View>
   );
 }
@@ -131,6 +238,11 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sectionLabel: {
     fontFamily: Fonts.semiBold,
@@ -155,7 +267,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: BrandColors.lavenderCard,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,69 +1,28 @@
 import type { FiberProfile } from '@/data/fabrics/fiber-profiles';
+import { FIBER_SHEDDING_INFO } from '@/data/fabrics/shedding-why';
 
 export type InsightTone = 'good' | 'caution' | 'warn';
 
 // Skin/health verdicts used to live here as a fourth, independent, uncited judgment layer.
 // Replaced by the single consolidated model in @/data/fabrics/comfort-profile.ts — see
-// docs/profile-screen-audit.md. This file now only covers sustainability-derived labels and
-// shared tone/color utilities.
+// docs/profile-screen-audit.md. This file now only covers the shedding label and shared
+// tone/color utilities. The Renewable / Biodegradable / Recyclable / Carbon impact labels that used
+// to be derived from the retired sustainability sub-scores were removed (see
+// docs/sustainability-score-archive.md); sourced research findings are in data/fabrics/fiber-research.ts.
 
 export type EnvironmentalSummary = {
-  renewable: string;
-  biodegradable: string;
-  recyclable: string;
-  carbonImpact: string;
   microplasticShedding: string;
 };
 
 export function getEnvironmentalSummary(profile: FiberProfile): EnvironmentalSummary {
-  const lowerFiberType = profile.fiberType.toLowerCase();
-  const renewable = lowerFiberType.includes('plant')
-    ? 'Yes'
-    : lowerFiberType.includes('animal')
-      ? 'Yes'
-      : lowerFiberType.includes('semi-synthetic')
-        ? 'Partly'
-        : 'No';
+  // High / Moderate for the four synthetic fibers (the same levels as FIBER_RISK_LEVELS in
+  // synthetic-health-risk.ts, which a test checks); "Not rated" for every other fiber, because the
+  // shedding references do not support a level for them. This used to read "Low" for every natural
+  // fiber, which the cotton and wool laundering studies contradict, and "Moderate" for Rayon only
+  // because its fiber type contains the word "synthetic".
+  const microplasticShedding = FIBER_SHEDDING_INFO[profile.fabric].value;
 
-  // Thresholds (7/4) match buildSustainabilityFactors() in build-scan-profile.ts — the same
-  // breakdown number used to read "Partly biodegradable" here but a positive "biodegrades
-  // relatively well" on the Results screen for Rayon (7.5) before this was unified. See
-  // docs/fiber-percentage-methodology.md.
-  const biodegradable =
-    profile.breakdown.biodegradability >= 7
-      ? 'Yes'
-      : profile.breakdown.biodegradability <= 4
-        ? 'No'
-        : 'Partly';
-
-  const recyclable =
-    profile.breakdown.recyclability >= 7
-      ? 'High'
-      : profile.breakdown.recyclability <= 4
-        ? 'Low'
-        : 'Moderate';
-
-  const carbonImpact =
-    profile.breakdown.lowCarbon >= 7
-      ? 'Low'
-      : profile.breakdown.lowCarbon <= 4
-        ? 'High'
-        : 'Moderate';
-
-  // Matches FIBER_RISK_LEVELS in synthetic-health-risk.ts (Napper & Thompson 2016 shedding-rate ranking) — see docs/fabric-score-sources.md
-  const microplasticShedding = lowerFiberType.includes('synthetic')
-    ? profile.fabric === 'Polyester' || profile.fabric === 'Acrylic'
-      ? 'High'
-      : 'Moderate'
-    : 'Low';
-
-  return {
-    renewable,
-    biodegradable,
-    recyclable,
-    carbonImpact,
-    microplasticShedding,
-  };
+  return { microplasticShedding };
 }
 
 export function getSheddingColor(value: string): string | undefined {

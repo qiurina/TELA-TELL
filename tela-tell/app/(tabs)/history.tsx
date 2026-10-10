@@ -1,30 +1,48 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { showAlert } from '@/components/ui/alert-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
 import { ScanHistoryFilters } from '@/features/history/components/scan-history-filters';
-import { filterScansByDate, type ScanDateFilter } from '@/features/history/lib/scan-date-filters';
+import { ScanPager } from '@/features/history/components/scan-pager';
+import { getScanDateRange, type ScanDateFilter } from '@/features/history/lib/scan-date-filters';
+import { useScanPages } from '@/features/history/lib/use-scan-pages';
 import {
   Bookmark,
-  ChevronLeft,
-  ChevronRight,
-  Leaf,
   ScanLine,
+  Search,
   Trash2,
   TriangleAlert,
+  X,
 } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
-import { SUSTAINABILITY_DOT, type RecentScanPreview } from '@/data/scans/mock-data';
-import { deleteScan, getAllScans, setScanFavorite } from '@/db/scans';
+import type { RecentScanPreview } from '@/data/scans/mock-data';
+import {
+  deleteScan,
+  getScansPage,
+  getScanStats,
+  SCAN_PAGE_SIZE,
+  setScanFavorite,
+  type ScanStats,
+} from '@/db/scans';
 
-const HISTORY_PAGE_SIZE = 5;
+const SEARCH_DEBOUNCE_MS = 300;
+const EMPTY_STATS: ScanStats = { total: 0, mislabeled: 0 };
+const ALERT_RED = '#dc2626';
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -32,128 +50,77 @@ export default function HistoryScreen() {
   const listRef = useRef<FlatList<RecentScanPreview>>(null);
   const [dateFilter, setDateFilter] = useState<ScanDateFilter>('all');
   const [customDate, setCustomDate] = useState<Date | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // id -> isFavorite, so the Favorite/Unfavorite action still works for selections made on other pages.
+  const [selected, setSelected] = useState<Map<string, boolean>>(new Map());
   const [busy, setBusy] = useState(false);
-  const [page, setPage] = useState(1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [stats, setStats] = useState<ScanStats>(EMPTY_STATS);
 
-  const [previews, setPreviews] = useState<RecentScanPreview[]>([]);
-  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const handle = setTimeout(() => setSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
 
-  const reload = useCallback(async () => {
+  const fetchPage = useCallback(
+    (targetPage: number) =>
+      getScansPage({
+        page: targetPage,
+        pageSize: SCAN_PAGE_SIZE,
+        search,
+        dateRange: getScanDateRange(dateFilter, customDate),
+      }),
+    [search, dateFilter, customDate],
+  );
+  const resetKey = `${dateFilter}|${customDate?.getTime() ?? ''}|${search}`;
+  const { items, totalPages, page, loading, error, goToPage, reload } = useScanPages(
+    fetchPage,
+    resetKey,
+  );
+
+  const loadStats = useCallback(async () => {
     try {
-      const previewList = await getAllScans();
-      setPreviews(previewList);
-    } catch (error) {
-      console.error('[TELA-TELL] Failed to reload scan history:', error);
+      setStats(await getScanStats());
+    } catch (statsError) {
+      console.error('[TELA-TELL] Failed to load scan stats:', statsError);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-
-      setLoading(true);
-      void (async () => {
-        try {
-          const previewList = await getAllScans();
-          if (!active) {
-            return;
-          }
-          setPreviews(previewList);
-          setPage(1);
-        } catch (error) {
-          console.error('[TELA-TELL] Failed to load scan history:', error);
-        } finally {
-          if (active) {
-            setLoading(false);
-          }
-        }
-      })();
-
-      return () => {
-        active = false;
-      };
-    }, []),
+      void loadStats();
+    }, [loadStats]),
   );
+
+  const refresh = useCallback(async () => {
+    await Promise.all([reload(), loadStats()]);
+  }, [reload, loadStats]);
 
   const exitSelectionMode = useCallback(() => {
     setSelectionMode(false);
-    setSelectedIds(new Set());
+    setSelected(new Map());
   }, []);
 
-  const totalScans = previews.length;
+  const isFiltered = search !== '' || dateFilter !== 'all';
+  const allSelectedFavorited = selected.size > 0 && [...selected.values()].every(Boolean);
 
-  const mislabelingCount = useMemo(
-    () => previews.filter((scan) => scan.mislabeling).length,
-    [previews],
+  const changePage = useCallback(
+    (nextPage: number) => {
+      goToPage(nextPage);
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    },
+    [goToPage],
   );
 
-  const sustainableCount = useMemo(
-    () =>
-      previews.filter(
-        (scan) => scan.sustainability === 'green' || scan.sustainability === 'yellow',
-      ).length,
-    [previews],
-  );
-
-  const filteredScans = useMemo(
-    () => filterScansByDate(previews, dateFilter, customDate),
-    [previews, dateFilter, customDate],
-  );
-
-  const totalPages = Math.max(1, Math.ceil(filteredScans.length / HISTORY_PAGE_SIZE));
-
-  useEffect(() => {
-    setPage(1);
-  }, [dateFilter, customDate]);
-
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
-
-  const pageScans = useMemo(() => {
-    const start = (page - 1) * HISTORY_PAGE_SIZE;
-    return filteredScans.slice(start, start + HISTORY_PAGE_SIZE);
-  }, [filteredScans, page]);
-
-  const goToPage = useCallback((nextPage: number) => {
-    setPage(nextPage);
-    listRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, []);
-
-  const goPrev = useCallback(() => {
-    if (page <= 1) {
-      return;
-    }
-    goToPage(page - 1);
-  }, [goToPage, page]);
-
-  const goNext = useCallback(() => {
-    if (page >= totalPages) {
-      return;
-    }
-    goToPage(page + 1);
-  }, [goToPage, page, totalPages]);
-
-  const selectedScans = useMemo(
-    () => filteredScans.filter((scan) => selectedIds.has(scan.id)),
-    [filteredScans, selectedIds],
-  );
-
-  const allSelectedFavorited =
-    selectedScans.length > 0 && selectedScans.every((scan) => Boolean(scan.isFavorite));
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+  const toggleSelect = (scan: RecentScanPreview) => {
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (next.has(scan.id)) {
+        next.delete(scan.id);
       } else {
-        next.add(id);
+        next.set(scan.id, Boolean(scan.isFavorite));
       }
       return next;
     });
@@ -161,7 +128,7 @@ export default function HistoryScreen() {
 
   const handlePress = (scan: RecentScanPreview) => {
     if (selectionMode) {
-      toggleSelect(scan.id);
+      toggleSelect(scan);
       return;
     }
     router.push(`/results/${scan.id}` as Href);
@@ -169,7 +136,7 @@ export default function HistoryScreen() {
 
   const handleLongPress = (scan: RecentScanPreview) => {
     setSelectionMode(true);
-    setSelectedIds(new Set([scan.id]));
+    setSelected(new Map([[scan.id, Boolean(scan.isFavorite)]]));
   };
 
   const handleFilterSelect = (filter: ScanDateFilter) => {
@@ -182,8 +149,15 @@ export default function HistoryScreen() {
     setCustomDate(date);
   };
 
+  const handleSearchChange = (text: string) => {
+    if (selectionMode) {
+      exitSelectionMode();
+    }
+    setSearchInput(text);
+  };
+
   const handleToggleFavorite = () => {
-    const ids = [...selectedIds];
+    const ids = [...selected.keys()];
     if (ids.length === 0 || busy) {
       return;
     }
@@ -194,7 +168,7 @@ export default function HistoryScreen() {
       try {
         await Promise.all(ids.map((id) => setScanFavorite(id, nextFavorite)));
         exitSelectionMode();
-        await reload();
+        await refresh();
       } catch {
         showAlert(
           nextFavorite ? 'Could not favorite' : 'Could not unfavorite',
@@ -207,14 +181,14 @@ export default function HistoryScreen() {
   };
 
   const handleDelete = () => {
-    if (selectedIds.size === 0 || busy) {
+    if (selected.size === 0 || busy) {
       return;
     }
     setShowDeleteConfirm(true);
   };
 
   const handleConfirmDelete = () => {
-    const ids = [...selectedIds];
+    const ids = [...selected.keys()];
     setShowDeleteConfirm(false);
     if (ids.length === 0) {
       return;
@@ -225,7 +199,7 @@ export default function HistoryScreen() {
       try {
         await Promise.all(ids.map((id) => deleteScan(id)));
         exitSelectionMode();
-        await reload();
+        await refresh();
       } catch {
         showAlert('Could not delete', 'Please try again.');
       } finally {
@@ -235,41 +209,60 @@ export default function HistoryScreen() {
   };
 
   const listHeader = (
-    <View>
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, faintCardShadow()]}>
-          <ScanLine size={18} color={BrandColors.primary} strokeWidth={2} />
-          <Text style={[styles.statValue, styles.statValuePrimary]}>{totalScans}</Text>
-          <Text style={styles.statLabel}>TOTAL SCANS</Text>
+      <View>
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, faintCardShadow()]}>
+            <ScanLine size={18} color={BrandColors.primary} strokeWidth={2} />
+            <Text style={[styles.statValue, styles.statValuePrimary]}>{stats.total}</Text>
+            <Text style={styles.statLabel}>TOTAL SCANS</Text>
+          </View>
+          <View style={[styles.statCard, faintCardShadow()]}>
+            <TriangleAlert size={18} color={ALERT_RED} strokeWidth={2} />
+            <Text style={[styles.statValue, styles.statValueAlert]}>{stats.mislabeled}</Text>
+            <Text style={styles.statLabel}>MISLABEL</Text>
+          </View>
         </View>
-        <View style={[styles.statCard, faintCardShadow()]}>
-          <TriangleAlert size={18} color={SUSTAINABILITY_DOT.red} strokeWidth={2} />
-          <Text style={[styles.statValue, styles.statValueAlert]}>{mislabelingCount}</Text>
-          <Text style={styles.statLabel}>MISLABEL</Text>
+
+        <Text style={styles.sectionLabel}>ALL SCANS</Text>
+
+        <View style={styles.searchBox}>
+          <Search size={16} color={BrandColors.textMuted} strokeWidth={2} />
+          <TextInput
+            value={searchInput}
+            onChangeText={handleSearchChange}
+            placeholder="Search fabric or seller"
+            placeholderTextColor={BrandColors.textMuted}
+            style={styles.searchInput}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+            accessibilityLabel="Search scans by fabric or seller"
+          />
+          {searchInput.length > 0 ? (
+            <Pressable
+              onPress={() => handleSearchChange('')}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search">
+              <X size={16} color={BrandColors.textMuted} strokeWidth={2} />
+            </Pressable>
+          ) : null}
         </View>
-        <View style={[styles.statCard, faintCardShadow()]}>
-          <Leaf size={18} color={SUSTAINABILITY_DOT.green} strokeWidth={2} />
-          <Text style={[styles.statValue, styles.statValueSustainable]}>{sustainableCount}</Text>
-          <Text style={styles.statLabel}>SUSTAINABLE</Text>
-        </View>
+
+        <ScanHistoryFilters
+          selected={dateFilter}
+          customDate={customDate}
+          onSelect={handleFilterSelect}
+          onCustomDateChange={handleCustomDateChange}
+        />
       </View>
-
-      <Text style={styles.sectionLabel}>ALL SCANS</Text>
-
-      <ScanHistoryFilters
-        selected={dateFilter}
-        customDate={customDate}
-        onSelect={handleFilterSelect}
-        onCustomDateChange={handleCustomDateChange}
-      />
-    </View>
   );
 
   return (
     <View style={styles.root}>
       <ConfirmDialog
         visible={showDeleteConfirm}
-        title={selectedIds.size === 1 ? 'Delete scan?' : `Delete ${selectedIds.size} scans?`}
+        title={selected.size === 1 ? 'Delete scan?' : `Delete ${selected.size} scans?`}
         message="They’ll move to Recently Deleted and can be restored within 30 days."
         confirmLabel="Delete"
         cancelLabel="Cancel"
@@ -290,8 +283,8 @@ export default function HistoryScreen() {
           <View style={styles.headerText}>
             <Text style={styles.title}>
               {selectionMode
-                ? selectedIds.size > 0
-                  ? `${selectedIds.size} selected`
+                ? selected.size > 0
+                  ? `${selected.size} selected`
                   : 'Select scans'
                 : 'History'}
             </Text>
@@ -310,13 +303,14 @@ export default function HistoryScreen() {
         <View style={styles.sheet}>
           <FlatList
             ref={listRef}
-            data={pageScans}
+            data={items}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={[
               styles.sheetContent,
-              selectionMode && selectedIds.size > 0 ? styles.sheetContentWithBar : null,
-              filteredScans.length > HISTORY_PAGE_SIZE ? styles.sheetContentWithPager : null,
+              selectionMode && selected.size > 0 ? styles.sheetContentWithBar : null,
+              totalPages > 1 ? styles.sheetContentWithPager : null,
             ]}
             ListHeaderComponent={listHeader}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -324,7 +318,7 @@ export default function HistoryScreen() {
               <ScanHistoryCard
                 scan={scan}
                 selectionMode={selectionMode}
-                selected={selectedIds.has(scan.id)}
+                selected={selected.has(scan.id)}
                 onPress={() => handlePress(scan)}
                 onLongPress={() => handleLongPress(scan)}
               />
@@ -334,72 +328,44 @@ export default function HistoryScreen() {
                 <View style={styles.loading}>
                   <ActivityIndicator color={BrandColors.primary} />
                 </View>
-              ) : (
+              ) : error ? null : (
                 <Text style={styles.emptyText}>
-                  No scans yet. Analyze a fabric to start your history.
+                  {isFiltered
+                    ? 'No scans match your search or filter.'
+                    : 'No scans yet. Analyze a fabric to start your history.'}
                 </Text>
               )
             }
-            initialNumToRender={HISTORY_PAGE_SIZE}
+            ListFooterComponent={
+              error ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>Could not load your scans.</Text>
+                  <Pressable
+                    onPress={() => void reload()}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Try loading scans again">
+                    <Text style={styles.retryText}>Try again</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            }
+            initialNumToRender={SCAN_PAGE_SIZE}
             windowSize={7}
-            maxToRenderPerBatch={HISTORY_PAGE_SIZE}
+            maxToRenderPerBatch={SCAN_PAGE_SIZE}
             removeClippedSubviews
           />
 
-          {filteredScans.length > HISTORY_PAGE_SIZE ? (
-            <View style={styles.pager}>
-              <Pressable
-                onPress={goPrev}
-                disabled={page <= 1}
-                style={({ pressed }) => [
-                  styles.pagerButton,
-                  page <= 1 && styles.pagerButtonDisabled,
-                  pressed && page > 1 && styles.pagerPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Previous page">
-                <ChevronLeft
-                  size={18}
-                  color={page <= 1 ? BrandColors.textMuted : BrandColors.primaryDark}
-                  strokeWidth={2.25}
-                />
-                <Text
-                  style={[styles.pagerButtonText, page <= 1 && styles.pagerButtonTextDisabled]}>
-                  Prev
-                </Text>
-              </Pressable>
-
-              <Text style={styles.pagerLabel}>
-                Page {page} of {totalPages}
-              </Text>
-
-              <Pressable
-                onPress={goNext}
-                disabled={page >= totalPages}
-                style={({ pressed }) => [
-                  styles.pagerButton,
-                  page >= totalPages && styles.pagerButtonDisabled,
-                  pressed && page < totalPages && styles.pagerPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Next page">
-                <Text
-                  style={[
-                    styles.pagerButtonText,
-                    page >= totalPages && styles.pagerButtonTextDisabled,
-                  ]}>
-                  Next
-                </Text>
-                <ChevronRight
-                  size={18}
-                  color={page >= totalPages ? BrandColors.textMuted : BrandColors.primaryDark}
-                  strokeWidth={2.25}
-                />
-              </Pressable>
-            </View>
+          {totalPages > 1 ? (
+            <ScanPager
+              page={page}
+              totalPages={totalPages}
+              onPrev={() => changePage(page - 1)}
+              onNext={() => changePage(page + 1)}
+            />
           ) : null}
 
-          {selectionMode && selectedIds.size > 0 ? (
+          {selectionMode && selected.size > 0 ? (
             <View style={styles.actionBar}>
               <Pressable
                 onPress={handleToggleFavorite}
@@ -527,10 +493,7 @@ const styles = StyleSheet.create({
     color: BrandColors.primary,
   },
   statValueAlert: {
-    color: SUSTAINABILITY_DOT.red,
-  },
-  statValueSustainable: {
-    color: SUSTAINABILITY_DOT.green,
+    color: ALERT_RED,
   },
   statLabel: {
     fontFamily: Fonts.semiBold,
@@ -545,6 +508,24 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: BrandColors.textMuted,
     marginBottom: 12,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+    backgroundColor: BrandColors.white,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: BrandColors.text,
   },
   separator: {
     height: 12,
@@ -563,50 +544,21 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     marginTop: 12,
   },
-  pager: {
-    flexDirection: 'row',
+  errorBox: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: BrandColors.borderLight,
-    backgroundColor: BrandColors.white,
+    gap: 6,
+    paddingVertical: 24,
   },
-  pagerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: BrandColors.lavender,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-    minWidth: 84,
-    justifyContent: 'center',
+  errorText: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: BrandColors.textMuted,
+    textAlign: 'center',
   },
-  pagerButtonDisabled: {
-    backgroundColor: BrandColors.white,
-    borderColor: BrandColors.borderLight,
-  },
-  pagerPressed: {
-    opacity: 0.85,
-  },
-  pagerButtonText: {
+  retryText: {
     fontFamily: Fonts.semiBold,
-    fontSize: 13,
-    color: BrandColors.primaryDark,
-  },
-  pagerButtonTextDisabled: {
-    color: BrandColors.textMuted,
-  },
-  pagerLabel: {
-    fontFamily: Fonts.medium,
-    fontSize: 13,
-    color: BrandColors.textMuted,
+    fontSize: 14,
+    color: BrandColors.primary,
   },
   actionBar: {
     flexDirection: 'row',

@@ -88,56 +88,6 @@ export const Eye: FC<IconProps> = (props) => {
   );
 };
 
-export const EyeOff: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Path
-        d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path d="m2 2 20 20" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-};
-
-export const Mail: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Rect x="2" y="4" width="20" height="16" rx="2" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-};
-
-export const Lock: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M7 11V7a5 5 0 0 1 10 0v4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-};
-
 export const Square: FC<IconProps> = (props) => {
   const { color, strokeWidth } = { ...defaults, ...props };
   return (
@@ -411,69 +361,6 @@ export const Scissors: FC<IconProps> = (props) => {
   );
 };
 
-export const Smile: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={strokeWidth} />
-      <Path d="M8 14s1.5 2 4 2 4-2 4-2" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 9h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Path d="M15 9h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-    </Svg>
-  );
-};
-
-export const Baby: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Path
-        d="M10 16c3.5 0 5-1.5 5-3.5V11h-1.5"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M14 16c-3.5 0-5-1.5-5-3.5V11h1.5"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path d="M12 4a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3Z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 8H5a2 2 0 0 0-2 2v1a3 3 0 0 0 3 3h1" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M15 8h4a2 2 0 0 1 2 2v1a3 3 0 0 1-3 3h-1" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx="9.5" cy="12.5" r="0.5" fill={color} stroke={color} strokeWidth={strokeWidth} />
-      <Circle cx="14.5" cy="12.5" r="0.5" fill={color} stroke={color} strokeWidth={strokeWidth} />
-    </Svg>
-  );
-};
-
-export const Meh: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={strokeWidth} />
-      <Path d="M8 15h8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Path d="M9 9h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Path d="M15 9h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-    </Svg>
-  );
-};
-
-export const Frown: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={strokeWidth} />
-      <Path d="M16 16s-1.5-2-4-2-4 2-4 2" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 9h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Path d="M15 9h.01" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-    </Svg>
-  );
-};
-
 export const Layers: FC<IconProps> = (props) => {
   const { color, strokeWidth } = { ...defaults, ...props };
   return (
@@ -529,30 +416,6 @@ export const ShieldAlert: FC<IconProps> = (props) => {
   );
 };
 
-export const Grid3x3: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Rect x="3" y="3" width="18" height="18" rx="2" stroke={color} strokeWidth={strokeWidth} />
-      <Path d="M3 9h18" stroke={color} strokeWidth={strokeWidth} />
-      <Path d="M3 15h18" stroke={color} strokeWidth={strokeWidth} />
-      <Path d="M9 3v18" stroke={color} strokeWidth={strokeWidth} />
-      <Path d="M15 3v18" stroke={color} strokeWidth={strokeWidth} />
-    </Svg>
-  );
-};
-
-export const MoveHorizontal: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Path d="m18 8 4 4-4 4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M2 12h20" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="m6 16-4-4 4-4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-};
-
 export const Droplets: FC<IconProps> = (props) => {
   const { color, strokeWidth } = { ...defaults, ...props };
   return (
@@ -586,22 +449,6 @@ export const Shirt: FC<IconProps> = (props) => {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </Svg>
-  );
-};
-
-export const User: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Path
-        d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Circle cx="12" cy="7" r="4" stroke={color} strokeWidth={strokeWidth} />
     </Svg>
   );
 };
@@ -790,17 +637,6 @@ export const ZapOff: FC<IconProps> = (props) => {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </Svg>
-  );
-};
-
-export const LogOut: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="m16 17 5-5-5-5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M21 12H9" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 };

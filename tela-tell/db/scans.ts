@@ -5,11 +5,10 @@ import {
   DEFAULT_GARMENT_CONDITION,
   type GarmentCondition,
 } from '@/data/scans/garment-condition';
-import type {
-  RecentScanPreview,
-  ScanResult,
-  SustainabilityRating,
-} from '@/data/scans/mock-data';
+import type { RecentScanPreview, ScanResult } from '@/data/scans/mock-data';
+import { assessScanReliability } from '@/data/scans/scan-confidence';
+import { isCaptureType } from '@/features/results/lib/scan-details';
+import { normalizeTesterFields } from '@/features/results/lib/tester-fields';
 import { buildMislabeling } from '@/features/scan/lib/create-scan-record';
 import { deleteAllScanImages, deleteScanImages } from '@/features/scan/lib/scan-image-storage';
 import {
@@ -34,20 +33,53 @@ type ScanRow = {
   createdAt?: string | null;
   sellerLabel: string | null;
   imageUri: string | null;
-  sustainabilityRating: string;
-  sustainabilityLabel: string;
   mislabelDetected: number;
-  resultJson: string | null;
+  compositionsJson: string | null;
+  resultSellerLabel: string | null;
+  resultCaptureType: string | null;
   isFavorite?: number | null;
   deletedAt?: string | null;
 };
 
+export const SCAN_PAGE_SIZE = 10;
+
 const ACTIVE_SCAN_FILTER = `(deletedAt IS NULL OR deletedAt = '')`;
 const DELETED_SCAN_FILTER = `(deletedAt IS NOT NULL AND deletedAt != '')`;
 const SCAN_LIST_ORDER = `ORDER BY createdAt DESC, scannedAtDate DESC, scan_ID DESC`;
-const SCAN_PREVIEW_COLUMNS = `scan_ID, dominantFabric, confidence, scannedAt, scannedAtDate, createdAt,
-                sellerLabel, imageUri, sustainabilityRating, sustainabilityLabel,
-                mislabelDetected, resultJson, isFavorite, deletedAt`;
+const DELETED_SCAN_LIST_ORDER = `ORDER BY deletedAt DESC, scan_ID DESC`;
+// List rows only need the compositions and seller label out of resultJson, so SQLite extracts
+// just those instead of shipping the whole result blob to JS. json_valid guards against one
+// malformed row making json_extract throw and failing the entire list query.
+const SCAN_LIST_COLUMNS = `scan_ID, dominantFabric, confidence, scannedAt, scannedAtDate, createdAt,
+                sellerLabel, imageUri,
+                mislabelDetected, isFavorite, deletedAt,
+                CASE WHEN json_valid(resultJson) THEN json_extract(resultJson, '$.compositions') END AS compositionsJson,
+                CASE WHEN json_valid(resultJson) THEN json_extract(resultJson, '$.sellerLabel') END AS resultSellerLabel,
+                CASE WHEN json_valid(resultJson) THEN json_extract(resultJson, '$.capture.captureType') END AS resultCaptureType`;
+
+export type ScanListQuery = {
+  /** 1-based; clamped into the valid range. */
+  page?: number;
+  pageSize?: number;
+  /** Matches the dominant fabric, seller label, or any fiber in the composition. */
+  search?: string;
+  /** Half-open range on createdAt as ISO strings: from <= createdAt < to. */
+  dateRange?: { from: string; to: string } | null;
+};
+
+export type ScanPage = {
+  items: RecentScanPreview[];
+  total: number;
+  /** The page actually returned (after clamping). */
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+export type ScanStats = {
+  total: number;
+  mislabeled: number;
+};
 
 function daysRemainingUntilPurge(deletedAt: string, retentionDays: number): number {
   const deletedMs = Date.parse(deletedAt);
@@ -57,6 +89,29 @@ function daysRemainingUntilPurge(deletedAt: string, retentionDays: number): numb
   const expiresAt = deletedMs + retentionDays * 24 * 60 * 60 * 1000;
   return Math.max(0, Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000)));
 }
+/**
+ * The three sustainability columns in tblScan are legacy: the app no longer scores sustainability,
+ * but the columns are NOT NULL and are kept (dropping them needs a table rebuild). New and
+ * migrated rows hold these neutral placeholders, which nothing reads.
+ */
+export const LEGACY_SUSTAINABILITY_PLACEHOLDER = {
+  rating: 'unrated',
+  label: 'Not rated',
+  score: 0,
+} as const;
+
+/**
+ * A scan without the `sustainability` object older versions saved. Applied when saving (so an
+ * imported old backup cannot write a score back), when reading, and when exporting.
+ */
+function withoutLegacySustainability<T extends object>(scan: T): T {
+  if (!('sustainability' in scan)) {
+    return scan;
+  }
+  const { sustainability: _removed, ...rest } = scan as T & { sustainability?: unknown };
+  return rest as T;
+}
+
 export async function saveScan(
   result: ScanResult,
   options?: SaveScanOptions,
@@ -88,20 +143,23 @@ export async function saveScan(
         result.sellerLabel ?? null,
         garmentCondition,
         imageUri,
-        result.sustainability.rating,
-        result.sustainability.label,
-        result.sustainability.score,
+        LEGACY_SUSTAINABILITY_PLACEHOLDER.rating,
+        LEGACY_SUSTAINABILITY_PLACEHOLDER.label,
+        LEGACY_SUSTAINABILITY_PLACEHOLDER.score,
         result.mislabeling.detected ? 1 : 0,
         result.mislabeling.title ?? null,
         result.mislabeling.message ?? null,
-        JSON.stringify(result),
+        JSON.stringify(withoutLegacySustainability(result)),
       ],
     );
   });
 }
 export type ScanExportEntry = {
+  /** The scan without its photo path, which is a device-specific location. */
   scan: ScanResult;
   isFavorite: boolean;
+  /** Where this device keeps the scan's photo, used to read it into the export; null if none. */
+  imageUri: string | null;
 };
 
 export async function getAllScansForExport(): Promise<ScanExportEntry[]> {
@@ -111,8 +169,12 @@ export async function getAllScansForExport(): Promise<ScanExportEntry[]> {
 
   const db = await getDatabase();
 
-  const rows = await db.getAllAsync<{ resultJson: string | null; isFavorite: number | null }>(
-    `SELECT resultJson, isFavorite FROM tblScan
+  const rows = await db.getAllAsync<{
+    resultJson: string | null;
+    isFavorite: number | null;
+    imageUri: string | null;
+  }>(
+    `SELECT resultJson, isFavorite, imageUri FROM tblScan
      WHERE ${ACTIVE_SCAN_FILTER}
      ${SCAN_LIST_ORDER}`,
   );
@@ -123,9 +185,13 @@ export async function getAllScansForExport(): Promise<ScanExportEntry[]> {
       continue;
     }
     try {
-      const parsed = JSON.parse(row.resultJson) as ScanResult;
-      const { imageUri: _imageUri, ...withoutImage } = parsed;
-      results.push({ scan: withoutImage, isFavorite: row.isFavorite === 1 });
+      const parsed = withoutLegacySustainability(JSON.parse(row.resultJson) as ScanResult);
+      const { imageUri: jsonImageUri, ...withoutImage } = parsed;
+      results.push({
+        scan: withoutImage,
+        isFavorite: row.isFavorite === 1,
+        imageUri: row.imageUri ?? jsonImageUri ?? null,
+      });
     } catch {
       continue;
     }
@@ -151,7 +217,7 @@ export async function getScanById(scanId: string): Promise<ScanResult | undefine
   }
 
   try {
-    const parsed = JSON.parse(row.resultJson) as ScanResult;
+    const parsed = withoutLegacySustainability(JSON.parse(row.resultJson) as ScanResult);
     return {
       ...parsed,
       imageUri: row.imageUri ?? parsed.imageUri ?? null,
@@ -160,20 +226,122 @@ export async function getScanById(scanId: string): Promise<ScanResult | undefine
     return undefined;
   }
 }
-export async function getAllScans(): Promise<RecentScanPreview[]> {
+function escapeLike(term: string): string {
+  return term.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
+/** Builds the WHERE clause (always starting from `baseFilter`) plus its bound params. */
+function buildScanListFilter(
+  baseFilter: string,
+  query: ScanListQuery,
+): { where: string; params: string[] } {
+  const clauses = [baseFilter];
+  const params: string[] = [];
+
+  const search = query.search?.trim();
+  if (search) {
+    const pattern = `%${escapeLike(search)}%`;
+    clauses.push(
+      `(dominantFabric LIKE ? ESCAPE '\\'
+        OR sellerLabel LIKE ? ESCAPE '\\'
+        OR CASE WHEN json_valid(resultJson) THEN EXISTS (
+          SELECT 1 FROM json_each(resultJson, '$.compositions')
+          WHERE json_extract(value, '$.material') LIKE ? ESCAPE '\\'
+        ) ELSE 0 END)`,
+    );
+    params.push(pattern, pattern, pattern);
+  }
+
+  if (query.dateRange) {
+    clauses.push('createdAt >= ? AND createdAt < ?');
+    params.push(query.dateRange.from, query.dateRange.to);
+  }
+
+  return { where: clauses.join(' AND '), params };
+}
+
+async function queryScanPage(
+  baseFilter: string,
+  order: string,
+  query: ScanListQuery,
+  retentionDays?: number,
+): Promise<ScanPage> {
+  const pageSize = Math.max(1, Math.floor(query.pageSize ?? SCAN_PAGE_SIZE));
   if (!isDatabaseAvailable()) {
-    return [];
+    return { items: [], total: 0, page: 1, pageSize, totalPages: 1 };
   }
 
   const db = await getDatabase();
+  const { where, params } = buildScanListFilter(baseFilter, query);
+
+  const countRow = await db.getFirstAsync<{ total: number }>(
+    `SELECT COUNT(*) AS total FROM tblScan WHERE ${where}`,
+    params,
+  );
+  const total = countRow?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(Math.max(1, Math.floor(query.page ?? 1)), totalPages);
+
   const rows = await db.getAllAsync<ScanRow>(
-    `SELECT ${SCAN_PREVIEW_COLUMNS}
+    `SELECT ${SCAN_LIST_COLUMNS}
      FROM tblScan
-     WHERE ${ACTIVE_SCAN_FILTER}
-     ${SCAN_LIST_ORDER}`,
+     WHERE ${where}
+     ${order}
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, (page - 1) * pageSize],
   );
 
-  return rows.map((row) => rowToPreview(row));
+  return {
+    items: rows.map((row) => rowToPreview(row, retentionDays)),
+    total,
+    page,
+    pageSize,
+    totalPages,
+  };
+}
+
+/** One page of active (not deleted) scans, newest first. */
+export function getScansPage(query: ScanListQuery = {}): Promise<ScanPage> {
+  return queryScanPage(ACTIVE_SCAN_FILTER, SCAN_LIST_ORDER, query);
+}
+
+/** One page of favorited, active scans, newest first. */
+export function getFavoriteScansPage(query: ScanListQuery = {}): Promise<ScanPage> {
+  return queryScanPage(`isFavorite = 1 AND ${ACTIVE_SCAN_FILTER}`, SCAN_LIST_ORDER, query);
+}
+
+/** One page of the trash, most recently deleted first. Expired scans are purged first. */
+export async function getDeletedScansPage(
+  query: ScanListQuery & { retentionDays?: number } = {},
+): Promise<ScanPage> {
+  const retentionDays = query.retentionDays ?? 30;
+  if (isDatabaseAvailable()) {
+    await purgeExpiredDeletedScans(retentionDays);
+  }
+  return queryScanPage(DELETED_SCAN_FILTER, DELETED_SCAN_LIST_ORDER, query, retentionDays);
+}
+
+/** Totals for the History header, counted in SQL so no scan rows are loaded. */
+export async function getScanStats(): Promise<ScanStats> {
+  if (!isDatabaseAvailable()) {
+    return { total: 0, mislabeled: 0 };
+  }
+
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{
+    total: number;
+    mislabeled: number | null;
+  }>(
+    `SELECT COUNT(*) AS total,
+            SUM(CASE WHEN mislabelDetected = 1 THEN 1 ELSE 0 END) AS mislabeled
+     FROM tblScan
+     WHERE ${ACTIVE_SCAN_FILTER}`,
+  );
+
+  return {
+    total: row?.total ?? 0,
+    mislabeled: row?.mislabeled ?? 0,
+  };
 }
 export async function getRecentScans(limit = 5): Promise<RecentScanPreview[]> {
   if (!isDatabaseAvailable()) {
@@ -183,7 +351,7 @@ export async function getRecentScans(limit = 5): Promise<RecentScanPreview[]> {
   const safeLimit = Math.max(1, Math.min(limit, 50));
   const db = await getDatabase();
   const rows = await db.getAllAsync<ScanRow>(
-    `SELECT ${SCAN_PREVIEW_COLUMNS}
+    `SELECT ${SCAN_LIST_COLUMNS}
      FROM tblScan
      WHERE ${ACTIVE_SCAN_FILTER}
      ${SCAN_LIST_ORDER}
@@ -193,56 +361,23 @@ export async function getRecentScans(limit = 5): Promise<RecentScanPreview[]> {
 
   return rows.map((row) => rowToPreview(row));
 }
-export async function getFavoriteScans(): Promise<RecentScanPreview[]> {
-  if (!isDatabaseAvailable()) {
-    return [];
-  }
-
-  const db = await getDatabase();
-  const rows = await db.getAllAsync<ScanRow>(
-    `SELECT ${SCAN_PREVIEW_COLUMNS}
-     FROM tblScan
-     WHERE isFavorite = 1 AND ${ACTIVE_SCAN_FILTER}
-     ${SCAN_LIST_ORDER}`,
-  );
-
-  return rows.map((row) => rowToPreview(row));
-}
-export async function getDeletedScans(
-  options?: { retentionDays?: number },
-): Promise<RecentScanPreview[]> {
-  if (!isDatabaseAvailable()) {
-    return [];
-  }
-
-  const retentionDays = options?.retentionDays ?? 30;
-  await purgeExpiredDeletedScans(retentionDays);
-
-  const db = await getDatabase();
-  const rows = await db.getAllAsync<ScanRow>(
-    `SELECT ${SCAN_PREVIEW_COLUMNS}
-     FROM tblScan
-     WHERE ${DELETED_SCAN_FILTER}
-     ORDER BY deletedAt DESC`,
-  );
-
-  return rows.map((row) => rowToPreview(row, retentionDays));
-}
 
 function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
   let compositionText = '';
   let liveMislabel = row.mislabelDetected === 1;
+  let unsure = false;
 
-  if (row.resultJson) {
+  if (row.compositionsJson) {
     try {
-      const parsed = JSON.parse(row.resultJson) as ScanResult;
-      compositionText = parsed.compositions
+      const compositions = JSON.parse(row.compositionsJson) as ScanResult['compositions'];
+      compositionText = compositions
         .map((item) => `${item.material} ${item.percentage}%`)
         .join(' · ');
+      unsure = !assessScanReliability(compositions).reliable;
       liveMislabel = buildMislabeling(
-        parsed.dominantFabric,
-        row.sellerLabel ?? parsed.sellerLabel ?? null,
-        parsed.compositions ?? [],
+        row.dominantFabric,
+        row.sellerLabel ?? row.resultSellerLabel ?? null,
+        compositions ?? [],
       ).detected;
     } catch {
       compositionText = '';
@@ -263,9 +398,9 @@ function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
     composition: compositionText,
     scannedAt: resolvedDate ? formatScanDisplayTime(resolvedDate) : row.scannedAt,
     scannedAtDate: resolvedDate ? formatScannedAtDate(resolvedDate) : row.scannedAtDate,
-    sustainability: row.sustainabilityRating as SustainabilityRating,
-    sustainabilityLabel: row.sustainabilityLabel,
     mislabeling: liveMislabel,
+    unsure,
+    captureType: isCaptureType(row.resultCaptureType) ? row.resultCaptureType : null,
     sellerLabel: row.sellerLabel ?? undefined,
     image: row.imageUri ? { uri: row.imageUri } : SCAN_THUMBNAIL,
     isFavorite: row.isFavorite === 1,
@@ -332,6 +467,50 @@ export async function updateScanSellerLabel(
 
   return true;
 }
+/**
+ * Saves a tester's notes (Research mode) with a scan. The notes live inside the scan's saved JSON
+ * (no database column), so nothing else about the scan changes and the notes travel with Export
+ * and Import. Saving empty notes removes them. Returns false when the scan does not exist.
+ */
+export async function updateScanTesterFields(
+  scanId: string,
+  fields: unknown,
+): Promise<boolean> {
+  if (!isDatabaseAvailable() || !scanId) {
+    return false;
+  }
+
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ resultJson: string | null }>(
+    `SELECT resultJson FROM tblScan
+     WHERE scan_ID = ? AND ${ACTIVE_SCAN_FILTER}
+     LIMIT 1`,
+    [scanId],
+  );
+
+  if (!row?.resultJson) {
+    return false;
+  }
+
+  let parsed: ScanResult;
+  try {
+    parsed = JSON.parse(row.resultJson) as ScanResult;
+  } catch {
+    return false;
+  }
+
+  const { testerFields: _previous, ...rest } = parsed;
+  const normalized = normalizeTesterFields(fields);
+  const next: ScanResult = normalized ? { ...rest, testerFields: normalized } : rest;
+
+  await db.runAsync(
+    `UPDATE tblScan SET resultJson = ? WHERE scan_ID = ? AND ${ACTIVE_SCAN_FILTER}`,
+    [JSON.stringify(next), scanId],
+  );
+
+  return true;
+}
+
 export async function isScanFavorite(scanId: string): Promise<boolean> {
   if (!isDatabaseAvailable() || !scanId) {
     return false;

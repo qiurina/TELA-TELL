@@ -1,8 +1,8 @@
 import {
+  getPredictedSyntheticFibers,
   getFiberHealthRiskLabel,
   getFiberHealthRiskLevel,
   getSyntheticHealthRisk,
-  HEALTH_RISK_DISCLAIMER,
 } from '@/data/fabrics/synthetic-health-risk';
 
 describe('getFiberHealthRiskLevel', () => {
@@ -21,7 +21,7 @@ describe('getFiberHealthRiskLevel', () => {
 
 describe('getFiberHealthRiskLabel', () => {
   it('reports no risk for non-synthetic fibers', () => {
-    expect(getFiberHealthRiskLabel('Cotton')).toBe('No risk');
+    expect(getFiberHealthRiskLabel('Cotton')).toBe('Not synthetic');
   });
 
   it('labels synthetic fibers by their risk level', () => {
@@ -48,14 +48,23 @@ describe('getSyntheticHealthRisk', () => {
     expect(result?.syntheticPercent).toBe(100);
   });
 
-  it('takes the highest risk level among detected synthetic fibers', () => {
-    const result = getSyntheticHealthRisk('Polyester', [
+  it('follows the most likely fiber, not the highest level among the predictions', () => {
+    const result = getSyntheticHealthRisk('Nylon', [
       { material: 'Nylon', percentage: 55 },
       { material: 'Polyester', percentage: 45 },
     ]);
 
-    expect(result?.level).toBe('high');
-    expect(result?.fibers).toEqual(expect.arrayContaining(['Nylon', 'Polyester']));
+    expect(result?.level).toBe('moderate');
+    expect(result?.fibers).toEqual(['Nylon']);
+  });
+
+  it('returns null when the most likely fiber is not synthetic, even if a synthetic is predicted lower', () => {
+    expect(
+      getSyntheticHealthRisk('Cotton', [
+        { material: 'Cotton', percentage: 60 },
+        { material: 'Polyester', percentage: 35 },
+      ]),
+    ).toBeNull();
   });
 
   it('sums only the synthetic share into syntheticPercent', () => {
@@ -75,8 +84,24 @@ describe('getSyntheticHealthRisk', () => {
     expect(withDamaged?.tips.at(-1)).toMatch(/frayed|torn/i);
   });
 
-  it('always includes the health-risk disclaimer', () => {
+  it('gives the scan its own reason, and an (i) sheet with the limits', () => {
     const result = getSyntheticHealthRisk('Polyester', []);
-    expect(result?.disclaimer).toBe(HEALTH_RISK_DISCLAIMER);
+    expect(result?.reason).toMatch(/polyester clothes can release tiny plastic fibers during washing/);
+    expect(result?.disclaimer.map((section) => section.heading)).toEqual(['What this result means', 'Keep in mind']);
+    expect(result?.disclaimer[1].body).toMatch(/does not assess health effects/);
+  });
+});
+
+describe('getPredictedSyntheticFibers', () => {
+  it('lists every predicted synthetic, most likely first, so a possible synthetic can still be flagged', () => {
+    expect(
+      getPredictedSyntheticFibers('Cotton', [
+        { material: 'Cotton', percentage: 60 },
+        { material: 'Polyester', percentage: 35 },
+        { material: 'Nylon', percentage: 5 },
+      ]),
+    ).toEqual(['Polyester', 'Nylon']);
+    expect(getPredictedSyntheticFibers('Cotton', [{ material: 'Cotton', percentage: 90 }])).toEqual([]);
+    expect(getPredictedSyntheticFibers('Polyester', [])).toEqual(['Polyester']);
   });
 });

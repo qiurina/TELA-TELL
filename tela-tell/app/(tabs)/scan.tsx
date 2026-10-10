@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { showAlert } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   CameraGuide,
   type CameraGuideHandle,
@@ -25,11 +27,16 @@ import { ResultsScreenHeader } from '@/features/results/components/results-scree
 import { ScanLine } from '@/components/ui/lucide-icons';
 import { primaryButtonShadow } from '@/constants/shadows';
 import { DEFAULT_GARMENT_CONDITION, type GarmentCondition } from '@/data/scans/garment-condition';
+import type { CaptureType, SharpnessCheckStatus } from '@/data/scans/mock-data';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
 import { persistScanImage } from '@/features/scan/lib/scan-image-storage';
 import { optimizeScanImage } from '@/features/scan/lib/crop-to-guide';
+import { checkCapture } from '@/features/scan/lib/ml/measure-sharpness';
+import type { LightingAssessment } from '@/features/scan/lib/ml/lighting';
+import { LightingNoticeCard } from '@/features/scan/components/lighting-notice-card';
+import { getClipOnLens, setClipOnLens } from '@/features/scan/lib/clip-on-lens';
 import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 import {
   clearLastGarmentCondition,
@@ -40,12 +47,33 @@ import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
 import { saveScan } from '@/db/scans';
 import { createScanRecord } from '@/features/scan/lib/create-scan-record';
 
+/** What is known about the photo(s) on screen, saved with the scan. */
+type CaptureInfo = {
+  captureType: CaptureType;
+  sharpness: number | null;
+  sharpnessPerPhoto: (number | null)[];
+  sharpnessCheck: SharpnessCheckStatus;
+  lighting: LightingAssessment;
+};
+
+/** A capture the blur check flagged, waiting for the person to choose "Retake" or "Use anyway". */
+type BlurPrompt = {
+  uris: string[];
+  captureType: CaptureType;
+  sharpness: number | null;
+  sharpnessPerPhoto: (number | null)[];
+  lighting: LightingAssessment;
+};
+
 export default function ScanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const cameraGuideRef = useRef<CameraGuideHandle>(null);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [burstUris, setBurstUris] = useState<string[]>([]);
+  const [captureInfo, setCaptureInfo] = useState<CaptureInfo | null>(null);
+  const [blurPrompt, setBlurPrompt] = useState<BlurPrompt | null>(null);
+  const [clipOnLens, setClipOnLensState] = useState<boolean>(() => getClipOnLens());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
@@ -60,9 +88,13 @@ export default function ScanScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // The saved answer may finish loading after this screen first rendered.
+      setClipOnLensState(getClipOnLens());
       if (consumeFreshScan()) {
         setPreviewUri(null);
         setBurstUris([]);
+        setCaptureInfo(null);
+        setBlurPrompt(null);
         clearLastGarmentCondition();
         setGarmentCondition(DEFAULT_GARMENT_CONDITION);
         setDetailsExpanded(true);
@@ -72,10 +104,56 @@ export default function ScanScreen() {
     }, []),
   );
 
-  const commitPreviewUri = (photoUri: string, allUris: string[] = [photoUri]) => {
-    setPreviewUri(photoUri);
+  const commitPreviewUri = (allUris: string[], info: CaptureInfo) => {
+    setPreviewUri(allUris[0]);
     setBurstUris(allUris);
+    setCaptureInfo(info);
     setDetailsExpanded(true);
+  };
+
+  /**
+   * Runs the blur check on a fresh capture. A photo flagged as blurry is held back and the person
+   * chooses to retake or use it anyway; a check that cannot run never blocks the scan.
+   */
+  const acceptCapture = async (uris: string[], captureType: CaptureType) => {
+    // One pass over the photos gives the blur verdict (unchanged) and the lighting readings.
+    const { verdict, lighting } = await checkCapture(uris);
+    if (verdict.blurry) {
+      setBlurPrompt({
+        uris,
+        captureType,
+        sharpness: verdict.sharpest,
+        sharpnessPerPhoto: verdict.readings,
+        lighting,
+      });
+      return;
+    }
+    commitPreviewUri(uris, {
+      captureType,
+      sharpness: verdict.sharpest,
+      sharpnessPerPhoto: verdict.readings,
+      sharpnessCheck: verdict.measured ? 'passed' : 'unchecked',
+      lighting,
+    });
+  };
+
+  const handleUseBlurryAnyway = () => {
+    const pending = blurPrompt;
+    setBlurPrompt(null);
+    if (pending) {
+      commitPreviewUri(pending.uris, {
+        captureType: pending.captureType,
+        sharpness: pending.sharpness,
+        sharpnessPerPhoto: pending.sharpnessPerPhoto,
+        sharpnessCheck: 'overridden',
+        lighting: pending.lighting,
+      });
+    }
+  };
+
+  const handleClipOnLensChange = (value: boolean) => {
+    setClipOnLensState(value);
+    setClipOnLens(value);
   };
 
   const runAnalysis = (photoUri?: string | null, photoUris: string[] = photoUri ? [photoUri] : []) => {
@@ -89,6 +167,14 @@ export default function ScanScreen() {
         const result = await createScanRecord({
           sellerLabel: getLastSellerLabel(),
           imageUris: photoUris,
+          capture: {
+            captureType: captureInfo?.captureType ?? 'gallery',
+            clipOnLens,
+            sharpness: captureInfo?.sharpness ?? null,
+            sharpnessPerPhoto: captureInfo?.sharpnessPerPhoto,
+            lighting: captureInfo?.lighting,
+            sharpnessCheck: captureInfo?.sharpnessCheck ?? 'unchecked',
+          },
         });
         result.garmentCondition = garmentCondition;
 
@@ -126,6 +212,7 @@ export default function ScanScreen() {
     setIsCapturing(true);
     try {
       let photoUris: string[] | null = null;
+      let captureType: CaptureType = 'live_camera';
 
       if (cameraGuideRef.current?.hasLiveCamera()) {
         photoUris = await cameraGuideRef.current.captureAndCrop();
@@ -134,10 +221,12 @@ export default function ScanScreen() {
       if (!photoUris || photoUris.length === 0) {
         const singleUri = await captureFromCamera(guideAspect());
         photoUris = singleUri ? [singleUri] : null;
+        // On web the "camera" fallback is the photo library picker.
+        captureType = Platform.OS === 'web' ? 'gallery' : 'system_camera';
       }
 
       if (photoUris && photoUris.length > 0) {
-        commitPreviewUri(photoUris[0], photoUris);
+        await acceptCapture(photoUris, captureType);
       }
     } catch (error) {
       showAlert(
@@ -158,7 +247,7 @@ export default function ScanScreen() {
     try {
       const photoUri = await captureFromGallery(guideAspect());
       if (photoUri) {
-        commitPreviewUri(photoUri);
+        await acceptCapture([photoUri], 'gallery');
       }
     } catch (error) {
       showAlert(
@@ -187,6 +276,7 @@ export default function ScanScreen() {
 
     setPreviewUri(null);
     setBurstUris([]);
+    setCaptureInfo(null);
     setDetailsExpanded(true);
     clearLastGarmentCondition();
     setGarmentCondition(DEFAULT_GARMENT_CONDITION);
@@ -227,12 +317,17 @@ export default function ScanScreen() {
           keyboardShouldPersistTaps="handled">
           <FabricPhotoPreview imageUri={previewUri} scanCaption="Your scan" />
 
+          {/* Advisory only: the photo can still be analyzed whatever this says. */}
+          <LightingNoticeCard warnings={captureInfo?.lighting.warnings ?? []} />
+
           <ScanDetailsPanel
             savedSellerLabel={savedSellerLabel}
             garmentCondition={garmentCondition}
             onGarmentConditionChange={handleGarmentConditionChange}
             onAddLabel={handleAddLabel}
             onOpenPreferences={handleOpenPreferences}
+            clipOnLens={clipOnLens}
+            onClipOnLensChange={handleClipOnLensChange}
             isAnalyzing={busy}
             expanded={detailsExpanded}
             onExpandedChange={setDetailsExpanded}
@@ -276,6 +371,20 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.root}>
+      <ConfirmDialog
+        visible={blurPrompt !== null}
+        title="This photo looks blurry"
+        message={
+          blurPrompt?.captureType === 'gallery'
+            ? 'A blurry photo can give a wrong or unsure result. Choose a sharper photo, or use this one anyway.'
+            : 'A blurry photo can give a wrong or unsure result. Retake it closer to the fabric and hold the phone steady, or use it anyway.'
+        }
+        confirmLabel="Use anyway"
+        cancelLabel={blurPrompt?.captureType === 'gallery' ? 'Choose another' : 'Retake'}
+        onConfirm={handleUseBlurryAnyway}
+        onCancel={() => setBlurPrompt(null)}
+      />
+
       <CameraGuide
         ref={cameraGuideRef}
         previewUri={null}

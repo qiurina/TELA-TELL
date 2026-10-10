@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useRouter, type Href } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,32 +9,27 @@ import { ScanGalleryGrid } from '@/features/profile/components/scan-gallery-grid
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import type { RecentScanPreview } from '@/data/scans/mock-data';
-import { getFavoriteScans, setScanFavorite } from '@/db/scans';
+import { getFavoriteScansPage, SCAN_PAGE_SIZE, setScanFavorite } from '@/db/scans';
+import { ScanPager } from '@/features/history/components/scan-pager';
+import { useScanPages } from '@/features/history/lib/use-scan-pages';
+
+const fetchFavoritePage = (page: number) => getFavoriteScansPage({ page, pageSize: SCAN_PAGE_SIZE });
 
 export default function FavoriteScansScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [scans, setScans] = useState<RecentScanPreview[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    items: scans,
+    totalPages,
+    page,
+    loading,
+    error,
+    goToPage,
+    reload,
+  } = useScanPages(fetchFavoritePage, 'favorites');
   const [busy, setBusy] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const next = await getFavoriteScans();
-      setScans(next);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -89,7 +84,7 @@ export default function FavoriteScansScreen() {
       try {
         await Promise.all(ids.map((id) => setScanFavorite(id, false)));
         exitSelectionMode();
-        await load();
+        await reload();
       } catch {
         showAlert('Could not unfavorite', 'Please try again.');
       } finally {
@@ -120,9 +115,20 @@ export default function FavoriteScansScreen() {
         }
       />
 
-      {loading ? (
+      {loading && scans.length === 0 ? (
         <View style={styles.loading}>
           <ActivityIndicator color={BrandColors.primary} />
+        </View>
+      ) : error && scans.length === 0 ? (
+        <View style={styles.loading}>
+          <Text style={styles.errorText}>Could not load your scans.</Text>
+          <Pressable
+            onPress={() => void reload()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Try loading scans again">
+            <Text style={styles.headerAction}>Try again</Text>
+          </Pressable>
         </View>
       ) : (
         <ScanGalleryGrid
@@ -136,6 +142,15 @@ export default function FavoriteScansScreen() {
           emptyMessage="Tap the bookmark on a scan result to save it here."
         />
       )}
+
+      {totalPages > 1 ? (
+        <ScanPager
+          page={page}
+          totalPages={totalPages}
+          onPrev={() => goToPage(page - 1)}
+          onNext={() => goToPage(page + 1)}
+        />
+      ) : null}
 
       {selectionMode && selectedIds.size > 0 ? (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -168,12 +183,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+  },
+  errorText: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: BrandColors.textMuted,
+    textAlign: 'center',
   },
   bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

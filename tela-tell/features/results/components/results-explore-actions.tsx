@@ -42,6 +42,11 @@ type ResultsExploreActionsProps = {
   onEcoTips: () => void;
   onPersonalizedInsights: () => void;
   onScanAgain: () => void;
+  /**
+   * False for an "Unsure" scan: Profile, Eco tips and Insights all describe one named fiber, so
+   * they are withheld rather than presented for a fiber the scan could not identify.
+   */
+  showFiberDetails?: boolean;
 };
 
 export function ResultsExploreActions({
@@ -49,31 +54,36 @@ export function ResultsExploreActions({
   onEcoTips,
   onPersonalizedInsights,
   onScanAgain,
+  showFiberDetails = true,
 }: ResultsExploreActionsProps) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>EXPLORE FABRIC</Text>
+      {showFiberDetails ? (
+        <>
+          <Text style={styles.sectionLabel}>EXPLORE FABRIC</Text>
 
-      <View style={styles.cardRow}>
-        <ExploreCard
-          icon={Layers}
-          label="Profile"
-          subtitle="Traits & care"
-          onPress={onProfile}
-        />
-        <ExploreCard
-          icon={Leaf}
-          label="Eco tips"
-          subtitle="Microplastics, reuse & alternatives"
-          onPress={onEcoTips}
-        />
-        <ExploreCard
-          icon={Sparkles}
-          label="Insights"
-          subtitle="Colors, fit & allergies"
-          onPress={onPersonalizedInsights}
-        />
-      </View>
+          <View style={styles.cardRow}>
+            <ExploreCard
+              icon={Layers}
+              label="Profile"
+              subtitle="Traits & care"
+              onPress={onProfile}
+            />
+            <ExploreCard
+              icon={Leaf}
+              label="Eco tips"
+              subtitle="Microplastics, reuse & alternatives"
+              onPress={onEcoTips}
+            />
+            <ExploreCard
+              icon={Sparkles}
+              label="Insights"
+              subtitle="Colors, fit & allergies"
+              onPress={onPersonalizedInsights}
+            />
+          </View>
+        </>
+      ) : null}
 
       <ScanAnotherButton onPress={onScanAgain} />
     </View>

@@ -14,10 +14,8 @@ import type { FabricComposition } from '@/data/scans/mock-data';
  *
  * The SPECIFIC swap-this-for-that recommendations (which named alternative to suggest
  * per fiber) are hand-authored practical guidance, not independently verified against
- * that research — same category as eco-alternatives.ts's suggestions. Exception: Tencel/
- * lyocell's "moisture-wicking comfort" and "closed-loop processing" descriptions are
- * confirmed directly from Lenzing (the manufacturer) — see eco-alternatives.ts's module
- * comment for the specific figures.
+ * that research — same category as eco-alternatives.ts's suggestions. The Tencel/lyocell
+ * "moisture-wicking comfort" note is a manufacturer-style description, not verified here.
  */
 
 export type HypoallergenicAlternative = {
@@ -60,7 +58,7 @@ const FABRIC_ALTERNATIVES: Partial<Record<SupportedFabric, HypoallergenicAlterna
   Silk: [
     { name: 'Cotton', note: 'Soft natural option without silk protein fibers' },
     { name: 'Linen', note: 'Crisp and breathable for tropical climates' },
-    { name: 'Tencel / lyocell', note: 'Smooth drape similar to silk with closed-loop processing' },
+    { name: 'Tencel / lyocell', note: 'A man-made fiber made from plant cellulose' },
   ],
   Polyester: [
     { name: 'Cotton', note: 'Natural fiber less likely to trap heat and sweat' },
@@ -95,7 +93,7 @@ const FABRIC_ALTERNATIVES: Partial<Record<SupportedFabric, HypoallergenicAlterna
   Suede: [
     { name: 'Cotton canvas', note: 'Plant-based alternative without animal hide' },
     { name: 'Linen', note: 'Breathable natural option for warm climates' },
-    { name: 'Microfiber (verified)', note: 'Synthetic suede-like finish without animal material' },
+    { name: 'Microfiber', note: 'Synthetic suede-like finish without animal material' },
   ],
 };
 

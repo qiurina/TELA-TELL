@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import {
   GarmentConditionIcon,
@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ImagePlus,
   Plus,
+  Search,
   Settings,
   Tag,
   X,
@@ -106,11 +107,43 @@ type ScanDetailsPanelProps = {
   onGarmentConditionChange: (condition: GarmentCondition) => void;
   onAddLabel: () => void;
   onOpenPreferences?: () => void;
+  /** Whether the person is using a clip-on macro lens. The row is hidden unless a handler is given. */
+  clipOnLens?: boolean;
+  onClipOnLensChange?: (value: boolean) => void;
   isAnalyzing?: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   variant?: 'chip' | 'sheet';
 };
+
+function ClipOnLensRow({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <View style={[styles.detailRow, disabled && styles.disabled]}>
+      <View style={styles.detailRowIcon}>
+        <Search size={16} color={BrandColors.primary} strokeWidth={2.25} />
+      </View>
+      <Text style={styles.detailRowLabel}>Clip-on macro lens</Text>
+      <Text style={[styles.detailRowValue, styles.detailRowValueEmpty]} numberOfLines={1}>
+        {value ? 'Using' : 'Not using'}
+      </Text>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        disabled={disabled}
+        trackColor={{ false: BrandColors.border, true: BrandColors.primary }}
+        accessibilityLabel="Using a clip-on macro lens"
+      />
+    </View>
+  );
+}
 
 function DetailActionRow({
   icon,
@@ -165,11 +198,16 @@ export function ScanDetailsPanel({
   onGarmentConditionChange,
   onAddLabel,
   onOpenPreferences,
+  clipOnLens = false,
+  onClipOnLensChange,
   isAnalyzing,
   expanded,
   onExpandedChange,
   variant = 'chip',
 }: ScanDetailsPanelProps) {
+  const lensRow = onClipOnLensChange ? (
+    <ClipOnLensRow value={clipOnLens} onChange={onClipOnLensChange} disabled={isAnalyzing} />
+  ) : null;
   const [showConditionSheet, setShowConditionSheet] = useState(false);
   const [hasPreferences, setHasPreferences] = useState(() => hasActiveUserPreferences());
   const trimmedLabel = savedSellerLabel?.trim() ?? '';
@@ -244,6 +282,8 @@ export function ScanDetailsPanel({
               accessibilityLabel={`Fabric condition, ${getGarmentConditionLabel(garmentCondition)}. Change`}
             />
 
+            {lensRow}
+
             <DetailActionRow
               icon={<Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />}
               label="Stated label"
@@ -313,6 +353,8 @@ export function ScanDetailsPanel({
                 disabled={isAnalyzing}
                 accessibilityLabel={`Fabric condition, ${getGarmentConditionLabel(garmentCondition)}. Change`}
               />
+
+              {lensRow}
 
               <DetailActionRow
                 icon={<Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />}

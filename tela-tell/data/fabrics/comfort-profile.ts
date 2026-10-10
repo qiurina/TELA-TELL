@@ -249,8 +249,7 @@ const AXIS_KEYS: ComfortAxisKey[] = [
 ];
 
 /**
- * Mass-fraction-weighted comfort score across a full detected composition — same weighting
- * pattern as the sustainability score in build-scan-profile.ts, applied here to the comfort
+ * Mass-fraction-weighted comfort score across a full detected composition, applied to the comfort
  * axes instead of ad hoc "irritant fiber" coefficients.
  */
 export function getWeightedComfort(

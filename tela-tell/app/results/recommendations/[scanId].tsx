@@ -1,11 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View , ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { NotFoundFallback } from '@/components/ui/not-found-fallback';
 
 
 import { RecommendationsContent } from '@/features/recommendations/components/recommendations-content';
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { BrandColors } from '@/constants/brand';
-import { Fonts } from '@/constants/fonts';
 import { useScanResult } from '@/features/results/hooks/use-scan-result';
 
 export default function RecommendationsScreen() {
@@ -23,12 +23,7 @@ export default function RecommendationsScreen() {
 
   if (!result) {
     return (
-      <View style={styles.fallback}>
-        <Text style={styles.fallbackText}>Recommendations not found.</Text>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.fallbackLink}>Go back</Text>
-        </Pressable>
-      </View>
+      <NotFoundFallback message="Recommendations not found." />
     );
   }
 
@@ -66,15 +61,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     backgroundColor: BrandColors.white,
-  },
-  fallbackText: {
-    fontFamily: Fonts.medium,
-    fontSize: 16,
-    color: BrandColors.text,
-  },
-  fallbackLink: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.primary,
   },
 });

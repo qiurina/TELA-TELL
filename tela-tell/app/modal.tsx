@@ -173,6 +173,7 @@ export default function SellerLabelModal() {
                   placeholderTextColor={BrandColors.textMuted}
                   value={sellerLabel}
                   onChangeText={commitLabel}
+                  accessibilityLabel="Declared fiber label"
                 />
               </View>
               {selectedFibers.length >= 2 ? (

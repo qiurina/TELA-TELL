@@ -1,39 +1,24 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ChevronRight, Droplets, Info, Shield } from '@/components/ui/lucide-icons';
+import { InfoButton } from '@/components/ui/info-button';
+import { InfoSheet } from '@/components/ui/info-sheet';
+import { ChevronRight, Droplets, Shield } from '@/components/ui/lucide-icons';
+import { StatusCard } from '@/components/ui/status-card';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { faintCardShadow } from '@/constants/shadows';
+import type { StatusTone } from '@/constants/status-colors';
+import { SHEDDING_SHEET_TITLE } from '@/data/fabrics/assessment-disclaimers';
 import {
-  getFiberHealthRiskLevel,
+  SHEDDING_TIPS_FOOTNOTE,
   type HealthRiskLevel,
   type SyntheticHealthRisk,
 } from '@/data/fabrics/synthetic-health-risk';
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
 
-const LEVEL_STYLES: Record<
-  HealthRiskLevel,
-  { background: string; border: string; accent: string; label: string }
-> = {
-  low: {
-    background: '#F0FDF4',
-    border: '#BBF7D0',
-    accent: '#15803D',
-    label: 'Low',
-  },
-  moderate: {
-    background: '#FFFBEB',
-    border: '#FDE68A',
-    accent: '#B45309',
-    label: 'Moderate',
-  },
-  high: {
-    background: '#FEF2F2',
-    border: '#FECACA',
-    accent: '#B91C1C',
-    label: 'High',
-  },
+const LEVEL_TONE: Record<HealthRiskLevel, StatusTone> = {
+  low: 'good',
+  moderate: 'caution',
+  high: 'alert',
 };
 
 type SyntheticMicroplasticGuideProps = {
@@ -41,85 +26,62 @@ type SyntheticMicroplasticGuideProps = {
 };
 
 /**
- * Compact Eco Tips microplastic strip.
- * Importance stays on-screen; tips and disclaimer open on demand.
+ * Eco Tips microplastic section: the section label carries the (i); the card below uses the same
+ * header, frame and pastel pill as the Results status cards. Tips open on demand.
  */
 export function SyntheticMicroplasticGuide({ risk }: SyntheticMicroplasticGuideProps) {
   const [sheet, setSheet] = useState<'advisory' | 'tips' | null>(null);
-  const levelStyle = LEVEL_STYLES[risk.level];
+  const tone = LEVEL_TONE[risk.level];
 
-  const tipsMessage = risk.tips.map((tip, index) => `${index + 1}. ${tip}`).join('\n\n');
+  const tipsMessage = `${risk.tips.map((tip, index) => `${index + 1}. ${tip}`).join('\n\n')}\n\n${SHEDDING_TIPS_FOOTNOTE}`;
 
   return (
     <View style={styles.section}>
-      <ScanConfirmSheet
+      <InfoSheet
         visible={sheet === 'advisory'}
-        variant="info"
-        title="About this advisory"
-        message={risk.disclaimer}
-        confirmLabel="Got it"
-        onConfirm={() => setSheet(null)}
-        onCancel={() => setSheet(null)}
+        title={SHEDDING_SHEET_TITLE}
+        sections={risk.disclaimer}
+        icon={Shield}
+        tone={tone}
+        onClose={() => setSheet(null)}
       />
-      <ScanConfirmSheet
+      <InfoSheet
         visible={sheet === 'tips'}
-        variant="info"
         title="What you can do"
         message={tipsMessage}
-        confirmLabel="Got it"
-        onConfirm={() => setSheet(null)}
-        onCancel={() => setSheet(null)}
+        icon={Droplets}
+        onClose={() => setSheet(null)}
       />
 
       <View style={styles.titleRow}>
         <Text style={styles.sectionLabel}>SYNTHETIC & MICROPLASTIC</Text>
-        <Pressable
-          style={styles.infoButton}
+        <InfoButton
           onPress={() => setSheet('advisory')}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="About this advisory">
-          <Info size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
-        </Pressable>
+          accessibilityLabel="About this shedding estimate"
+        />
       </View>
 
-      <View style={[styles.panel, faintCardShadow()]}>
-        <View style={styles.importanceRow}>
-          <View style={[styles.shieldWrap, { backgroundColor: levelStyle.background }]}>
-            <Shield size={16} color={levelStyle.accent} strokeWidth={2.25} />
-          </View>
-          <View style={styles.importanceText}>
-            <Text style={styles.importanceTitle}>Why this matters</Text>
-            <Text style={styles.importanceBody}>{risk.summary}</Text>
-          </View>
+      <StatusCard icon={Shield} tone={tone} title="Fiber shedding" pillLabel={risk.label}>
+        <View style={styles.copy}>
+          <Text style={styles.summary}>
+            <Text style={styles.lead}>Why {risk.label}: </Text>
+            {risk.reason}
+          </Text>
+          <Text style={styles.note}>{risk.note}</Text>
         </View>
 
-        <View style={styles.chipRow}>
-          <View
-            style={[
-              styles.levelPill,
-              { backgroundColor: levelStyle.background, borderColor: levelStyle.border },
-            ]}>
-            <Text style={[styles.levelPillText, { color: levelStyle.accent }]}>
-              {levelStyle.label} risk
-            </Text>
+        {risk.fibers.length > 0 ? (
+          <View style={styles.fibers}>
+            <Text style={styles.fibersLabel}>Predicted fibers</Text>
+            <View style={styles.chipRow}>
+              {risk.fibers.map((fiber) => (
+                <View key={fiber} style={styles.fiberChip}>
+                  <Text style={styles.fiberChipText}>{fiber}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-          {risk.fibers.map((fiber) => {
-            const fiberLevel = getFiberHealthRiskLevel(fiber);
-            const accent = LEVEL_STYLES[fiberLevel];
-
-            return (
-              <View
-                key={fiber}
-                style={[
-                  styles.fiberChip,
-                  { backgroundColor: accent.background, borderColor: accent.border },
-                ]}>
-                <Text style={[styles.fiberChipText, { color: accent.accent }]}>{fiber}</Text>
-              </View>
-            );
-          })}
-        </View>
+        ) : null}
 
         <Pressable
           style={({ pressed }) => [styles.careButton, pressed && styles.pressed]}
@@ -132,7 +94,7 @@ export function SyntheticMicroplasticGuide({ risk }: SyntheticMicroplasticGuideP
           </View>
           <ChevronRight size={18} color={BrandColors.textMuted} strokeWidth={2.25} />
         </Pressable>
-      </View>
+      </StatusCard>
     </View>
   );
 }
@@ -154,51 +116,31 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: BrandColors.textMuted,
   },
-  infoButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BrandColors.lavenderCard,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
+  copy: {
+    gap: 8,
   },
-  panel: {
-    backgroundColor: BrandColors.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
-    padding: 14,
-    gap: 12,
-  },
-  importanceRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  shieldWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  importanceText: {
-    flex: 1,
-    gap: 3,
-    minWidth: 0,
-  },
-  importanceTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 13,
+  summary: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    lineHeight: 21,
     color: BrandColors.text,
   },
-  importanceBody: {
+  lead: {
+    fontFamily: Fonts.semiBold,
+    color: BrandColors.primaryDark,
+  },
+  note: {
     fontFamily: Fonts.regular,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
+    color: BrandColors.textMuted,
+  },
+  fibers: {
+    gap: 6,
+  },
+  fibersLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: 12,
     color: BrandColors.textMuted,
   },
   chipRow: {
@@ -206,25 +148,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-  levelPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  levelPillText: {
-    fontFamily: Fonts.bold,
-    fontSize: 12,
-  },
   fiberChip: {
     borderRadius: 999,
     borderWidth: 1,
+    borderColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.lavender,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   fiberChipText: {
     fontFamily: Fonts.semiBold,
     fontSize: 12,
+    color: BrandColors.text,
   },
   careButton: {
     flexDirection: 'row',

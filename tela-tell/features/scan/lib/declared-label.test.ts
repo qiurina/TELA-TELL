@@ -1,3 +1,4 @@
+import { buildMislabeling } from '@/features/scan/lib/create-scan-record';
 import { evaluateDeclaredLabel } from '@/features/scan/lib/declared-label';
 
 const cottonScan = [
@@ -69,6 +70,43 @@ describe('evaluateDeclaredLabel', () => {
     expect(result.status).toBe('unreadable');
     expect(result.unsupported).toEqual(['pu leather']);
     expect(evaluateDeclaredLabel('Leather', 'Genuine leather', scan).status).toBe('match');
+  });
+
+  describe('when the scan itself is unsure', () => {
+    const unsureScan = [
+      { material: 'Cotton', percentage: 45 },
+      { material: 'Rayon', percentage: 35 },
+      { material: 'Linen', percentage: 20 },
+    ];
+
+    it('does not call a missing declared fiber a mismatch', () => {
+      const result = evaluateDeclaredLabel('Cotton', '100% Silk', unsureScan);
+      expect(result.status).toBe('unsure');
+      expect(result.missing).toEqual(['Silk']);
+      expect(result.title).not.toMatch(/mislabel/i);
+      expect(result.message).toMatch(/care tag/i);
+      // Same label, clear scan: still a real mismatch.
+      expect(evaluateDeclaredLabel('Cotton', '100% Silk', cottonScan).status).toBe('mismatch');
+    });
+
+    it('does not confirm a label either, even when the declared fiber is the top guess', () => {
+      const result = evaluateDeclaredLabel('Cotton', '100% Cotton', unsureScan);
+      expect(result.status).toBe('unsure');
+      expect(result.missing).toEqual([]);
+      expect(result.message).toMatch(/either way/);
+      // The same label on a clear scan is still a clean match.
+      expect(evaluateDeclaredLabel('Cotton', '100% Cotton', cottonScan).status).toBe('match');
+    });
+
+    it('still says nothing without a label, and still cannot read an unreadable one', () => {
+      expect(evaluateDeclaredLabel('Cotton', '', unsureScan).status).toBe('none');
+      expect(evaluateDeclaredLabel('Cotton', '100% Cashmere', unsureScan).status).toBe('unreadable');
+    });
+
+    it('does not set the stored mislabel flag', () => {
+      expect(buildMislabeling('Cotton', '100% Silk', unsureScan).detected).toBe(false);
+      expect(buildMislabeling('Cotton', '100% Silk', cottonScan).detected).toBe(true);
+    });
   });
 
   it('checks the fibers it knows and says so when part of a label cannot be checked', () => {

@@ -88,13 +88,17 @@ export default function UserPreferencesScreen() {
               primaryButtonShadow(),
               pressed && styles.doneButtonPressed,
             ]}
-            onPress={handleDismiss}>
+            onPress={handleDismiss}
+            accessibilityRole="button"
+            accessibilityLabel="Done">
             <Text style={styles.doneButtonText}>Done</Text>
           </Pressable>
 
           <Pressable
             style={({ pressed }) => [styles.clearButton, pressed && styles.clearButtonPressed]}
-            onPress={handleClear}>
+            onPress={handleClear}
+            accessibilityRole="button"
+            accessibilityLabel="Clear preferences">
             <Text style={styles.clearButtonText}>Clear preferences</Text>
           </Pressable>
         </ScrollView>

@@ -3,28 +3,28 @@ import { useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { InfoButton } from '@/components/ui/info-button';
+import { InfoSheet } from '@/components/ui/info-sheet';
 import {
   Calendar,
-  Check,
   CircleCheck,
   CircleX,
   Droplets,
-  Leaf,
-  Recycle,
   Sun,
   TriangleAlert,
-  Wind,
   type IconProps,
 } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
+import { SHEDDING_SHEET_TITLE } from '@/data/fabrics/assessment-disclaimers';
 import { FABRIC_REFERENCES } from '@/data/fabrics/fabric-references';
+import { getFiberSheddingSheet } from '@/data/fabrics/shedding-why';
 import { getComfortProfile } from '@/data/fabrics/comfort-profile';
 import type { FiberProfile } from '@/data/fabrics/fiber-profiles';
 import { FABRIC_CATEGORY_COLORS, FABRIC_REGISTRY } from '@/data/fabrics/fabrics';
 import { getDressingContextLabel } from '@/data/preferences/occasion-weather';
-import { SUSTAINABILITY_DOT, type SustainabilityRating } from '@/data/scans/mock-data';
+import { FiberResearchSection } from '@/features/fabrics/components/fiber-research-section';
 import { getEnvironmentalSummary, getSheddingColor } from '@/features/fabrics/lib/fiber-profile-insights';
 
 type FiberProfileContentProps = {
@@ -69,65 +69,6 @@ function ProfileTabs({
           </Pressable>
         );
       })}
-    </View>
-  );
-}
-
-const SUSTAINABILITY_BADGE: Record<
-  SustainabilityRating,
-  { background: string; border: string; text: string }
-> = {
-  green: { background: '#F0FDF4', border: '#BBF7D0', text: '#15803D' },
-  yellow: { background: '#FFFBEB', border: '#FDE68A', text: '#B45309' },
-  red: { background: '#FEF2F2', border: '#FECACA', text: '#B91C1C' },
-};
-
-function SustainabilityScoreStack({
-  score,
-  label,
-  rating,
-}: {
-  score: number;
-  label: string;
-  rating: SustainabilityRating;
-}) {
-  const badgeStyle = SUSTAINABILITY_BADGE[rating];
-  const scoreColor = SUSTAINABILITY_DOT[rating];
-
-  return (
-    <View style={styles.sustainabilityBadgeWrap}>
-      <View
-        style={[
-          styles.sustainabilityBadge,
-          { backgroundColor: badgeStyle.background, borderColor: badgeStyle.border },
-        ]}>
-        <View style={[styles.sustainabilityDot, { backgroundColor: scoreColor }]} />
-        <Text style={[styles.sustainabilityBadgeText, { color: badgeStyle.text }]}>{label}</Text>
-      </View>
-      <Text style={[styles.sustainabilityScore, { color: scoreColor }]}>
-        {score.toFixed(1)}
-        <Text style={styles.sustainabilityScoreSuffix}> / 10</Text>
-      </Text>
-    </View>
-  );
-}
-
-function PropertyCell({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon?: FC<IconProps>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.propertyCell}>
-      <View style={styles.propertyLabelRow}>
-        {Icon ? <Icon size={13} color={BrandColors.textMuted} strokeWidth={2.25} /> : null}
-        <Text style={styles.propertyLabel}>{label}</Text>
-      </View>
-      <Text style={styles.propertyValue}>{value}</Text>
     </View>
   );
 }
@@ -180,17 +121,24 @@ function InfoRow({
   label,
   value,
   valueColor,
+  onInfoPress,
+  infoAccessibilityLabel,
 }: {
   icon: FC<IconProps>;
   label: string;
   value: string;
   valueColor?: string;
+  onInfoPress?: () => void;
+  infoAccessibilityLabel?: string;
 }) {
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoLabelWrap}>
         <Icon size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
         <Text style={styles.infoLabel}>{label}</Text>
+        {onInfoPress ? (
+          <InfoButton onPress={onInfoPress} accessibilityLabel={infoAccessibilityLabel ?? label} />
+        ) : null}
       </View>
       <Text style={[styles.infoValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
     </View>
@@ -233,6 +181,7 @@ function ContextChipGroup({
 
 export function FiberProfileContent({ profile, showHero = true }: FiberProfileContentProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>('health');
+  const [sheet, setSheet] = useState<'shedding' | null>(null);
   const reference = FABRIC_REFERENCES[profile.fabric];
   const category = FABRIC_REGISTRY.find((item) => item.name === profile.fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
@@ -254,16 +203,15 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
     <Text style={styles.fiberType}>{profile.fiberType}</Text>
   );
 
-  const sustainabilityStack = (
-    <SustainabilityScoreStack
-      score={profile.sustainabilityScore}
-      label={profile.sustainabilityLabel}
-      rating={profile.sustainabilityRating}
-    />
-  );
-
   return (
     <View style={styles.root}>
+      <InfoSheet
+        visible={sheet === 'shedding'}
+        title={SHEDDING_SHEET_TITLE}
+        sections={getFiberSheddingSheet(profile.fabric)}
+        icon={Droplets}
+        onClose={() => setSheet(null)}
+      />
       {showHero ? (
         <View style={[styles.heroCard, faintCardShadow()]}>
           <Image
@@ -280,7 +228,6 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
                 <Text style={styles.scientificName}>{profile.scientificName}</Text>
                 {categoryPill}
               </View>
-              {sustainabilityStack}
             </View>
 
             <Text style={styles.description}>{profile.description}</Text>
@@ -294,7 +241,6 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
               <Text style={styles.scientificName}>{profile.scientificName}</Text>
               {categoryPill}
             </View>
-            {sustainabilityStack}
           </View>
           <Text style={styles.description}>{profile.description}</Text>
         </View>
@@ -332,25 +278,18 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
 
       {activeTab === 'eco' ? (
         <View style={styles.section}>
-          <SectionLabel>Environmental impact</SectionLabel>
+          <SectionLabel>Fiber shedding</SectionLabel>
           <View style={[styles.propertiesCard, faintCardShadow()]}>
-            <View style={styles.propertyRow}>
-              <PropertyCell icon={Leaf} label="Renewable" value={environment.renewable} />
-              <PropertyCell icon={Check} label="Biodegradable" value={environment.biodegradable} />
-            </View>
-            <View style={styles.propertyDivider} />
-            <View style={styles.propertyRow}>
-              <PropertyCell icon={Recycle} label="Recyclable" value={environment.recyclable} />
-              <PropertyCell icon={Wind} label="Carbon impact" value={environment.carbonImpact} />
-            </View>
-            <View style={styles.propertyDivider} />
             <InfoRow
               icon={Droplets}
-              label="Microplastic shedding"
+              label="Shedding tendency"
               value={environment.microplasticShedding}
               valueColor={getSheddingColor(environment.microplasticShedding)}
+              onInfoPress={() => setSheet('shedding')}
+              infoAccessibilityLabel="About this shedding estimate"
             />
           </View>
+          <FiberResearchSection fabric={profile.fabric} />
         </View>
       ) : null}
 
@@ -446,37 +385,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: BrandColors.textMuted,
   },
-  sustainabilityBadgeWrap: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  sustainabilityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  sustainabilityDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  sustainabilityBadgeText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-  },
-  sustainabilityScore: {
-    fontFamily: Fonts.bold,
-    fontSize: 18,
-  },
-  sustainabilityScoreSuffix: {
-    fontFamily: Fonts.medium,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-  },
   categoryPill: {
     alignSelf: 'flex-start',
     borderRadius: 999,
@@ -547,32 +455,6 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  propertyRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  propertyCell: {
-    flex: 1,
-    gap: 4,
-  },
-  propertyLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  propertyLabel: {
-    fontFamily: Fonts.medium,
-    fontSize: 11,
-    color: BrandColors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  propertyValue: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.text,
-    lineHeight: 20,
-  },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -597,10 +479,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: BrandColors.text,
     textAlign: 'right',
-  },
-  propertyDivider: {
-    height: 1,
-    backgroundColor: BrandColors.borderLight,
   },
   textCard: {
     backgroundColor: BrandColors.white,

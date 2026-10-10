@@ -98,6 +98,8 @@ function ColorSeasonPicker({
           <Pressable
             onPress={onClear}
             disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel="Clear color season"
             style={({ pressed }) => [styles.seasonClearBtn, pressed && styles.pressed]}>
             <Text style={styles.seasonClearText}>Clear</Text>
           </Pressable>

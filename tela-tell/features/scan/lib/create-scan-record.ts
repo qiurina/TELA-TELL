@@ -4,10 +4,13 @@ import { evaluateDeclaredLabel } from '@/features/scan/lib/declared-label';
 import { formatScanDisplayTime, formatScannedAtDate } from '@/features/scan/lib/scan-timestamp';
 import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
 import { classifyFabric, type ClassificationResult } from '@/features/scan/lib/ml/model';
+import { buildCaptureMeta, type CaptureInput } from '@/features/scan/lib/scan-capture-meta';
 
 export type CreateScanRecordInput = {
   sellerLabel?: string | null;
   imageUris?: string[] | null;
+  /** How the photos were taken; saved with the scan. */
+  capture: CaptureInput;
 };
 
 function createScanId(): string {
@@ -34,7 +37,7 @@ export function buildMislabeling(
 function buildResultFromClassification(classification: ClassificationResult): ScanResult {
   const primary = (resolveFabricAlias(classification.dominantFabric) ??
     classification.dominantFabric) as SupportedFabric;
-  const { profile, sustainability, recommendations } = buildScanProfile(
+  const { profile, recommendations } = buildScanProfile(
     primary,
     classification.dominantFabric,
     classification.compositions,
@@ -47,7 +50,6 @@ function buildResultFromClassification(classification: ClassificationResult): Sc
     confidence: classification.confidence,
     scannedAt: '',
     scannedAtDate: '',
-    sustainability,
     mislabeling: { detected: false, title: '', message: '' },
     profile,
     recommendations,
@@ -63,7 +65,7 @@ async function classifyFromImages(imageUris: string[]): Promise<ClassificationRe
   }
 }
 
-export async function createScanRecord(input: CreateScanRecordInput = {}): Promise<ScanResult> {
+export async function createScanRecord(input: CreateScanRecordInput): Promise<ScanResult> {
   const now = new Date();
   const sellerLabel = input.sellerLabel?.trim() || null;
 
@@ -82,5 +84,6 @@ export async function createScanRecord(input: CreateScanRecordInput = {}): Promi
     scannedAtDate: formatScannedAtDate(now),
     sellerLabel: sellerLabel ?? undefined,
     mislabeling: buildMislabeling(base.dominantFabric, sellerLabel, base.compositions),
+    capture: buildCaptureMeta(input.capture, classification),
   };
 }

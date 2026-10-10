@@ -51,8 +51,8 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     points: [
       {
         icon: Leaf,
-        title: 'Sustainability',
-        text: 'See how eco-friendly a fiber is: biodegradability, water use, recyclability and carbon.',
+        title: 'Environmental research',
+        text: 'See what lab studies found about each fiber, with their sources. The app does not score sustainability.',
       },
       {
         icon: Recycle,
@@ -66,8 +66,8 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
       },
       {
         icon: Shirt,
-        title: 'Eco-friendly alternatives',
-        text: 'Greener fibers to look for the next time you shop.',
+        title: 'Other fabrics to consider',
+        text: 'Fabric ideas for your next shop, with the evidence behind each one.',
       },
       {
         icon: Layers,
@@ -130,7 +130,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     key: 'label',
     icon: Tag,
     title: 'Check the label',
-    body: 'Add what the care tag or the seller claims. TELA-TELL compares it with your scan and flags a possible mislabel, which can help when negotiating a price.',
+    body: 'Add what the care tag or the seller claims. TELA-TELL compares it with your scan and flags a possible mislabel to double-check.',
     footnote: 'Treat it as a hint, not proof.',
   },
   {

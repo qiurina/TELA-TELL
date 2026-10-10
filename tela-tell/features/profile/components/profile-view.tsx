@@ -114,7 +114,7 @@ export function ProfileView() {
         return;
       }
 
-      const count = await importScans(payload.scans, payload.favoriteScanIds);
+      const count = await importScans(payload.scans, payload.favoriteScanIds, payload.photos);
 
       if (payload.preferences) {
         setPendingImport({ count, preferences: payload.preferences });
@@ -244,7 +244,7 @@ export function ProfileView() {
           />
           <ProfilePreferenceRow
             title="Export My Data"
-            value={isExporting ? 'Preparing export...' : undefined}
+            value={isExporting ? 'Preparing export...' : 'Includes photos'}
             icon={<Share2 size={18} color={BrandColors.primaryDark} strokeWidth={2.25} />}
             onPress={() => void handleExportData()}
           />

@@ -5,6 +5,7 @@ import {
   type SupportedFabric,
 } from '@/data/fabrics/fabrics';
 import {
+  assessScanReliability,
   CLEAR_SHARE_MIN_PERCENT,
   TRACE_DETECTION_MIN_PERCENT,
 } from '@/data/scans/scan-confidence';
@@ -17,12 +18,15 @@ import {
  *  - match:    every declared fiber is the scan's top match or has a clear share (>= 15%)
  *  - weak:     every declared fiber was seen, but at least one only faintly (2% to 15%)
  *  - mismatch: a declared fiber is not in the scan's top 3 at all (under 2%)
+ *  - unsure:   the scan itself was unsure (see assessScanReliability), so it can neither call the
+ *              label wrong nor confirm it. Takes the place of match, weak and mismatch.
  *  - unreadable: nothing the label says can be checked (unknown names, imitation leather, ...)
  *  - none:     no label was entered
  * Only `mismatch` raises the "possible mislabel" warning, so trace fibers (e.g. 5% spandex) never
- * cause a false alarm, and a faint hit is never reported as a clean match either.
+ * cause a false alarm, a faint hit is never reported as a clean match either, and a scan that
+ * could not tell what the fabric is never accuses a label of being wrong.
  */
-export type DeclaredLabelStatus = 'none' | 'unreadable' | 'match' | 'weak' | 'mismatch';
+export type DeclaredLabelStatus = 'none' | 'unreadable' | 'match' | 'weak' | 'mismatch' | 'unsure';
 
 export type DeclaredLabelCheck = {
   status: DeclaredLabelStatus;
@@ -109,12 +113,28 @@ export function evaluateDeclaredLabel(
       : '';
   const base = { declared, missing, weak, unsupported };
 
+  // A scan that could not name one fiber has nothing solid to compare the label with: it must not
+  // call the label wrong, and it must not confirm it either (the card would then say "Label
+  // matches" next to "Scan found: Unsure").
+  if (!assessScanReliability(compositions).reliable) {
+    const detail =
+      missing.length > 0
+        ? `it can't tell whether ${listNames(missing)} is really missing`
+        : "it can't confirm the label either way";
+    return {
+      ...base,
+      status: 'unsure',
+      title: "Can't confirm this label",
+      message: `The scan wasn't sure what this fabric is, so ${detail}. Try another scan, or check the care tag.${skippedNote}`,
+    };
+  }
+
   if (missing.length > 0) {
     return {
       ...base,
       status: 'mismatch',
       title: 'Possible Mislabeling Detected',
-      message: `The scan did not find ${listNames(missing)}. Consider negotiating the price.${skippedNote}`,
+      message: `The scan may not have found ${listNames(missing)}. Check the care tag before deciding.${skippedNote}`,
     };
   }
 

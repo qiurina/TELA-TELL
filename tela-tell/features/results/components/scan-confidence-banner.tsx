@@ -4,8 +4,10 @@ import { TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import {
   LOW_CONFIDENCE_WARNING,
+  UNSURE_NOTICE,
   getConfidenceLabel,
   getConfidenceLevel,
+  type ScanReliability,
 } from '@/data/scans/scan-confidence';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
@@ -15,14 +17,33 @@ type ScanConfidenceBannerProps = {
   dominantFabric: string;
   /** dominant fabric is shown on the photo preview, banner shows notes only. */
   compact?: boolean;
+  /** When the scan was judged unreliable, the banner explains "Unsure" instead. */
+  reliability?: ScanReliability;
 };
 
 export function ScanConfidenceBanner({
   confidence,
   dominantFabric,
   compact = false,
+  reliability,
 }: ScanConfidenceBannerProps) {
   const level = getConfidenceLevel(confidence);
+
+  if (reliability && !reliability.reliable) {
+    return (
+      <View style={[styles.warningCard, faintCardShadow()]}>
+        <TriangleAlert size={20} color="#ca8a04" strokeWidth={2.5} />
+        <View style={styles.warningTextBlock}>
+          <Text style={styles.warningTitle}>{UNSURE_NOTICE.title}</Text>
+          <Text style={styles.warningMessage}>
+            {reliability.reason === 'close_call'
+              ? UNSURE_NOTICE.closeCall
+              : UNSURE_NOTICE.lowConfidence}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   if (level === 'low') {
     return (

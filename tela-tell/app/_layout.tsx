@@ -17,11 +17,18 @@ import 'react-native-reanimated';
 
 import { AppErrorFallback } from '@/components/app-error-boundary';
 import { AppSplash } from '@/components/splash/app-splash';
-import { AlertHost } from '@/components/ui/alert-dialog';
+import { AlertHost, showAlert } from '@/components/ui/alert-dialog';
 import { BrandColors } from '@/constants/brand';
 import { migrateDatabase } from '@/db/migrate';
+import {
+  GENERIC_MIGRATION_WARNING,
+  migrationHadIssues,
+  migrationWarningFor,
+  type MigrationWarning,
+} from '@/db/migration-report';
 import { loadIntroState } from '@/features/onboarding/lib/intro-state';
 import { hydrateUserPreferences } from '@/features/profile/lib/user-preferences';
+import { hydrateClipOnLens } from '@/features/scan/lib/clip-on-lens';
 import { hydrateLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
 SplashScreen.preventAutoHideAsync();
@@ -56,6 +63,7 @@ export default function RootLayout() {
   const [showSplashOverlay, setShowSplashOverlay] = useState(true);
   const [splashMinTimeElapsed, setSplashMinTimeElapsed] = useState(false);
   const [databaseReady, setDatabaseReady] = useState(false);
+  const [migrationWarning, setMigrationWarning] = useState<MigrationWarning | null>(null);
   const splashOpacity = useState(() => new Animated.Value(1))[0];
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -95,15 +103,30 @@ export default function RootLayout() {
     });
   }, [fontsLoaded, splashMinTimeElapsed, databaseReady, splashOpacity]);
 
+  // Shown once the splash has faded so the dialog isn't covered by it. Failed steps are only
+  // logged; the user sees a plain message with no technical detail.
+  useEffect(() => {
+    if (migrationWarning && !showSplashOverlay) {
+      showAlert(migrationWarning.title, migrationWarning.message, 'info');
+    }
+  }, [migrationWarning, showSplashOverlay]);
+
   // Screens read SQLite as soon as they mount, so nothing renders until the migration has settled.
   useEffect(() => {
     void migrateDatabase()
-      .then(() => hydrateUserPreferences())
+      .then(async (report) => {
+        if (migrationHadIssues(report)) {
+          setMigrationWarning(migrationWarningFor(report));
+        }
+        await hydrateUserPreferences();
+      })
       .catch((error: unknown) => {
         console.warn('[TELA-TELL] SQLite migration failed:', error);
+        setMigrationWarning(GENERIC_MIGRATION_WARNING);
       })
       .finally(() => setDatabaseReady(true));
     void hydrateLastSellerLabel();
+    void hydrateClipOnLens();
     void loadIntroState();
   }, []);
 
@@ -168,6 +191,14 @@ export default function RootLayout() {
               />
               <Stack.Screen
                 name="about"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
+                name="why-synthetics-shed"
                 options={{
                   headerShown: false,
                   animation: 'slide_from_right',

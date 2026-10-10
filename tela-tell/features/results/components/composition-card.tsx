@@ -1,10 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
-import { Info } from '@/components/ui/lucide-icons';
-import { COMPOSITION_DISCLAIMER } from '@/data/scans/scan-confidence';
+import { InfoButton } from '@/components/ui/info-button';
+import { InfoSheet } from '@/components/ui/info-sheet';
+import {
+  COMPOSITION_SHEET_SECTIONS,
+  COMPOSITION_SHEET_TITLE,
+} from '@/data/fabrics/assessment-disclaimers';
 import { FABRIC_CATEGORY_COLORS, getFabricCategory } from '@/data/fabrics/fabrics';
 import { BrandColors, FabricBarFallback, FabricBarStyles } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -24,26 +27,19 @@ export function CompositionCard({ compositions }: CompositionCardProps) {
 
   return (
     <View style={styles.card}>
-      <ScanConfirmSheet
+      <InfoSheet
         visible={showDisclaimer}
-        variant="info"
-        title="About these percentages"
-        message={COMPOSITION_DISCLAIMER}
-        confirmLabel="Got it"
-        onConfirm={() => setShowDisclaimer(false)}
-        onCancel={() => setShowDisclaimer(false)}
+        title={COMPOSITION_SHEET_TITLE}
+        sections={COMPOSITION_SHEET_SECTIONS}
+        onClose={() => setShowDisclaimer(false)}
       />
 
       <View style={styles.headerRow}>
         <Text style={styles.sectionLabel}>MOST LIKELY FIBERS</Text>
-        <Pressable
-          style={styles.infoButton}
+        <InfoButton
           onPress={() => setShowDisclaimer(true)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="About these percentages">
-          <Info size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
-        </Pressable>
+          accessibilityLabel="About these percentages"
+        />
       </View>
 
       <View style={styles.list}>
@@ -97,6 +93,7 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 6,
   },
   sectionLabel: {
@@ -104,16 +101,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     color: BrandColors.textMuted,
-  },
-  infoButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BrandColors.lavenderCard,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
   },
   list: {
     gap: 12,

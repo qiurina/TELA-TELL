@@ -17,3 +17,8 @@ To replace the model with a newer training run (see `../../../ml-training/README
 cp ../../ml-training/models/fabric_classifier.tflite ./fabric_classifier.tflite
 cp ../../ml-training/models/fabric_classifier.labels.txt ./fabric_classifier.labels.txt
 ```
+
+When you replace `fabric_classifier.tflite`, also update `MODEL_VERSION` in
+`../../features/scan/lib/ml/constants.ts` (it ends with the first 8 hex digits of the file's
+MD5, e.g. `md5sum fabric_classifier.tflite | cut -c1-8`). Every saved scan records it, and
+`model-version.test.ts` fails if the two disagree.

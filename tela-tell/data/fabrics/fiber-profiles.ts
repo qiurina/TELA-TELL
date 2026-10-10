@@ -1,33 +1,15 @@
-import type { CareInstruction, SustainabilityRating } from '@/data/scans/mock-data';
+import type { CareInstruction } from '@/data/scans/mock-data';
 import type { OccasionContext, WeatherContext } from '@/data/preferences/occasion-weather';
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
 
-export type SustainabilityBreakdown = {
-  biodegradability: number;
-  waterEfficiency: number;
-  /**
-   * SCOPE CLARIFIED (2026-09-27): this measures technical/infrastructure recyclability
-   * (does common recycling machinery/process exist for this fiber), NOT the real-world
-   * rate at which garments of this fiber actually get recycled - those are genuinely
-   * different numbers. Global textile collection sits around just 14% regardless of
-   * fiber type (Ellen MacArthur Foundation 2024, already cited in eco-alternatives.ts),
-   * so even a fiber scoring high here should not be read as "this usually gets recycled
-   * in practice." The UI copy ("commonly recyclable") means capability, not outcome.
-   */
-  recyclability: number;
-  lowCarbon: number;
-};
-
+// The per-fiber sustainability score, rating and sub-scores that used to live here were retired
+// (2026-10-11). The old values and the reasons are archived in docs/sustainability-score-archive.md.
 export type FiberProfile = {
   fabric: SupportedFabric;
   scientificName: string;
   fiberType: string;
   description: string;
   production: string;
-  sustainabilityScore: number;
-  sustainabilityLabel: string;
-  sustainabilityRating: SustainabilityRating;
-  breakdown: SustainabilityBreakdown;
   breathability: string;
   durability: string;
   stretch: string;
@@ -75,10 +57,6 @@ const SLUG_TO_FABRIC = Object.fromEntries(
   Object.entries(FIBER_SLUGS).map(([fabric, slug]) => [slug, fabric]),
 ) as Record<string, SupportedFabric>;
 
-// sustainabilityScore = avg of the 4 breakdown values; normalized from the peer-reviewed and
-// industry-report sources listed per fiber below (60+ numbered references in full at
-// docs/fabric-score-sources.md — not a vague "research says" claim, each score traces to a
-// specific study or standard).
 export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
   Cotton: {
     fabric: 'Cotton',
@@ -86,23 +64,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Natural plant-based fiber',
     description: 'A soft natural plant fiber. It feels cool and comfortable on skin.',
     production: 'Grown from cotton plants, spun into yarn, then woven or knitted.',
-    sustainabilityScore: 6.6,
-    sustainabilityLabel: 'Moderate',
-    sustainabilityRating: 'yellow',
-    // ~10,000 L/kg water footprint (Mekonnen & Hoekstra 2011, Hydrology and Earth System
-    // Sciences, "The green, blue and grey water footprint of crops and derived crop
-    // products" - corrected from a previously-cited "2016" year, which doesn't match any
-    // real Mekonnen & Hoekstra publication; ICAC 2025 corroborates), ~75% of it rainfed
-    // rather than irrigated — see docs/fabric-score-sources.md
-    // lowCarbon DISCLOSED (2026-09-27), not independently pinned to one figure: cotton's
-    // carbon footprint is genuinely contested in the literature, not just inconsistently
-    // reported — verified this directly, and found real studies ranging from ~2.5-3.7 kg
-    // CO2e/kg (raw lint) up to 22-32 kg CO2e/kg (finished T-shirt-level GHG estimates),
-    // driven by allocation methodology, system boundary, and whether farming/dyeing stages
-    // are included. This is an open scientific disagreement, not a citable single number -
-    // the score of 5 (Moderate) reflects a reasonable middle position within that range,
-    // not a consensus figure.
-    breakdown: { biodegradability: 9.5, waterEfficiency: 4.5, recyclability: 7.5, lowCarbon: 5 },
     breathability: 'High',
     durability: 'Medium',
     stretch: 'Low',
@@ -130,14 +91,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Natural animal protein fiber',
     description: 'A warm fiber from sheep. It traps air and holds heat well.',
     production: 'Sheared from sheep, cleaned, carded, and spun into yarn.',
-    sustainabilityScore: 4.9,
-    sustainabilityLabel: 'Low',
-    sustainabilityRating: 'red',
-    // Worst carbon footprint of any fiber measured here (sheep methane) plus high water use —
-    // Li et al. (2024, Journal of Cleaner Production, DOI 10.1016/j.jclepro.2024.141336) and
-    // Bhatt & Abbassi (2021) both put farm-stage carbon at 20-60 kg CO2e/kg, the highest range
-    // of any fiber in this set — see docs/fabric-score-sources.md refs [5]-[7] for the full trail.
-    breakdown: { biodegradability: 8.5, waterEfficiency: 2.5, recyclability: 6.5, lowCarbon: 2 },
     breathability: 'High',
     durability: 'High',
     stretch: 'Medium',
@@ -175,10 +128,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Natural animal protein fiber',
     description: 'A fine fiber with smooth shine and light drape.',
     production: 'Spun from silkworm cocoons, then woven into fine cloth.',
-    sustainabilityScore: 5.6,
-    sustainabilityLabel: 'Moderate',
-    sustainabilityRating: 'yellow',
-    breakdown: { biodegradability: 9, waterEfficiency: 3, recyclability: 5, lowCarbon: 5.5 },
     breathability: 'High',
     durability: 'Low',
     stretch: 'Low',
@@ -205,29 +154,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Natural plant-based fiber',
     description: 'A crisp fiber from flax. It feels airy and cool in heat.',
     production: 'Flax stems are retted, spun, and woven into linen cloth.',
-    sustainabilityScore: 7.5,
-    sustainabilityLabel: 'Sustainable',
-    sustainabilityRating: 'green',
-    // RECALCULATED (2026-09-27): previously sourced from the Misciano/SELVANE aggregator
-    // (undated secondary) at "15-50 L/kg" — a real primary source exists after all, from
-    // the SAME study already used for Cotton's water footprint: Mekonnen & Hoekstra (2011,
-    // Hydrology and Earth System Sciences). Their table gives flax fibre (processed but
-    // not spun) a total water footprint of 3,783 L/kg (2,866 green/rainfed + 481
-    // blue/irrigated + 436 grey/pollution-dilution) - independently cross-confirmed via a
-    // second secondary source quoting the same primary figures.
-    // waterEfficiency rescored from this real figure, not guessed: two other fibers in
-    // this file are already anchored to the same Mekonnen & Hoekstra water-footprint scale
-    // (Wool 17,000 L/kg -> 2.5; Cotton 10,000 L/kg -> 4.5), giving a consistent rate of
-    // ~1 point per 3,500 L/kg over that range. Extrapolating that same rate from Cotton's
-    // anchor down to Linen's 3,783 L/kg gives ~6.3 (4.5 + (10,000-3,783)/3,500). This is a
-    // linear interpolation from two real data points on the same primary source, not an
-    // independently invented number - but it IS an approximation, not itself a published
-    // score, since the original scorer's exact L/kg-to-point formula isn't documented
-    // anywhere. sustainabilityScore recomputed to match (avg of the 4 breakdown values,
-    // per this file's own documented convention): (9.5+6.3+7+7)/4 = 7.45, rounds to 7.5 -
-    // still clears the >=7.5 "green/Sustainable" threshold in build-scan-profile.ts, so the
-    // fiber's displayed tier is unchanged despite the corrected underlying number.
-    breakdown: { biodegradability: 9.5, waterEfficiency: 6.3, recyclability: 7, lowCarbon: 7 },
     breathability: 'Very high',
     durability: 'High',
     stretch: 'Low',
@@ -261,28 +187,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Synthetic petroleum-based fiber',
     description: 'A plastic-based fiber. It holds shape and dries fast.',
     production: 'Made from petroleum polymers, melted and extruded into fibers.',
-    sustainabilityScore: 5.5,
-    sustainabilityLabel: 'Moderate',
-    sustainabilityRating: 'yellow',
-    // Low process water and moderate carbon per kg raise production impact even though it
-    // barely biodegrades and sheds the most microplastic of any fiber tested. CORRECTED
-    // (2026-09-27): these are two separate claims that were previously both attributed to
-    // Napper & Thompson (2016) and De Falco et al. (2020) - but those two papers are
-    // specifically about microfiber SHEDDING, not biodegradability, so they only actually
-    // support the shedding half of this claim (see docs/fabric-score-sources.md refs
-    // [12]-[13]). The biodegradability half now has its own real, current, directly
-    // relevant source: Erayman Yuksel, Y., & Korkmaz, Y. (2026). Soil biodegradation of
-    // virgin and recycled cotton and PET based fabrics. Biodegradation, 37, 124. DOI:
-    // 10.1007/s10532-026-10343-5. Found zero degradation for 100% PET fabric after 1, 4,
-    // and 7 months of soil burial, versus 93-95% degradation for cotton after just 1 month
-    // - a direct, current, comparative confirmation of this exact claim.
-    // lowCarbon DISCLOSED (2026-09-27), same treatment as Cotton above: polyester's carbon
-    // footprint is also genuinely contested, not just under-cited - verified real studies
-    // ranging from ~3.7-4.5 t CO2e/t fiber up to 11.6-73.4 kg CO2e/kg at the finished
-    // T-shirt level, varying by whether older (2001-2016-vintage) industry LCA data or
-    // newer primary studies are used. The score of 6.5 (Moderate-good) is a reasonable
-    // position within that disputed range, not a single settled figure.
-    breakdown: { biodegradability: 1.5, waterEfficiency: 7.5, recyclability: 6.5, lowCarbon: 6.5 },
     breathability: 'Low',
     durability: 'High',
     stretch: 'Low',
@@ -309,16 +213,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Synthetic petroleum-based fiber',
     description: 'A strong synthetic fiber with stretch and a slick feel.',
     production: 'Made from synthetic polymers drawn into fine filaments.',
-    sustainabilityScore: 5.5,
-    sustainabilityLabel: 'Moderate',
-    sustainabilityRating: 'yellow',
-    // ADDED (2026-09-27): biodegradability score previously had no citation in this file.
-    // Changes in the Chemical and Physical Properties of Untreated and Finished Polyamide
-    // 6.6 Fabrics Buried in Different Soil Matrices, from the Lab-Scale to a House Garden
-    // (2026). Sustainable Chemistry, 7(1), 13. DOI: 10.3390/suschem7010013. Found no
-    // significant weight loss or macroscopic degradation for polyamide 6.6 fabric across
-    // soil-burial trials from lab-scale to real outdoor garden conditions.
-    breakdown: { biodegradability: 2, waterEfficiency: 7, recyclability: 7, lowCarbon: 6 },
     breathability: 'Low',
     durability: 'Very high',
     stretch: 'High',
@@ -344,17 +238,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Synthetic petroleum-based fiber',
     description: 'A synthetic fiber that mimics wool at lower cost.',
     production: 'Made from acrylonitrile polymers, spun into fluffy yarns.',
-    sustainabilityScore: 4.4,
-    sustainabilityLabel: 'Low',
-    sustainabilityRating: 'red',
-    // Highest microplastic shedding rate of any fiber tested (122 fibers/g per wash); no direct water/carbon study found for acrylic specifically — see docs/fabric-score-sources.md
-    // Biodegradability score ADDED (2026-09-27), previously uncited: "Current status on the
-    // biodegradability of acrylic polymers: microorganisms, enzymes and metabolic pathways
-    // involved" (2021). Applied Microbiology and Biotechnology, 105(3). DOI:
-    // 10.1007/s00253-020-11073-1. Polyacrylonitrile is an addition-polymerized thermoplastic
-    // that cannot be depolymerized back to its monomer, a structural barrier to
-    // biodegradation distinct from (and more severe than) most other synthetics reviewed.
-    breakdown: { biodegradability: 2, waterEfficiency: 7.5, recyclability: 4.5, lowCarbon: 3.5 },
     breathability: 'Low',
     durability: 'Medium',
     stretch: 'Medium',
@@ -383,24 +266,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Synthetic stretch fiber',
     description: 'A stretch fiber also called elastane or Lycra.',
     production: 'Made from polyurethane, usually blended in small amounts.',
-    sustainabilityScore: 3.8,
-    sustainabilityLabel: 'Low',
-    sustainabilityRating: 'red',
-    // REMOVED (2026-09-27): this comment previously gave a specific "~200 years to break
-    // down in landfill" estimate. Searched multiple real avenues for a rigorous primary
-    // source for that specific number - peer-reviewed biodegradation journals, an EPA
-    // textile-waste data page, a GAO textile-waste report, and materials-science
-    // degradation-kinetics literature - and none state this figure or any other specific
-    // landfill decomposition timeframe for polyurethane. It appears to be a widely-repeated
-    // number with no traceable rigorous origin, so it has been removed rather than kept as
-    // an uncited precise-sounding figure. What real peer-reviewed research DOES confirm
-    // (the lowest biodegradability score in this file, 1, is based on this): polyurethane
-    // degrades very slowly under both environmental and lab conditions, is not practically
-    // recyclable at scale, and is overwhelmingly landfilled or incinerated as post-consumer
-    // waste. The shedding-rises-with-share finding is separately real and peer-reviewed
-    // (Persson et al. 2026) - see docs/fabric-score-sources.md refs [14], [28]-[29] for the
-    // full trail, including this correction.
-    breakdown: { biodegradability: 1, waterEfficiency: 7, recyclability: 4, lowCarbon: 3 },
     breathability: 'Low',
     durability: 'Medium',
     stretch: 'Very high',
@@ -427,17 +292,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Semi-synthetic plant-based fiber',
     description: 'A fiber from plant pulp. It drapes like silk.',
     production: 'Cellulose from wood or bamboo is dissolved, then spun into fiber.',
-    sustainabilityScore: 5.9,
-    sustainabilityLabel: 'Moderate',
-    sustainabilityRating: 'yellow',
-    // Processing still uses toxic carbon disulfide, but forest-sourcing has improved industry-wide (Canopy Hot Button Report 2025) — see docs/fabric-score-sources.md
-    // Biodegradability score ADDED (2026-09-27), previously uncited: "Native and regenerated
-    // cellulose show similar environmental biodegradation behavior across global terrestrial
-    // and aquatic ecosystems" (2025), bioRxiv. Found viscose/rayon biodegrades at rates
-    // comparable to cotton and linen. Caveat: this is a bioRxiv preprint, not yet published
-    // in a peer-reviewed journal - weaker-tier evidence than the journal-published citations
-    // elsewhere in this file, though it is a recent, directly relevant, large-scope study.
-    breakdown: { biodegradability: 7.5, waterEfficiency: 5.5, recyclability: 5.5, lowCarbon: 5 },
     breathability: 'High',
     durability: 'Low',
     stretch: 'Low',
@@ -463,14 +317,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Natural animal material',
     description: 'Treated animal hide. Firm, durable, and ages with patina.',
     production: 'Hides are tanned, dyed, and finished into leather goods.',
-    sustainabilityScore: 4.6,
-    sustainabilityLabel: 'Low',
-    sustainabilityRating: 'red',
-    // Chromium tanning is documented to pollute waterways and farmland; ~126L water + 2.83kg
-    // chemicals per m² of finished leather — Scientific Reports (2024, DOI
-    // 10.1038/s41598-024-84726-0), Environmental Chemistry Letters (2025), and Water Quality
-    // Research Journal/IWA (2023); see docs/fabric-score-sources.md refs [21]-[23].
-    breakdown: { biodegradability: 4, waterEfficiency: 4, recyclability: 6, lowCarbon: 4.5 },
     breathability: 'Medium',
     durability: 'Very high',
     stretch: 'Low',
@@ -497,10 +343,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fiberType: 'Natural animal material',
     description: 'Leather with a soft napped surface. Matte and velvety.',
     production: 'Hide is split and brushed to create a fuzzy nap.',
-    sustainabilityScore: 4.4,
-    sustainabilityLabel: 'Low',
-    sustainabilityRating: 'red',
-    breakdown: { biodegradability: 3.5, waterEfficiency: 4, recyclability: 5.5, lowCarbon: 4.5 },
     breathability: 'Medium',
     durability: 'Medium',
     stretch: 'Low',
@@ -522,13 +364,8 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     fabric: 'Abaca',
     scientificName: 'Musa textilis',
     fiberType: 'Philippine native plant fiber',
-    description: 'A strong fiber from banana family plants, grown across the Philippines.',
+    description: 'A plant fiber from Musa textilis, a banana-family plant. It is used for ropes, textiles and specialty papers.',
     production: 'Harvested, stripped, dried, and woven into sinamay or textile.',
-    sustainabilityScore: 8.1,
-    sustainabilityLabel: 'Sustainable',
-    sustainabilityRating: 'green',
-    // Biodegradability confirmed directly by PhilFIDA; water/carbon figures are inferred from rain-fed cultivation, not directly measured — see docs/fabric-score-sources.md
-    breakdown: { biodegradability: 9.5, waterEfficiency: 8, recyclability: 8, lowCarbon: 7 },
     breathability: 'High',
     durability: 'Very high',
     stretch: 'Low',

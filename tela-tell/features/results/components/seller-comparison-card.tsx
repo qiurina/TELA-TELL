@@ -1,9 +1,17 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CircleCheck, Info, Tag, TriangleAlert } from '@/components/ui/lucide-icons';
+import { InfoSheet } from '@/components/ui/info-sheet';
+import { CircleCheck, Tag, TriangleAlert } from '@/components/ui/lucide-icons';
+import { StatusCard } from '@/components/ui/status-card';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
+import type { StatusTone } from '@/constants/status-colors';
+import {
+  LABEL_CHECK_SHEET_SECTIONS,
+  LABEL_CHECK_SHEET_TITLE,
+} from '@/data/fabrics/assessment-disclaimers';
 import type { DeclaredLabelCheck } from '@/features/scan/lib/declared-label';
 
 type SellerComparisonCardProps = {
@@ -13,16 +21,20 @@ type SellerComparisonCardProps = {
   onAddLabel?: () => void;
 };
 
-const STATUS_STYLE = {
-  mismatch: { border: '#fecaca', background: '#fef2f2', accent: '#dc2626', text: '#991b1b' },
-  weak: { border: '#fde68a', background: '#fffbeb', accent: '#b45309', text: '#92400e' },
-  unreadable: {
-    border: BrandColors.border,
-    background: BrandColors.inputBackground,
-    accent: BrandColors.textMuted,
-    text: BrandColors.textMuted,
-  },
-  match: { border: '#bbf7d0', background: '#f0fdf4', accent: '#15803d', text: '#166534' },
+const STATUS_TONE: Record<'mismatch' | 'weak' | 'unsure' | 'unreadable' | 'match', StatusTone> = {
+  mismatch: 'alert',
+  weak: 'caution',
+  unsure: 'neutral',
+  unreadable: 'neutral',
+  match: 'good',
+};
+
+const STATUS_ICON = {
+  mismatch: TriangleAlert,
+  weak: TriangleAlert,
+  unsure: Tag,
+  unreadable: Tag,
+  match: CircleCheck,
 } as const;
 
 export function SellerComparisonCard({
@@ -31,6 +43,7 @@ export function SellerComparisonCard({
   check,
   onAddLabel,
 }: SellerComparisonCardProps) {
+  const [showInfo, setShowInfo] = useState(false);
   const trimmedLabel = sellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
 
@@ -53,15 +66,17 @@ export function SellerComparisonCard({
     );
   }
 
-  const tone = STATUS_STYLE[check.status === 'none' ? 'unreadable' : check.status];
+  const statusKey = check.status === 'none' ? 'unreadable' : check.status;
   const heading =
     check.status === 'mismatch'
-      ? 'Possible mislabel'
+      ? 'Mismatch'
       : check.status === 'weak'
-        ? 'Label only partly confirmed'
+        ? 'Partial'
         : check.status === 'match'
-          ? 'Label matches'
-          : "Can't check this label";
+          ? 'Match'
+          : check.status === 'unsure'
+            ? 'Unsure'
+            : "Can't check";
   const detail = check.message.trim();
 
   return (
@@ -70,36 +85,37 @@ export function SellerComparisonCard({
       disabled={!onAddLabel}
       accessibilityRole="button"
       accessibilityLabel={`${heading}. Edit stated label`}
-      style={({ pressed }) => [
-        styles.card,
-        { borderColor: tone.border, backgroundColor: tone.background },
-        faintCardShadow(),
-        pressed && styles.pressed,
-      ]}>
-      <View style={styles.header}>
-        {check.status === 'mismatch' ? (
-          <TriangleAlert size={16} color={tone.accent} strokeWidth={2.5} />
-        ) : check.status === 'match' ? (
-          <CircleCheck size={16} color={tone.accent} strokeWidth={2.25} />
-        ) : (
-          <Info size={16} color={tone.accent} strokeWidth={2.25} />
-        )}
-        <Text style={[styles.headerTitle, { color: tone.accent }]}>{heading}</Text>
-      </View>
+      style={({ pressed }) => pressed && styles.pressed}>
+      <InfoSheet
+        visible={showInfo}
+        title={LABEL_CHECK_SHEET_TITLE}
+        sections={LABEL_CHECK_SHEET_SECTIONS}
+        icon={STATUS_ICON[statusKey]}
+        tone={STATUS_TONE[statusKey]}
+        onClose={() => setShowInfo(false)}
+      />
 
-      <View style={styles.compareRow}>
-        <View style={styles.compareCol}>
-          <Text style={styles.compareLabel}>SELLER SAID</Text>
-          <Text style={styles.compareValue}>{trimmedLabel}</Text>
+      <StatusCard
+        icon={STATUS_ICON[statusKey]}
+        tone={STATUS_TONE[statusKey]}
+        title="Label check"
+        pillLabel={heading}
+        onInfoPress={() => setShowInfo(true)}
+        infoAccessibilityLabel="About this label check">
+        <View style={styles.compareRow}>
+          <View style={styles.compareCol}>
+            <Text style={styles.compareLabel}>SELLER SAID</Text>
+            <Text style={styles.compareValue}>{trimmedLabel}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.compareCol}>
+            <Text style={styles.compareLabel}>SCAN FOUND</Text>
+            <Text style={styles.compareValue}>{detectedLabel}</Text>
+          </View>
         </View>
-        <View style={styles.divider} />
-        <View style={styles.compareCol}>
-          <Text style={styles.compareLabel}>SCAN FOUND</Text>
-          <Text style={styles.compareValue}>{detectedLabel}</Text>
-        </View>
-      </View>
 
-      {detail ? <Text style={[styles.message, { color: tone.text }]}>{detail}</Text> : null}
+        {detail ? <Text style={styles.message}>{detail}</Text> : null}
+      </StatusCard>
     </Pressable>
   );
 }
@@ -139,22 +155,6 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: BrandColors.textMuted,
   },
-  card: {
-    borderRadius: 16,
-    padding: 14,
-    gap: 12,
-    borderWidth: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 13,
-    letterSpacing: 0.2,
-  },
   compareRow: {
     flexDirection: 'row',
     gap: 12,
@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     fontSize: 12,
     lineHeight: 17,
+    color: BrandColors.textMuted,
   },
   divider: {
     width: 1,

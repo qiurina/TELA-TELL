@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS tblScan (
   sellerLabel           TEXT,
   garmentCondition      TEXT NOT NULL DEFAULT 'New',
   imageUri              TEXT,
+  -- Legacy: the app no longer scores sustainability. These three columns stay (NOT NULL, and
+  -- dropping them needs a table rebuild) and hold the placeholders 'unrated', 'Not rated', 0.
   sustainabilityRating  TEXT NOT NULL,
   sustainabilityLabel   TEXT NOT NULL,
   sustainabilityScore   INTEGER NOT NULL,

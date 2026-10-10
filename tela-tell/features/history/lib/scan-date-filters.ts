@@ -1,80 +1,59 @@
-import type { RecentScanPreview } from '@/data/scans/mock-data';
-
 export type ScanDateFilter = 'all' | 'today' | 'yesterday' | 'this_week' | 'this_month' | 'custom';
 
+export type ScanDateRange = { from: string; to: string };
+
 function startOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function parseScanDate(value: string) {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [year, month, day] = value.split('-').map(Number);
-    return startOfDay(new Date(year, month - 1, day));
-  }
-  return startOfDay(new Date(value));
-}
-
-function isSameDay(left: Date, right: Date) {
-  return startOfDay(left).getTime() === startOfDay(right).getTime();
+function addDays(date: Date, days: number) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
 function startOfWeek(date: Date) {
-  const next = startOfDay(date);
-  const day = next.getDay();
+  const day = date.getDay();
   const mondayBased = day === 0 ? 6 : day - 1;
-  next.setDate(next.getDate() - mondayBased);
-  return next;
+  return addDays(startOfDay(date), -mondayBased);
 }
 
-function endOfWeek(date: Date) {
-  const next = startOfWeek(date);
-  next.setDate(next.getDate() + 6);
-  next.setHours(23, 59, 59, 999);
-  return next;
-}
-
-function isSameMonth(left: Date, right: Date) {
-  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth();
-}
-
-export function matchesScanDateFilter(
-  scan: RecentScanPreview,
+/**
+ * Converts a History date filter into a half-open [from, to) range of ISO timestamps (local day
+ * boundaries) that can be compared against tblScan.createdAt in SQL. Returns null when the
+ * filter doesn't restrict by date.
+ */
+export function getScanDateRange(
   filter: ScanDateFilter,
   customDate: Date | null,
   referenceDate = new Date(),
-) {
-  if (filter === 'all') {
-    return true;
-  }
-
-  const scanDate = parseScanDate(scan.scannedAtDate);
+): ScanDateRange | null {
   const today = startOfDay(referenceDate);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
 
   switch (filter) {
     case 'today':
-      return isSameDay(scanDate, today);
+      return toRange(today, addDays(today, 1));
     case 'yesterday':
-      return isSameDay(scanDate, yesterday);
-    case 'this_week':
-      return scanDate >= startOfWeek(today) && scanDate <= endOfWeek(today);
+      return toRange(addDays(today, -1), today);
+    case 'this_week': {
+      const start = startOfWeek(today);
+      return toRange(start, addDays(start, 7));
+    }
     case 'this_month':
-      return isSameMonth(scanDate, today);
-    case 'custom':
-      return customDate ? isSameDay(scanDate, customDate) : true;
+      return toRange(
+        new Date(today.getFullYear(), today.getMonth(), 1),
+        new Date(today.getFullYear(), today.getMonth() + 1, 1),
+      );
+    case 'custom': {
+      if (!customDate) {
+        return null;
+      }
+      const start = startOfDay(customDate);
+      return toRange(start, addDays(start, 1));
+    }
     default:
-      return true;
+      return null;
   }
 }
 
-export function filterScansByDate(
-  scans: RecentScanPreview[],
-  filter: ScanDateFilter,
-  customDate: Date | null,
-  referenceDate = new Date(),
-) {
-  return scans.filter((scan) => matchesScanDateFilter(scan, filter, customDate, referenceDate));
+function toRange(from: Date, to: Date): ScanDateRange {
+  return { from: from.toISOString(), to: to.toISOString() };
 }

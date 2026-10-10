@@ -7,7 +7,19 @@ export type ClassificationResult = {
   dominantFabric: string;
   compositions: FabricComposition[];
   confidence: number;
+  /** Photos classified and averaged. */
+  burstCount: number;
+  /** Milliseconds inside the model's run call, summed over the burst. */
+  inferenceMs: number;
+  /** Milliseconds for the whole call (preprocessing + model for every photo + any model load). */
+  totalMs: number;
 };
+
+function nowMs(): number {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}
 
 export class ModelUnavailableError extends Error {
   constructor(message = 'Fabric classification model could not be loaded.') {
@@ -26,12 +38,16 @@ async function loadModel(): Promise<TFLiteModel> {
     modelPromise = (async () => {
       let loadTensorflowModel: (asset: number, delegates: string[]) => Promise<TFLiteModel>;
       try {
+        // Lazy require: keeps jest/web from loading the native module until a scan runs.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         ({ loadTensorflowModel } = require('react-native-fast-tflite'));
       } catch {
         throw new ModelUnavailableError('react-native-fast-tflite is not installed.');
       }
 
       try {
+        // Metro resolves the bundled .tflite asset id via require; there is no ES import form.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const asset = require('@/assets/models/fabric_classifier.tflite');
         return await loadTensorflowModel(asset, []);
       } catch (error) {
@@ -70,11 +86,15 @@ export async function classifyFabric(imageUris: string[]): Promise<Classificatio
     throw new ModelUnavailableError('No captured images to classify.');
   }
 
+  const startedAt = nowMs();
   const model = await loadModel();
   const scoreSets: Float32Array[] = [];
+  let inferenceMs = 0;
   for (const uri of imageUris) {
     const input = await imageToInputTensor(uri);
+    const runStartedAt = nowMs();
     const outputs = model.runSync([input.buffer as ArrayBuffer]);
+    inferenceMs += nowMs() - runStartedAt;
     scoreSets.push(new Float32Array(outputs[0]));
   }
 
@@ -96,6 +116,9 @@ export async function classifyFabric(imageUris: string[]): Promise<Classificatio
     dominantFabric: top.material,
     compositions,
     confidence: top.percentage,
+    burstCount: scoreSets.length,
+    inferenceMs: Math.round(inferenceMs),
+    totalMs: Math.round(nowMs() - startedAt),
   };
 }
 

@@ -1,29 +1,27 @@
 import type { CompositionInput } from '@/data/scans/scan-confidence';
-import { getFabricCategory, resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 import { getFiberProfile } from '@/data/fabrics/fiber-profiles';
 import { getWeightedComfort, type ComfortAxisKey } from '@/data/fabrics/comfort-profile';
 
 export type HealthSafetyTone = 'good' | 'caution' | 'warn';
 
-export type SheddingLevel = 'Low' | 'Medium' | 'High';
-
-// Sustainability Impact and Environmental Impact metrics were removed — they duplicated the
-// Sustainability score already shown on the Results screen and the Profile screen's Eco tab
-// (same underlying score, recomputed and re-labeled a third time here).
-export type HealthSafetyMetricId = 'skinHealth' | 'microplasticShedding';
+// Sustainability Impact, Environmental Impact and Microplastic Shedding metrics were removed from
+// this list — they duplicated the Sustainability score on the Results screen / Profile Eco tab and
+// the Synthetic & Microplastic section on the same Recommendations screen, which is the single
+// place the shedding level is shown (getSyntheticHealthRisk in synthetic-health-risk.ts).
+export type HealthSafetyMetricId = 'skinHealth';
 
 export type HealthSafetyMetric = {
   id: HealthSafetyMetricId;
   title: string;
   note: string;
-  /** 0–10 for the progress bar (for shedding: intensity, not “safety”). */
+  /** 0–10 for the progress bar. */
   score: number;
   tone: HealthSafetyTone;
-  /** Right-side value — e.g. "8.4" or shedding "High". */
+  /** Right-side value — e.g. "8.4". */
   valueLabel: string;
-  /** Suffix under/after value — "/10" or empty for level labels. */
+  /** Suffix after the value — e.g. " /10". */
   valueSuffix: string;
-  sheddingLevel?: SheddingLevel;
 };
 
 function clampScore(value: number): number {
@@ -38,20 +36,6 @@ function toneForScore(score: number): HealthSafetyTone {
     return 'caution';
   }
   return 'warn';
-}
-
-function shareOf(
-  compositions: CompositionInput[],
-  predicate: (fiber: SupportedFabric) => boolean,
-): number {
-  let total = 0;
-  for (const item of compositions) {
-    const fiber = resolveFabricAlias(item.material);
-    if (fiber && predicate(fiber)) {
-      total += item.percentage;
-    }
-  }
-  return total;
 }
 
 // Notes for whichever comfort axis scores lowest across the weighted blend — see
@@ -84,57 +68,12 @@ const AXIS_NOTE: Record<ComfortAxisKey, Record<'good' | 'caution' | 'warn', stri
   },
 };
 
-// Ranking (acrylic/polyester shed more than nylon/spandex) is research-backed — see
-// data/fabrics/synthetic-health-risk.ts's FIBER_RISK_LEVELS comment for the citations
-// (Napper & Thompson 2016; De Falco et al. 2020). The specific percentage cutoffs below
-// (15/50/35) are NOT — no cited study proposes a threshold like this; they're an
-// editorial heuristic for splitting the Low/Medium/High display buckets, same spirit as
-// the disclosed thresholds in data/scans/scan-confidence.ts.
-function sheddingLevelFromComposition(
-  syntheticShare: number,
-  highShedShare: number,
-): SheddingLevel {
-  if (syntheticShare < 15) {
-    return 'Low';
-  }
-  if (syntheticShare >= 50 || highShedShare >= 35) {
-    return 'High';
-  }
-  return 'Medium';
-}
-
-function sheddingTone(level: SheddingLevel): HealthSafetyTone {
-  if (level === 'Low') {
-    return 'good';
-  }
-  if (level === 'Medium') {
-    return 'caution';
-  }
-  return 'warn';
-}
-
-/** Bar fill for shedding intensity (High fills more). */
-function sheddingBarScore(level: SheddingLevel): number {
-  if (level === 'Low') {
-    return 2.5;
-  }
-  if (level === 'Medium') {
-    return 5.5;
-  }
-  return 9.0;
-}
-
 export function getHealthSafetyMetrics(
   dominantFabric: string,
   compositions: CompositionInput[] = [],
 ): HealthSafetyMetric[] {
   const items =
     compositions.length > 0 ? compositions : [{ material: dominantFabric, percentage: 100 }];
-
-  const syntheticShare = shareOf(items, (fiber) => getFabricCategory(fiber) === 'Synthetic');
-  const acrylicShare = shareOf(items, (fiber) => fiber === 'Acrylic');
-  const polyesterShare = shareOf(items, (fiber) => fiber === 'Polyester');
-  const highShedShare = acrylicShare + polyesterShare;
 
   // Wearing Comfort — breathability, moisture management, heat retention, and mechanical feel,
   // weighted across the full detected composition. Replaces a previous "irritant fiber"
@@ -146,15 +85,6 @@ export function getHealthSafetyMetrics(
   const skinHealth = clampScore(comfort.score);
   const skinNote = AXIS_NOTE[comfort.weakestAxis][comfort.weakestAxisTone];
 
-  // 2. Microplastic shedding — educational Low / Medium / High.
-  const sheddingLevel = sheddingLevelFromComposition(syntheticShare, highShedShare);
-  const sheddingNote =
-    sheddingLevel === 'Low'
-      ? 'Little synthetic content. Low release during wear and wash.'
-      : sheddingLevel === 'Medium'
-        ? 'Some synthetics. Moderate shedding; wash cold on full loads.'
-        : 'High synthetic share. More shedding in wear and laundry.';
-
   return [
     {
       id: 'skinHealth',
@@ -164,16 +94,6 @@ export function getHealthSafetyMetrics(
       tone: toneForScore(skinHealth),
       valueLabel: skinHealth.toFixed(1),
       valueSuffix: ' /10',
-    },
-    {
-      id: 'microplasticShedding',
-      title: 'Microplastic Shedding',
-      note: sheddingNote,
-      score: sheddingBarScore(sheddingLevel),
-      tone: sheddingTone(sheddingLevel),
-      valueLabel: sheddingLevel,
-      valueSuffix: '',
-      sheddingLevel,
     },
   ];
 }

@@ -5,7 +5,7 @@ import { preprocessRgbaForModel } from '@/features/scan/lib/ml/model-input';
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
-function base64ToUint8Array(base64: string): Uint8Array {
+export function base64ToUint8Array(base64: string): Uint8Array {
   const clean = base64.replace(/[^A-Za-z0-9+/]/g, '');
   const byteLength = Math.floor((clean.length * 6) / 8);
   const bytes = new Uint8Array(byteLength);

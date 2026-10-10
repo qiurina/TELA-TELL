@@ -3,12 +3,12 @@ import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { ChevronRight, Leaf, Search, Shield } from '@/components/ui/lucide-icons';
+import { ChevronRight, Search, Shield } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import { FABRIC_REFERENCES } from '@/data/fabrics/fabric-references';
-import { getFiberProfile, getFiberSlug } from '@/data/fabrics/fiber-profiles';
+import { getFiberSlug } from '@/data/fabrics/fiber-profiles';
 import {
   FABRIC_CATEGORY_COLORS,
   FABRIC_REGISTRY,
@@ -25,12 +25,6 @@ const RISK_CHIP_COLORS: Record<HealthRiskLevel, { text: string; background: stri
   low: { text: '#15803D', background: '#F0FDF4', border: '#BBF7D0' },
   moderate: { text: '#B45309', background: '#FFFBEB', border: '#FDE68A' },
   high: { text: '#B91C1C', background: '#FEF2F2', border: '#FECACA' },
-};
-
-const SUSTAINABLE_CHIP = {
-  text: '#15803D',
-  background: '#F0FDF4',
-  border: '#BBF7D0',
 };
 
 const CATEGORY_ORDER: FabricCategory[] = [
@@ -154,7 +148,6 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
   const riskLevel = getFiberHealthRiskLevel(fabric);
   const riskLabel = getFiberHealthRiskLabel(fabric);
   const riskStyle = RISK_CHIP_COLORS[riskLevel];
-  const isSustainable = getFiberProfile(fabric).sustainabilityRating === 'green';
 
   const handlePress = () => {
     router.push(`/(tabs)/fabrics/${getFiberSlug(fabric)}` as Href);
@@ -198,30 +191,12 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
               styles.metaPill,
               { backgroundColor: riskStyle.background, borderColor: riskStyle.border },
             ]}
-            accessibilityLabel={`Synthetic fiber health risk: ${riskLabel}`}>
+            accessibilityLabel={`Microplastic shedding tendency: ${riskLabel}`}>
             <Shield size={9} color={riskStyle.text} strokeWidth={2.5} />
             <Text numberOfLines={1} style={[styles.metaPillText, { color: riskStyle.text }]}>
               {riskLabel}
             </Text>
           </View>
-          {isSustainable ? (
-            <View
-              style={[
-                styles.metaPill,
-                {
-                  backgroundColor: SUSTAINABLE_CHIP.background,
-                  borderColor: SUSTAINABLE_CHIP.border,
-                },
-              ]}
-              accessibilityLabel="Sustainable fiber">
-              <Leaf size={9} color={SUSTAINABLE_CHIP.text} strokeWidth={2.5} />
-              <Text
-                numberOfLines={1}
-                style={[styles.metaPillText, { color: SUSTAINABLE_CHIP.text }]}>
-                Eco
-              </Text>
-            </View>
-          ) : null}
         </View>
 
         <Text style={styles.detailText} numberOfLines={2}>

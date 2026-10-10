@@ -3,17 +3,26 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { getDatabase } from '@/db/client';
 import { DEVICE_PROFILE_ID } from '@/db/preferences';
+import type { MigrationIssue, MigrationReport } from '@/db/migration-report';
 import { SCHEMA_SQL } from '@/db/schema';
-import type { SupportedFabric } from '@/data/fabrics/fabrics';
 import {
   isPersistedScanImage,
   persistScanImage,
   scanImageExists,
 } from '@/features/scan/lib/scan-image-storage';
 
-let migrationPromise: Promise<void> | null = null;
+let migrationPromise: Promise<MigrationReport> | null = null;
 
-export function migrateDatabase(): Promise<void> {
+/**
+ * Runs the migration once per app session and resolves with a report of any steps that failed or
+ * were skipped. It only rejects when the base schema itself can't be created.
+ *
+ * There is no in-session retry: a failed step is simply attempted again the next time the app
+ * starts. That is safe because every step is idempotent (columns and indexes are checked before
+ * being added, drops use IF EXISTS, and the sustainability resync only records its fingerprint
+ * after it succeeds). See the "safe to run twice" test.
+ */
+export function migrateDatabase(): Promise<MigrationReport> {
   if (!migrationPromise) {
     migrationPromise = runMigration().catch((error) => {
       migrationPromise = null;
@@ -25,22 +34,108 @@ export function migrateDatabase(): Promise<void> {
 }
 
 /**
- * Runs one migration step in isolation so a failure in it can't take down every step
- * after it.
+ * `ALTER TABLE ... DROP COLUMN` needs SQLite 3.35 (March 2021). expo-sqlite ships its own SQLite,
+ * so this only fails if the app is built with a much older one.
  */
-async function runStep(name: string, step: () => Promise<void>): Promise<void> {
-  try {
-    await step();
-  } catch (error) {
-    console.warn(`[TELA-TELL] Migration step "${name}" failed, continuing:`, error);
+const DROP_COLUMN_MIN_VERSION = { major: 3, minor: 35 };
+
+/** `true`/`false`, or `null` when the version string can't be read (then the drop is just tried). */
+export function isDropColumnSupported(version: string): boolean | null {
+  const match = /^(\d+)\.(\d+)/.exec(version.trim());
+  if (!match) {
+    return null;
+  }
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  return (
+    major > DROP_COLUMN_MIN_VERSION.major ||
+    (major === DROP_COLUMN_MIN_VERSION.major && minor >= DROP_COLUMN_MIN_VERSION.minor)
+  );
+}
+
+class SqliteTooOldError extends Error {
+  readonly code = 'sqlite-too-old' as const;
+
+  constructor(version: string) {
+    super(
+      `SQLite ${version} is older than ${DROP_COLUMN_MIN_VERSION.major}.${DROP_COLUMN_MIN_VERSION.minor}, which DROP COLUMN needs.`,
+    );
+    this.name = 'SqliteTooOldError';
   }
 }
 
-async function runMigration(): Promise<void> {
+/**
+ * Call before changing anything in a step that has to drop a column, so an unsupported SQLite
+ * stops the step cleanly instead of failing half way through it.
+ */
+async function assertDropColumnSupported(db: Database): Promise<void> {
+  const row = await db.getFirstAsync<{ version: string }>('SELECT sqlite_version() AS version');
+  const version = row?.version ?? '';
+  if (isDropColumnSupported(version) === false) {
+    throw new SqliteTooOldError(version);
+  }
+}
+
+function describeError(error: unknown): string {
+  if (error instanceof Error) {
+    const stackTop = error.stack?.split('\n').slice(1, 3).join(' ').trim();
+    return `${error.name}: ${error.message}${stackTop ? ` | ${stackTop}` : ''}`.slice(0, 500);
+  }
+  return String(error).slice(0, 500);
+}
+
+/**
+ * Runs migration steps in isolation so a failure in one can't take down independent steps after
+ * it. A step that lists `requires` is skipped (and reported as skipped) when any of those steps
+ * failed or was itself skipped, because running it against a half-migrated table would fail or
+ * silently do the wrong thing.
+ */
+function createStepRunner() {
+  const issues: MigrationIssue[] = [];
+  const unavailable = new Set<string>();
+
+  async function runStep(
+    name: string,
+    step: () => Promise<void>,
+    requires: string[] = [],
+  ): Promise<void> {
+    const blockedBy = requires.filter((required) => unavailable.has(required));
+    if (blockedBy.length > 0) {
+      unavailable.add(name);
+      issues.push({
+        step: name,
+        status: 'skipped',
+        reason: `Needs ${blockedBy.join(', ')}, which did not complete.`,
+      });
+      console.warn(`[TELA-TELL] Migration step "${name}" skipped: needs ${blockedBy.join(', ')}.`);
+      return;
+    }
+
+    try {
+      await step();
+    } catch (error) {
+      unavailable.add(name);
+      issues.push({
+        step: name,
+        status: 'failed',
+        reason: describeError(error),
+        ...(error instanceof SqliteTooOldError ? { code: error.code } : {}),
+      });
+      console.warn(`[TELA-TELL] Migration step "${name}" failed, continuing:`, error);
+    }
+  }
+
+  return { runStep, issues };
+}
+
+async function runMigration(): Promise<MigrationReport> {
   const db = await getDatabase();
   // Core schema creation is the one step allowed to abort the whole migration:
   // nothing below can meaningfully run without the base tables existing.
   await db.execAsync(SCHEMA_SQL);
+
+  const { runStep, issues } = createStepRunner();
+
   await runStep('ensureScanColumn:isFavorite', () =>
     ensureScanColumn(db, 'isFavorite', 'INTEGER NOT NULL DEFAULT 0'),
   );
@@ -49,25 +144,39 @@ async function runMigration(): Promise<void> {
   await runStep('ensureProfileColumn:colorSeason', () =>
     ensureProfileColumn(db, 'colorSeason', 'TEXT'),
   );
-  await runStep('idx_scan_createdAt', () =>
-    db.execAsync('CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)'),
+  await runStep(
+    'idx_scan_createdAt',
+    () => db.execAsync('CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)'),
+    ['ensureScanColumn:createdAt'],
   );
-  await runStep('removeLegacyAccounts', () => removeLegacyAccounts(db));
+  // Reads tblDeviceProfile.colorSeason when carrying a legacy account's preferences over.
+  await runStep('removeLegacyAccounts', () => removeLegacyAccounts(db), [
+    'ensureProfileColumn:colorSeason',
+  ]);
   await runStep('dropUnusedScanStorage', () => dropUnusedScanStorage(db));
   await runStep('persistLegacyScanImages', () => persistLegacyScanImages(db));
-  await runStep('backfillScanCreatedAt', () => backfillScanCreatedAt(db));
+  await runStep('backfillScanCreatedAt', () => backfillScanCreatedAt(db), [
+    'ensureScanColumn:createdAt',
+  ]);
   await runStep('resyncScanSustainability', () => resyncScanSustainability(db));
-  await runStep('purgeExpiredDeletedScans', async () => {
-    const { purgeExpiredDeletedScans } = await import('@/db/scans');
-    await purgeExpiredDeletedScans(30);
-  });
+  await runStep(
+    'purgeExpiredDeletedScans',
+    async () => {
+      const { purgeExpiredDeletedScans } = await import('@/db/scans');
+      await purgeExpiredDeletedScans(30);
+    },
+    ['ensureScanColumn:deletedAt'],
+  );
+
+  return { issues };
 }
 
 /**
- * Re-derives sustainability (and profile/recommendations) for every stored scan from the
- * current fiber and eco data, since saveScan() snapshots these at scan time rather than
- * computing them live on read. A fiber-profiles.ts update should retroactively fix history, not
- * just new scans -- but rewriting every scan on every launch gets slower as history grows, so it
+ * Re-derives the profile and recommendations for every stored scan from the current fiber and eco
+ * data, since saveScan() snapshots these at scan time rather than computing them live on read.
+ * It also clears the old sustainability scores (the legacy columns and the `sustainability` key in
+ * the saved JSON), which the app no longer shows. A fiber-profiles.ts update should retroactively
+ * fix history, not just new scans -- but rewriting every scan on every launch gets slower as history grows, so it
  * only runs when a fingerprint of that data (plus SCAN_PROFILE_LOGIC_VERSION) has changed since
  * the last run.
  */
@@ -82,10 +191,9 @@ function hashString(text: string): string {
 }
 
 async function resyncScanSustainability(db: Database) {
-  const { buildScanProfile, SCAN_PROFILE_LOGIC_VERSION } = await import(
-    '@/features/scan/lib/build-scan-profile'
-  );
-  const { resolveFabricAlias, SUPPORTED_FABRICS } = await import('@/data/fabrics/fabrics');
+  const { SCAN_PROFILE_LOGIC_VERSION } = await import('@/features/scan/lib/build-scan-profile');
+  const { refreshStoredScan } = await import('@/features/scan/lib/refresh-stored-scan');
+  const { SUPPORTED_FABRICS } = await import('@/data/fabrics/fabrics');
   const { FIBER_PROFILES } = await import('@/data/fabrics/fiber-profiles');
   const { getEcoGuidance } = await import('@/data/fabrics/eco-alternatives');
 
@@ -100,45 +208,51 @@ async function resyncScanSustainability(db: Database) {
     return;
   }
 
+  const { LEGACY_SUSTAINABILITY_PLACEHOLDER: placeholder } = await import('@/db/scans');
+
   const rows = await db.getAllAsync<{ scan_ID: string; resultJson: string | null }>(
     'SELECT scan_ID, resultJson FROM tblScan',
   );
 
   await db.withTransactionAsync(async () => {
+    // Old sustainability scores are cleared on every row, including rows whose saved JSON can't
+    // be read, so no stored score can reappear. Nothing else on the row is touched.
+    await db.runAsync(
+      `UPDATE tblScan
+       SET sustainabilityRating = ?, sustainabilityLabel = ?, sustainabilityScore = ?
+       WHERE sustainabilityRating != ? OR sustainabilityLabel != ? OR sustainabilityScore != ?`,
+      [
+        placeholder.rating,
+        placeholder.label,
+        placeholder.score,
+        placeholder.rating,
+        placeholder.label,
+        placeholder.score,
+      ],
+    );
+
     for (const row of rows) {
       if (!row.resultJson) {
         continue;
       }
 
+      // Only an unreadable row is skipped. A failed database write below is NOT caught: it rolls
+      // the transaction back and fails the step, so it is reported and retried on the next
+      // launch instead of being hidden while the fingerprint is saved as if all had succeeded.
+      let next: ReturnType<typeof refreshStoredScan>;
       try {
-        const parsed = JSON.parse(row.resultJson);
-        const compositions = parsed.compositions ?? [];
-        const primary = (resolveFabricAlias(parsed.dominantFabric) ??
-          parsed.dominantFabric) as SupportedFabric;
-
-        const { profile, sustainability, recommendations } = buildScanProfile(
-          primary,
-          parsed.dominantFabric,
-          compositions,
-        );
-
-        const next = { ...parsed, profile, sustainability, recommendations };
-
-        await db.runAsync(
-          `UPDATE tblScan
-           SET sustainabilityRating = ?, sustainabilityLabel = ?, sustainabilityScore = ?, resultJson = ?
-           WHERE scan_ID = ?`,
-          [
-            sustainability.rating,
-            sustainability.label,
-            sustainability.score,
-            JSON.stringify(next),
-            row.scan_ID,
-          ],
-        );
+        next = refreshStoredScan(JSON.parse(row.resultJson));
       } catch {
         continue;
       }
+      const nextJson = JSON.stringify(next);
+
+      // Already current: leave the row alone rather than rewriting it.
+      if (nextJson === row.resultJson) {
+        continue;
+      }
+
+      await db.runAsync('UPDATE tblScan SET resultJson = ? WHERE scan_ID = ?', [nextJson, row.scan_ID]);
     }
   });
 
@@ -159,6 +273,10 @@ type Database = Awaited<ReturnType<typeof getDatabase>>;
 async function removeLegacyAccounts(db: Database) {
   const profileColumns = await tableColumns(db, 'tblDeviceProfile');
   const scanColumns = await tableColumns(db, 'tblScan');
+
+  if (profileColumns.includes('user_id') || scanColumns.includes('user_id')) {
+    await assertDropColumnSupported(db);
+  }
 
   if (profileColumns.includes('user_id')) {
     await adoptLegacyPreferences(db);
@@ -190,6 +308,7 @@ async function dropUnusedScanStorage(db: Database) {
   await db.execAsync('DROP TABLE IF EXISTS tblScanComposition');
 
   if ((await tableColumns(db, 'tblScan')).includes('syncStatus')) {
+    await assertDropColumnSupported(db);
     await db.execAsync('ALTER TABLE tblScan DROP COLUMN syncStatus');
   }
 }

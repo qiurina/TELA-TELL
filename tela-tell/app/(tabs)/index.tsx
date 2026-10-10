@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScanHistoryCard } from '@/features/history/components/scan-history-card';
@@ -18,6 +18,9 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const [recentScans, setRecentScans] = useState<RecentScanPreview[]>([]);
+  // Starts true so the empty message never flashes before the first load finishes. Later focuses
+  // keep showing the previous list while it refreshes.
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -29,6 +32,10 @@ export default function HomeScreen() {
           setRecentScans(list);
         } catch (error) {
           console.error('[TELA-TELL] Failed to load recent scans:', error);
+        } finally {
+          if (active) {
+            setLoading(false);
+          }
         }
       })();
       return () => {
@@ -65,7 +72,10 @@ export default function HomeScreen() {
                       styles.scanButtonWrap,
                       pressed && styles.scanButtonPressed,
                     ]}
-                    onPress={() => router.push('/scan')}>
+                    onPress={() => router.push('/scan')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Scan Now"
+                    accessibilityHint="Opens the camera to scan a fabric">
                     <LinearGradient
                       colors={[BrandColors.primaryLight, BrandColors.primary, BrandColors.primaryDark]}
                       start={{ x: 0, y: 0.5 }}
@@ -88,7 +98,11 @@ export default function HomeScreen() {
 
             <View style={styles.recentHeader}>
               <Text style={styles.recentTitle}>Recent Scans</Text>
-              <Pressable onPress={() => router.push('/history')} hitSlop={8}>
+              <Pressable
+                onPress={() => router.push('/history')}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="See all scans">
                 <Text style={styles.seeAll}>See all</Text>
               </Pressable>
             </View>
@@ -102,6 +116,10 @@ export default function HomeScreen() {
                     onPress={() => router.push(`/results/${scan.id}` as Href)}
                   />
                 ))
+              ) : loading ? (
+                <View style={styles.loading}>
+                  <ActivityIndicator color={BrandColors.primary} />
+                </View>
               ) : (
                 <Text style={styles.emptyText}>No recent scans yet.</Text>
               )}
@@ -237,5 +255,10 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     fontSize: 13,
     color: BrandColors.textMuted,
+  },
+  loading: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -17,44 +17,37 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import type { RecentScanPreview } from '@/data/scans/mock-data';
 import {
-  getDeletedScans,
+  getDeletedScansPage,
   permanentlyDeleteAllDeletedScans,
   permanentlyDeleteScans,
   restoreScans,
+  SCAN_PAGE_SIZE,
 } from '@/db/scans';
+import { ScanPager } from '@/features/history/components/scan-pager';
+import { useScanPages } from '@/features/history/lib/use-scan-pages';
 
 const DELETE_RED = '#DC2626';
+
+const fetchDeletedPage = (page: number) => getDeletedScansPage({ page, pageSize: SCAN_PAGE_SIZE });
 
 export default function DeletedScansScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [scans, setScans] = useState<RecentScanPreview[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    items: scans,
+    total,
+    totalPages,
+    page,
+    loading,
+    error,
+    goToPage,
+    reload,
+  } = useScanPages(fetchDeletedPage, 'deleted');
   const [busy, setBusy] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const next = await getDeletedScans();
-      setScans(next);
-      setSelectedIds((prev) => {
-        const valid = new Set([...prev].filter((id) => next.some((scan) => scan.id === id)));
-        return valid;
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -107,7 +100,7 @@ export default function DeletedScansScreen() {
       try {
         await restoreScans(ids);
         exitSelectionMode();
-        await load();
+        await reload();
       } catch {
         showAlert('Could not restore', 'Please try again.');
       } finally {
@@ -128,7 +121,7 @@ export default function DeletedScansScreen() {
       try {
         await permanentlyDeleteScans(ids);
         exitSelectionMode();
-        await load();
+        await reload();
       } catch {
         showAlert('Could not delete', 'Please try again.');
       } finally {
@@ -138,7 +131,7 @@ export default function DeletedScansScreen() {
   };
 
   const handleDeleteAll = () => {
-    if (scans.length === 0 || busy) {
+    if (total === 0 || busy) {
       return;
     }
 
@@ -148,7 +141,7 @@ export default function DeletedScansScreen() {
       try {
         await permanentlyDeleteAllDeletedScans();
         exitSelectionMode();
-        await load();
+        await reload();
       } catch {
         showAlert('Could not delete', 'Please try again.');
       } finally {
@@ -191,7 +184,7 @@ export default function DeletedScansScreen() {
         title={headerTitle}
         onBack={selectionMode ? exitSelectionMode : () => router.back()}
         rightSlot={
-          scans.length > 0 ? (
+          total > 0 ? (
             selectionMode ? (
               <Pressable onPress={handleSelectAll} hitSlop={8} accessibilityRole="button">
                 <Text style={styles.headerAction}>
@@ -212,9 +205,20 @@ export default function DeletedScansScreen() {
         }
       />
 
-      {loading ? (
+      {loading && scans.length === 0 ? (
         <View style={styles.loading}>
           <ActivityIndicator color={BrandColors.primary} />
+        </View>
+      ) : error && scans.length === 0 ? (
+        <View style={styles.loading}>
+          <Text style={styles.errorText}>Could not load your scans.</Text>
+          <Pressable
+            onPress={() => void reload()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Try loading scans again">
+            <Text style={styles.headerAction}>Try again</Text>
+          </Pressable>
         </View>
       ) : (
         <ScanGalleryGrid
@@ -228,6 +232,15 @@ export default function DeletedScansScreen() {
           emptyMessage="Deleted scans stay here for 30 days, then they’re removed automatically."
         />
       )}
+
+      {totalPages > 1 ? (
+        <ScanPager
+          page={page}
+          totalPages={totalPages}
+          onPrev={() => goToPage(page - 1)}
+          onNext={() => goToPage(page + 1)}
+        />
+      ) : null}
 
       {selectionMode && selectedIds.size > 0 ? (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -272,12 +285,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+  },
+  errorText: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: BrandColors.textMuted,
+    textAlign: 'center',
   },
   bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,

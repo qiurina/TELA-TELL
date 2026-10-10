@@ -75,7 +75,9 @@ export function AlertHost() {
 
           <Pressable
             style={({ pressed }) => [styles.okButton, pressed && styles.pressed]}
-            onPress={() => setState(null)}>
+            onPress={() => setState(null)}
+            accessibilityRole="button"
+            accessibilityLabel="OK">
             <Text style={styles.okText}>OK</Text>
           </Pressable>
         </View>

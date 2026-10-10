@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
-import { ScanConfirmSheet } from '@/features/scan/components/scan-confirm-sheet';
-import { Info, Shield } from '@/components/ui/lucide-icons';
+import { InfoSheet } from '@/components/ui/info-sheet';
+import { Shield } from '@/components/ui/lucide-icons';
+import { StatusCard } from '@/components/ui/status-card';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
+import type { StatusTone } from '@/constants/status-colors';
+import { SHEDDING_SHEET_TITLE } from '@/data/fabrics/assessment-disclaimers';
 import type { HealthRiskLevel, SyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 
-const LEVEL_STYLES: Record<
-  HealthRiskLevel,
-  { background: string; border: string; accent: string }
-> = {
-  low: { background: '#F0FDF4', border: '#BBF7D0', accent: '#15803D' },
-  moderate: { background: '#FFFBEB', border: '#FDE68A', accent: '#B45309' },
-  high: { background: '#FEF2F2', border: '#FECACA', accent: '#B91C1C' },
+const LEVEL_TONE: Record<HealthRiskLevel, StatusTone> = {
+  low: 'good',
+  moderate: 'caution',
+  high: 'alert',
 };
 
 type SyntheticHealthRiskCardProps = {
@@ -22,134 +22,41 @@ type SyntheticHealthRiskCardProps = {
 
 export function SyntheticHealthRiskCard({ risk }: SyntheticHealthRiskCardProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const levelStyle = LEVEL_STYLES[risk.level];
-  const fiberList = risk.fibers.join(', ');
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: levelStyle.background, borderColor: levelStyle.border },
-      ]}>
-      <ScanConfirmSheet
+    <StatusCard
+      icon={Shield}
+      tone={LEVEL_TONE[risk.level]}
+      title="Fiber shedding"
+      pillLabel={risk.label}
+      onInfoPress={() => setShowDisclaimer(true)}
+      infoAccessibilityLabel="About this shedding estimate">
+      <InfoSheet
         visible={showDisclaimer}
-        variant="info"
-        title="Synthetic fiber health risk"
-        message={risk.disclaimer}
-        confirmLabel="Got it"
-        onConfirm={() => setShowDisclaimer(false)}
-        onCancel={() => setShowDisclaimer(false)}
+        title={SHEDDING_SHEET_TITLE}
+        sections={risk.disclaimer}
+        icon={Shield}
+        tone={LEVEL_TONE[risk.level]}
+        onClose={() => setShowDisclaimer(false)}
       />
 
-      <View style={styles.headerRow}>
-        <View style={styles.titleWrap}>
-          <Shield size={16} color={levelStyle.accent} strokeWidth={2.25} />
-          <Text style={[styles.cardLabel, { color: levelStyle.accent }]}>HEALTH RISK</Text>
-          <Text style={[styles.levelValue, { color: levelStyle.accent }]}>{risk.label}</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <View
-            style={[
-              styles.percentPill,
-              { backgroundColor: levelStyle.background, borderColor: levelStyle.border },
-            ]}>
-            <Text style={[styles.percentValue, { color: levelStyle.accent }]}>
-              {risk.syntheticPercent}%
-            </Text>
-            <Text style={[styles.percentCaption, { color: levelStyle.accent }]}>
-              synthetic match
-            </Text>
-          </View>
-          <Pressable
-            style={[
-              styles.infoButton,
-              { backgroundColor: levelStyle.background, borderColor: levelStyle.border },
-            ]}
-            onPress={() => setShowDisclaimer(true)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="About synthetic fiber health risk">
-            <Info size={14} color={levelStyle.accent} strokeWidth={2.25} />
-          </Pressable>
-        </View>
-      </View>
-
-      <Text style={styles.summary}>{risk.summary}</Text>
-      {fiberList ? <Text style={styles.fiberList}>{fiberList}</Text> : null}
-    </View>
+      <Text style={styles.summary}>
+        <Text style={styles.lead}>Why {risk.label}: </Text>
+        {risk.reason}
+      </Text>
+    </StatusCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    padding: 14,
-    gap: 8,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  titleWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minWidth: 0,
-  },
-  cardLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-  },
-  levelValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 14,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  percentPill: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    alignItems: 'center',
-  },
-  percentValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 13,
-    lineHeight: 15,
-  },
-  percentCaption: {
-    fontFamily: Fonts.medium,
-    fontSize: 8,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-    lineHeight: 10,
-  },
-  infoButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
   summary: {
     fontFamily: Fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 20,
     color: BrandColors.text,
   },
-  fiberList: {
-    fontFamily: Fonts.medium,
-    fontSize: 12,
-    color: BrandColors.textMuted,
+  lead: {
+    fontFamily: Fonts.semiBold,
+    color: BrandColors.primaryDark,
   },
 });

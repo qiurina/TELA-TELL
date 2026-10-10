@@ -1,13 +1,25 @@
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { useRouter, type Href } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { InfoButton } from '@/components/ui/info-button';
+import { ReferenceItem } from '@/components/ui/reference-item';
+import { BasisSheet } from '@/features/recommendations/components/basis-sheet';
 import { ProfileScreenShell } from '@/features/profile/components/profile-screen-shell';
-import { Leaf, ScanLine, Shield } from '@/components/ui/lucide-icons';
+import { ChevronRight, Leaf, ScanLine, Shield, Shirt } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow, heroCardShadow } from '@/constants/shadows';
+import {
+  FAST_FASHION_BASIS_TITLE,
+  FAST_FASHION_CLAIMS,
+  FAST_FASHION_EDITORIAL_NOTE,
+  FAST_FASHION_TEXT,
+  FAST_FASHION_TITLE,
+} from '@/data/fabrics/fast-fashion-background';
+import { SOURCE_LIST } from '@/data/fabrics/source-registry';
 
 const heroGradient = [BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark] as const;
 
@@ -33,6 +45,58 @@ function AboutSection({
   );
 }
 
+function FastFashionSection() {
+  const [basisVisible, setBasisVisible] = useState(false);
+
+  return (
+    <View style={[styles.card, faintCardShadow()]}>
+      <BasisSheet
+        visible={basisVisible}
+        title={FAST_FASHION_BASIS_TITLE}
+        claims={FAST_FASHION_CLAIMS}
+        editorialNote={FAST_FASHION_EDITORIAL_NOTE}
+        onClose={() => setBasisVisible(false)}
+      />
+      <View style={[styles.iconWrap, { backgroundColor: BrandColors.lavenderCard }]}>
+        <Shirt size={20} color={BrandColors.primaryDark} strokeWidth={2} />
+      </View>
+      <View style={styles.cardCopy}>
+        <View style={styles.cardTitleRow}>
+          <Text style={styles.cardTitle}>{FAST_FASHION_TITLE}</Text>
+          <InfoButton
+            onPress={() => setBasisVisible(true)}
+            accessibilityLabel="About fast fashion and its sources"
+          />
+        </View>
+        <Text style={styles.cardBody}>{FAST_FASHION_TEXT}</Text>
+      </View>
+    </View>
+  );
+}
+
+function ShedExplainerLink() {
+  const router = useRouter();
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.card, faintCardShadow(), pressed && styles.linkPressed]}
+      onPress={() => router.push('/why-synthetics-shed' as Href)}
+      accessibilityRole="button"
+      accessibilityLabel="Why synthetics shed">
+      <View style={[styles.iconWrap, { backgroundColor: BrandColors.lavenderCard }]}>
+        <Shield size={20} color={BrandColors.primaryDark} strokeWidth={2} />
+      </View>
+      <View style={styles.cardCopy}>
+        <Text style={styles.cardTitle}>Why synthetics shed</Text>
+        <Text style={styles.cardBody}>
+          A short, plain explainer on why synthetic fabrics shed.
+        </Text>
+      </View>
+      <ChevronRight size={18} color={BrandColors.textMuted} strokeWidth={2.25} />
+    </Pressable>
+  );
+}
+
 export default function AboutScreen() {
   const version = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -54,46 +118,49 @@ export default function AboutScreen() {
         icon={<ScanLine size={20} color={BrandColors.primaryDark} strokeWidth={2} />}
         iconBackground={BrandColors.lavenderCard}
         title="What it does"
-        body="TELA-TELL helps you check what a fabric is really made of before you buy it. It's especially handy for thrifted and secondhand finds."
+        body="TELA-TELL gives you a quick, photo-based guess of what a fabric is before you buy it. It's especially handy for thrifted and secondhand finds."
       />
       <AboutSection
         icon={<Leaf size={20} color="#16a34a" strokeWidth={2} />}
         iconBackground="#f0fdf4"
         title="How it works"
-        body="Take a photo of the fabric with your camera, or upload one you already have. We'll compare it to common fabric types and show you eco-friendly tips and any mismatched labels."
+        body="Take a photo of the fabric with your camera, or upload one you already have. The app predicts the most likely fabric types from the photo, then shows research-based eco tips and flags labels that may not match."
       />
       <AboutSection
         icon={<Shield size={20} color="#2563eb" strokeWidth={2} />}
         iconBackground="#eff6ff"
         title="Good to know"
-        body="For the best results, get your camera close enough to clearly see the fabric's threads. Your scans and preferences are saved right on your phone. There is no account to create and no internet connection needed to scan."
+        body="Results are predictions from a photo, not lab tests, so check the care tag when you can. Environmental, reuse and microplastic information is general guidance for each fiber type, not a measurement of your garment, and the app does not score sustainability, labor conditions, supply chains or brands. For the best results, get your camera close enough to clearly see the fabric's threads. Your scans and preferences are saved right on your phone. There is no account to create and no internet connection needed to scan."
       />
+
+      <ShedExplainerLink />
+
+      <FastFashionSection />
 
       <View style={[styles.card, faintCardShadow(), styles.sourcesCard]}>
         <Text style={styles.cardTitle}>Sources</Text>
         <Text style={styles.cardBody}>
-          Microplastic-shedding risk levels (Polyester/Acrylic = High, Nylon/Spandex =
-          Moderate) are ranked using measured shedding rates from:
-        </Text>
-        <Text style={styles.sourceItem}>
-          • Napper & Thompson (2016). Release of synthetic microplastic fibres from domestic
-          washing machines. Marine Pollution Bulletin.
-        </Text>
-        <Text style={styles.sourceItem}>
-          • De Falco et al. (2020). Microfiber Release to Water, Via Laundering, and to Air,
-          via Everyday Use. Environmental Science & Technology.
-        </Text>
-        <Text style={styles.sourceItem}>
-          • Persson et al. (2026). Mechanically Recycled Textiles: A Source of Microplastic
-          Fiber Emissions. Environmental Science & Technology.
+          Shedding levels, what the studies found and what they do not show are explained on the
+          &quot;Why synthetics shed&quot; page above. The studies are in the References list below.
         </Text>
         <Text style={[styles.cardBody, styles.sourcesFootnote]}>
-          Sustainability, comfort, and eco-alternative scoring draw on additional
-          peer-reviewed studies and industry standards (Mekonnen & Hoekstra 2011; The
-          Woolmark Company; PhilFIDA; DermNet NZ; and others). This app&apos;s engineering
-          documentation keeps the full reference list with every score&apos;s source
-          traced individually.
+          The Eco tab&apos;s &quot;What research says&quot; and the eco-alternative tips use the
+          studies in the References list below. Comfort information draws on additional
+          sources, such as The Woolmark Company, PhilFIDA and DermNet NZ, which this
+          app&apos;s engineering documentation lists. The app no longer scores sustainability,
+          because no published method compares all 12 fibers fairly.
         </Text>
+      </View>
+
+      <View style={[styles.card, faintCardShadow(), styles.sourcesCard]}>
+        <Text style={styles.cardTitle}>References</Text>
+        <Text style={styles.cardBody}>
+          Where the facts in the eco-alternative and reuse tips come from. The numbers match the
+          &quot;Basis&quot; sheets, which also explain what to keep in mind about each source.
+        </Text>
+        {SOURCE_LIST.map((source, index) => (
+          <ReferenceItem key={source.id} source={source} number={index + 1} />
+        ))}
       </View>
 
       <Text style={styles.version}>Version {version}</Text>
@@ -148,6 +215,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   cardTitle: {
     fontFamily: Fonts.semiBold,
     fontSize: 15,
@@ -163,15 +236,12 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 8,
   },
-  sourceItem: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: BrandColors.text,
-  },
   sourcesFootnote: {
     fontSize: 12,
     color: BrandColors.textMuted,
+  },
+  linkPressed: {
+    opacity: 0.88,
   },
   version: {
     fontFamily: Fonts.regular,

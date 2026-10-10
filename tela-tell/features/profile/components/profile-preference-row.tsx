@@ -14,6 +14,8 @@ type ProfilePreferenceRowProps = {
   showChevron?: boolean;
   isLast?: boolean;
   titleColor?: string;
+  /** Replaces the chevron, e.g. a Switch for an on/off setting. */
+  trailing?: ReactNode;
 };
 
 export function ProfilePreferenceRow({
@@ -24,6 +26,7 @@ export function ProfilePreferenceRow({
   showChevron = true,
   isLast = false,
   titleColor,
+  trailing,
 }: ProfilePreferenceRowProps) {
   const content = (
     <>
@@ -36,7 +39,8 @@ export function ProfilePreferenceRow({
           </Text>
         ) : null}
       </View>
-      {showChevron ? <ChevronRight size={18} color={BrandColors.textMuted} strokeWidth={2.25} /> : null}
+      {trailing ??
+        (showChevron ? <ChevronRight size={18} color={BrandColors.textMuted} strokeWidth={2.25} /> : null)}
     </>
   );
 

@@ -1,11 +1,17 @@
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Droplets, Heart, type IconProps } from '@/components/ui/lucide-icons';
+import { InfoButton } from '@/components/ui/info-button';
+import { InfoSheet } from '@/components/ui/info-sheet';
+import { Heart, type IconProps } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
+import {
+  COMFORT_SHEET_SECTIONS,
+  COMFORT_SHEET_TITLE,
+} from '@/data/fabrics/assessment-disclaimers';
 import {
   type HealthSafetyMetric,
   type HealthSafetyMetricId,
@@ -35,7 +41,6 @@ const TONE_COLORS: Record<
 
 const METRIC_ICONS: Record<HealthSafetyMetricId, FC<IconProps>> = {
   skinHealth: Heart,
-  microplasticShedding: Droplets,
 };
 
 type HealthSafetyScoresProps = {
@@ -46,7 +51,6 @@ function MetricCard({ metric }: { metric: HealthSafetyMetric }) {
   const colors = TONE_COLORS[metric.tone];
   const Icon = METRIC_ICONS[metric.id];
   const fillPercent = Math.max(8, Math.min(100, (metric.score / 10) * 100));
-  const isShedding = metric.id === 'microplasticShedding';
 
   return (
     <View style={[styles.card, faintCardShadow()]}>
@@ -61,25 +65,16 @@ function MetricCard({ metric }: { metric: HealthSafetyMetric }) {
               {metric.title}
             </Text>
             <View style={styles.valueBlock}>
-              {isShedding ? (
-                <>
-                  <Text style={[styles.levelCaption, { color: colors.accent }]}>Shedding</Text>
-                  <Text style={[styles.levelValue, { color: colors.accent }]}>
-                    {metric.valueLabel}
+              <View style={styles.scoreRow}>
+                <Text style={[styles.scoreValue, { color: colors.accent }]}>
+                  {metric.valueLabel}
+                </Text>
+                {metric.valueSuffix ? (
+                  <Text style={[styles.scoreMax, { color: colors.accent }]}>
+                    {metric.valueSuffix}
                   </Text>
-                </>
-              ) : (
-                <View style={styles.scoreRow}>
-                  <Text style={[styles.scoreValue, { color: colors.accent }]}>
-                    {metric.valueLabel}
-                  </Text>
-                  {metric.valueSuffix ? (
-                    <Text style={[styles.scoreMax, { color: colors.accent }]}>
-                      {metric.valueSuffix}
-                    </Text>
-                  ) : null}
-                </View>
-              )}
+                ) : null}
+              </View>
             </View>
           </View>
           <Text style={styles.note}>{metric.note}</Text>
@@ -98,15 +93,31 @@ function MetricCard({ metric }: { metric: HealthSafetyMetric }) {
   );
 }
 
-/** Scored Health & Safety cards — score + bar color-coded; chrome stays neutral. */
+/** Wearing Comfort card — score + bar color-coded; chrome stays neutral. */
 export function HealthSafetyScores({ metrics }: HealthSafetyScoresProps) {
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+
   if (metrics.length === 0) {
     return null;
   }
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>HEALTH & SAFETY</Text>
+      <InfoSheet
+        visible={showDisclaimer}
+        title={COMFORT_SHEET_TITLE}
+        sections={COMFORT_SHEET_SECTIONS}
+        icon={Heart}
+        onClose={() => setShowDisclaimer(false)}
+      />
+
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionLabel}>COMFORT</Text>
+        <InfoButton
+          onPress={() => setShowDisclaimer(true)}
+          accessibilityLabel="About this comfort estimate"
+        />
+      </View>
       <View style={styles.list}>
         {metrics.map((metric) => (
           <MetricCard key={metric.id} metric={metric} />
@@ -125,6 +136,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     color: BrandColors.textMuted,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
   },
   list: {
     gap: 10,
@@ -180,22 +197,10 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     fontSize: 18,
   },
-  levelValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 16,
-    letterSpacing: 0.2,
-  },
   scoreMax: {
     fontFamily: Fonts.medium,
     fontSize: 12,
     opacity: 0.75,
-  },
-  levelCaption: {
-    fontFamily: Fonts.medium,
-    fontSize: 10,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-    opacity: 0.9,
   },
   note: {
     fontFamily: Fonts.regular,

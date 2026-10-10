@@ -38,6 +38,29 @@ export async function persistScanImage(uri: string, scanId: string): Promise<str
   }
 }
 
+/**
+ * Writes an imported photo (base64 JPEG) into permanent storage under the scan's id and returns
+ * its path, or null if it could not be written. The id is checked here as well because it becomes
+ * part of a file name.
+ */
+export async function restoreScanImage(scanId: string, base64: string): Promise<string | null> {
+  if (!SCAN_IMAGE_DIR || !/^[A-Za-z0-9_-]{1,100}$/.test(scanId)) {
+    return null;
+  }
+
+  try {
+    await FileSystem.makeDirectoryAsync(SCAN_IMAGE_DIR, { intermediates: true });
+    const destination = `${SCAN_IMAGE_DIR}${scanId}.jpg`;
+    await FileSystem.writeAsStringAsync(destination, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return destination;
+  } catch (error) {
+    console.warn('[TELA-TELL] Could not restore imported scan image:', error);
+    return null;
+  }
+}
+
 /** Deletes stored scan photos. Only files inside the scan-images folder are ever touched. */
 export async function deleteScanImages(uris: (string | null | undefined)[]): Promise<void> {
   if (!SCAN_IMAGE_DIR) {

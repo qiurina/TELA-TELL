@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View , ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { NotFoundFallback } from '@/components/ui/not-found-fallback';
 
 
 import { showAlert } from '@/components/ui/alert-dialog';
@@ -11,16 +12,26 @@ import { ResultsExploreActions } from '@/features/results/components/results-exp
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { ScanConfidenceBanner } from '@/features/results/components/scan-confidence-banner';
 import { SellerComparisonCard } from '@/features/results/components/seller-comparison-card';
-import { StatusBadges } from '@/features/results/components/status-badges';
+import { SustainableChoicesCard } from '@/features/results/components/sustainable-choices-card';
+import { getFiberInformation } from '@/data/fabrics/shedding-why';
+import { FiberInformationCard } from '@/features/results/components/fiber-information-card';
 import { SyntheticHealthRiskCard } from '@/features/results/components/synthetic-health-risk-card';
+import { UnsureDetailsCard } from '@/features/results/components/unsure-details-card';
 import { BrandColors } from '@/constants/brand';
-import { Fonts } from '@/constants/fonts';
 import { deleteScan, isScanFavorite, setScanFavorite } from '@/db/scans';
+import { getBlendCaution } from '@/data/fabrics/blend-caution';
+import { BlendCautionCard } from '@/features/results/components/blend-caution-card';
 import { useScanResult } from '@/features/results/hooks/use-scan-result';
-import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
+import {
+  getPredictedSyntheticFibers,
+  getSyntheticHealthRisk,
+} from '@/data/fabrics/synthetic-health-risk';
 import { getFabricReference } from '@/data/fabrics/fabric-references';
-import { getFabricCategory, resolveFabricAlias } from '@/data/fabrics/fabrics';
-import { getScanResultHeadline } from '@/features/results/lib/scan-result-headline';
+import { assessScanReliability } from '@/data/scans/scan-confidence';
+import {
+  getScanResultHeadline,
+  getUnsureHeadline,
+} from '@/features/results/lib/scan-result-headline';
 import { evaluateDeclaredLabel } from '@/features/scan/lib/declared-label';
 import { requestFreshScan } from '@/features/scan/lib/scan-fresh';
 
@@ -113,12 +124,7 @@ export default function ResultsScreen() {
 
   if (!result) {
     return (
-      <View style={styles.fallback}>
-        <Text style={styles.fallbackText}>Scan not found.</Text>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.fallbackLink}>Go back</Text>
-        </Pressable>
-      </View>
+      <NotFoundFallback message="Scan not found." />
     );
   }
 
@@ -153,27 +159,42 @@ export default function ResultsScreen() {
     });
   };
 
-  const primaryReference = getFabricReference(result.dominantFabric, result.compositions);
+  // An unsure scan names no fiber, so nothing derived from "the" fiber (reference photo, synthetic
+  // badge, shedding estimate, fiber details, sustainable-choices card) is shown for it.
+  const reliability = assessScanReliability(result.compositions);
+  const isUnsure = !reliability.reliable;
 
-  const healthRisk = getSyntheticHealthRisk(
-    result.dominantFabric,
-    result.compositions ?? [],
-    result.garmentCondition,
-  );
+  const primaryReference = isUnsure
+    ? undefined
+    : getFabricReference(result.dominantFabric, result.compositions);
 
-  const fiberBadge = healthRisk
-    ? {
-        // "Detected" only when the most likely fiber itself is synthetic; a synthetic that only
-        // appears further down the top 3 is a possibility, not a finding.
-        label:
-          getFabricCategory(resolveFabricAlias(result.dominantFabric) ?? '') === 'Synthetic'
-            ? 'Synthetic Fiber Detected'
-            : 'Possible Synthetic Fiber',
-        tone: 'synthetic' as const,
-      }
+  const healthRisk = isUnsure
+    ? null
+    : getSyntheticHealthRisk(
+        result.dominantFabric,
+        result.compositions ?? [],
+        result.garmentCondition,
+      );
+
+  // "Detected" only when the most likely fiber itself is synthetic (that is when the shedding card
+  // shows); a synthetic that only appears further down the top 3 is a possibility, not a finding.
+  // Information (no rating) for a natural or cellulose-based top fiber; the rated card is for the four synthetics.
+  const fiberInfo = isUnsure || healthRisk ? null : getFiberInformation(result.dominantFabric);
+
+  const fiberBadge = isUnsure
+    ? null
+    : healthRisk
+    ? { label: 'Synthetic Fiber Detected', tone: 'synthetic' as const }
+    : getPredictedSyntheticFibers(result.dominantFabric, result.compositions ?? []).length > 0
+    ? { label: 'Possible Synthetic Fiber', tone: 'synthetic' as const }
     : { label: 'No Synthetic Detected', tone: 'clear' as const };
 
-  const headline = getScanResultHeadline(result.dominantFabric, result.compositions ?? []);
+  // Null for an Unsure scan and for fibers the note does not apply to.
+  const blendCaution = getBlendCaution(result.dominantFabric, result.compositions);
+
+  const headline = isUnsure
+    ? getUnsureHeadline(result.compositions ?? [])
+    : getScanResultHeadline(result.dominantFabric, result.compositions ?? []);
 
   return (
     <View style={styles.root}>
@@ -199,6 +220,7 @@ export default function ResultsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}>
         <FabricPhotoPreview
           imageUri={capturedPhotoUri}
@@ -214,13 +236,22 @@ export default function ResultsScreen() {
           confidence={result.confidence}
           dominantFabric={headline.title}
           compact
+          reliability={reliability}
         />
-
-        {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
 
         <CompositionCard compositions={result.compositions ?? []} />
 
-        <StatusBadges sustainability={result.sustainability} />
+        {blendCaution ? <BlendCautionCard caution={blendCaution} /> : null}
+
+
+        {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
+        {fiberInfo ? <FiberInformationCard info={fiberInfo} /> : null}
+
+        {isUnsure ? (
+          <UnsureDetailsCard />
+        ) : (
+          <SustainableChoicesCard onEcoTips={handleEcoTips} />
+        )}
 
         <SellerComparisonCard
           sellerLabel={sellerLabel}
@@ -234,6 +265,7 @@ export default function ResultsScreen() {
           onEcoTips={handleEcoTips}
           onPersonalizedInsights={handlePersonalizedInsights}
           onScanAgain={handleScanAnother}
+          showFiberDetails={!isUnsure}
         />
       </ScrollView>
     </View>
@@ -261,15 +293,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     backgroundColor: BrandColors.white,
-  },
-  fallbackText: {
-    fontFamily: Fonts.medium,
-    fontSize: 16,
-    color: BrandColors.text,
-  },
-  fallbackLink: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.primary,
   },
 });

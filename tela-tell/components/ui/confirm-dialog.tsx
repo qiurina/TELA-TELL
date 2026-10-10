@@ -71,13 +71,17 @@ export function ConfirmDialog({
           <View style={[styles.actions, message ? undefined : styles.actionsNoMessage]}>
             <Pressable
               style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
-              onPress={onCancel}>
+              onPress={onCancel}
+              accessibilityRole="button"
+              accessibilityLabel={cancelLabel}>
               <Text style={styles.cancelText}>{cancelLabel}</Text>
             </Pressable>
 
             <Pressable
               style={({ pressed }) => [styles.confirmWrap, pressed && styles.pressed]}
-              onPress={onConfirm}>
+              onPress={onConfirm}
+              accessibilityRole="button"
+              accessibilityLabel={confirmLabel}>
               {destructive ? (
                 <View style={[styles.confirmButton, styles.destructiveButton]}>
                   <Text style={styles.confirmText}>{confirmLabel}</Text>

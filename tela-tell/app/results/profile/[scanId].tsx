@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View , ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { NotFoundFallback } from '@/components/ui/not-found-fallback';
 
 
 import { FiberProfileContent } from '@/features/fabrics/components/fiber-profile-content';
@@ -30,12 +31,7 @@ export default function FabricProfileScreen() {
 
   if (!result) {
     return (
-      <View style={styles.fallback}>
-        <Text style={styles.fallbackText}>Profile not found.</Text>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.fallbackLink}>Go back</Text>
-        </Pressable>
-      </View>
+      <NotFoundFallback message="Profile not found." />
     );
   }
 
@@ -115,15 +111,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     backgroundColor: BrandColors.white,
-  },
-  fallbackText: {
-    fontFamily: Fonts.medium,
-    fontSize: 16,
-    color: BrandColors.text,
-  },
-  fallbackLink: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.primary,
   },
 });
