@@ -219,7 +219,7 @@ export default function HistoryScreen() {
           <View style={[styles.statCard, faintCardShadow()]}>
             <TriangleAlert size={18} color={ALERT_RED} strokeWidth={2} />
             <Text style={[styles.statValue, styles.statValueAlert]}>{stats.mislabeled}</Text>
-            <Text style={styles.statLabel}>MISLABEL</Text>
+            <Text style={styles.statLabel}>LABEL DIFFERS</Text>
           </View>
         </View>
 

@@ -19,7 +19,7 @@ type ScanHistoryCardProps = {
 };
 
 const MISLABEL_PILL_LABEL = {
-  true: 'Mislabeled',
+  true: 'Label differs',
   false: 'Label OK',
 } as const;
 

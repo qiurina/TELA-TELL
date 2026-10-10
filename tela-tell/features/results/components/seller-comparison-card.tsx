@@ -60,7 +60,7 @@ export function SellerComparisonCard({
         </View>
         <View style={styles.ctaText}>
           <Text style={styles.ctaTitle}>Compare stated label</Text>
-          <Text style={styles.ctaBody}>Add what the seller claimed to check for mislabeling</Text>
+          <Text style={styles.ctaBody}>Add what the seller claimed to compare it with the prediction</Text>
         </View>
       </Pressable>
     );
@@ -69,7 +69,7 @@ export function SellerComparisonCard({
   const statusKey = check.status === 'none' ? 'unreadable' : check.status;
   const heading =
     check.status === 'mismatch'
-      ? 'Mismatch'
+      ? 'Differs'
       : check.status === 'weak'
         ? 'Partial'
         : check.status === 'match'

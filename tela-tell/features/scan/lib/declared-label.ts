@@ -22,7 +22,7 @@ import {
  *              label wrong nor confirm it. Takes the place of match, weak and mismatch.
  *  - unreadable: nothing the label says can be checked (unknown names, imitation leather, ...)
  *  - none:     no label was entered
- * Only `mismatch` raises the "possible mislabel" warning, so trace fibers (e.g. 5% spandex) never
+ * Only `mismatch` raises the "label may not match" warning, so trace fibers (e.g. 5% spandex) never
  * cause a false alarm, a faint hit is never reported as a clean match either, and a scan that
  * could not tell what the fabric is never accuses a label of being wrong.
  */
@@ -133,7 +133,7 @@ export function evaluateDeclaredLabel(
     return {
       ...base,
       status: 'mismatch',
-      title: 'Possible Mislabeling Detected',
+      title: 'The label may not match the prediction',
       message: `The scan may not have found ${listNames(missing)}. Check the care tag before deciding.${skippedNote}`,
     };
   }

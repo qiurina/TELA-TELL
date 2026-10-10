@@ -130,7 +130,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     key: 'label',
     icon: Tag,
     title: 'Check the label',
-    body: 'Add what the care tag or the seller claims. TELA-TELL compares it with your scan and flags a possible mislabel to double-check.',
+    body: 'Add what the care tag or the seller claims. TELA-TELL compares it with your scan and flags when the label may not match, so you can double-check.',
     footnote: 'Treat it as a hint, not proof.',
   },
   {
