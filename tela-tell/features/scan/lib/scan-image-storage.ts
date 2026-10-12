@@ -7,6 +7,17 @@ import * as FileSystem from 'expo-file-system/legacy';
  */
 const SCAN_IMAGE_DIR = FileSystem.documentDirectory ? `${FileSystem.documentDirectory}scan-images/` : null;
 
+// The Scan tab stays mounted when Settings opens; its unsaved photos can be hours old.
+let activeScanImageUris = new Set<string>();
+
+export function setActiveScanImageUris(uris: string[]): void {
+  activeScanImageUris = new Set(uris);
+}
+
+export function isActiveScanImage(uri: string): boolean {
+  return activeScanImageUris.has(uri);
+}
+
 /** True when the path is already inside the permanent scan-images folder. */
 export function isPersistedScanImage(uri: string): boolean {
   return Boolean(SCAN_IMAGE_DIR && uri.startsWith(SCAN_IMAGE_DIR));

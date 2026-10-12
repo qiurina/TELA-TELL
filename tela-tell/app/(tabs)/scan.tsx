@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -32,6 +32,7 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
 import { saveCapturedScan } from '@/features/scan/lib/save-captured-scan';
+import { setActiveScanImageUris } from '@/features/scan/lib/scan-image-storage';
 import { checkCapture, judgeCapture } from '@/features/scan/lib/ml/measure-sharpness';
 import type { SnapshotMeasurement } from '@/features/scan/lib/preview-snapshot';
 import { sharpestIndex } from '@/features/scan/lib/ml/sharpness';
@@ -87,6 +88,11 @@ export default function ScanScreen() {
   const { captureFromCamera, captureFromGallery } = useFabricCapture();
   const hasPreview = Boolean(previewUri);
   const busy = isAnalyzing || isCapturing;
+
+  useEffect(() => {
+    setActiveScanImageUris([...burstUris, ...(previewUri ? [previewUri] : []), ...(blurPrompt?.uris ?? [])]);
+    return () => setActiveScanImageUris([]);
+  }, [burstUris, previewUri, blurPrompt]);
 
   useFocusEffect(
     useCallback(() => {

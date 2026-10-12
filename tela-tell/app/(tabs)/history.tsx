@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
-import { faintCardShadow } from '@/constants/shadows';
 import type { RecentScanPreview } from '@/data/scans/mock-data';
 import {
   deleteScan,
@@ -45,6 +44,8 @@ const SEARCH_DEBOUNCE_MS = 300;
 const EMPTY_STATS: ScanStats = { total: 0, mislabeled: 0, synthetic: 0 };
 const ALERT_RED = '#dc2626';
 const SYNTHETIC_AMBER = '#b45309';
+const SYNTHETIC_TINT = '#FFFBEB';
+const ALERT_TINT = '#FEF2F2';
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -213,20 +214,32 @@ export default function HistoryScreen() {
   const listHeader = (
       <View>
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, faintCardShadow()]}>
-            <ScanLine size={18} color={BrandColors.primary} strokeWidth={2} />
-            <Text style={[styles.statValue, styles.statValuePrimary]}>{stats.total}</Text>
-            <Text style={styles.statLabel}>TOTAL SCANS</Text>
+          <View style={[styles.statTile, { backgroundColor: BrandColors.lavenderCard }]}>
+            <View style={styles.statTop}>
+              <ScanLine size={15} color={BrandColors.primaryDark} strokeWidth={2.25} />
+              <Text style={[styles.statValue, { color: BrandColors.primaryDark }]}>{stats.total}</Text>
+            </View>
+            <Text style={styles.statLabel} numberOfLines={1}>
+              Scans
+            </Text>
           </View>
-          <View style={[styles.statCard, faintCardShadow()]}>
-            <ShieldAlert size={18} color={SYNTHETIC_AMBER} strokeWidth={2} />
-            <Text style={[styles.statValue, styles.statValueSynthetic]}>{stats.synthetic}</Text>
-            <Text style={styles.statLabel}>SYNTHETIC</Text>
+          <View style={[styles.statTile, { backgroundColor: SYNTHETIC_TINT }]}>
+            <View style={styles.statTop}>
+              <ShieldAlert size={15} color={SYNTHETIC_AMBER} strokeWidth={2.25} />
+              <Text style={[styles.statValue, { color: SYNTHETIC_AMBER }]}>{stats.synthetic}</Text>
+            </View>
+            <Text style={styles.statLabel} numberOfLines={1}>
+              Synthetic
+            </Text>
           </View>
-          <View style={[styles.statCard, faintCardShadow()]}>
-            <TriangleAlert size={18} color={ALERT_RED} strokeWidth={2} />
-            <Text style={[styles.statValue, styles.statValueAlert]}>{stats.mislabeled}</Text>
-            <Text style={styles.statLabel}>LABEL MAY NOT MATCH</Text>
+          <View style={[styles.statTile, { backgroundColor: ALERT_TINT }]}>
+            <View style={styles.statTop}>
+              <TriangleAlert size={15} color={ALERT_RED} strokeWidth={2.25} />
+              <Text style={[styles.statValue, { color: ALERT_RED }]}>{stats.mislabeled}</Text>
+            </View>
+            <Text style={styles.statLabel} numberOfLines={1}>
+              Mismatch
+            </Text>
           </View>
         </View>
 
@@ -237,7 +250,7 @@ export default function HistoryScreen() {
           <TextInput
             value={searchInput}
             onChangeText={handleSearchChange}
-            placeholder="Search fabric or seller"
+            placeholder="Search a fiber"
             placeholderTextColor={BrandColors.textMuted}
             style={styles.searchInput}
             returnKeyType="search"
@@ -480,37 +493,28 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 18,
   },
-  statCard: {
+  statTile: {
     flex: 1,
     alignItems: 'center',
     gap: 2,
-    backgroundColor: BrandColors.white,
     borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+  },
+  statTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   statValue: {
     fontFamily: Fonts.bold,
-    fontSize: 22,
-    lineHeight: 26,
-  },
-  statValuePrimary: {
-    color: BrandColors.primary,
-  },
-  statValueAlert: {
-    color: ALERT_RED,
-  },
-  statValueSynthetic: {
-    color: SYNTHETIC_AMBER,
+    fontSize: 20,
+    lineHeight: 24,
   },
   statLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 9,
-    letterSpacing: 0.6,
+    fontFamily: Fonts.medium,
+    fontSize: 12,
     color: BrandColors.textMuted,
-    textAlign: 'center',
   },
   sectionLabel: {
     fontFamily: Fonts.semiBold,

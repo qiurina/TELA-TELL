@@ -18,6 +18,8 @@ import {
   getRecentScans,
   getScanById,
   getScansPage,
+  getDeletedScanCount,
+  getScanPhotoUris,
   getScanStats,
   LEGACY_SUSTAINABILITY_PLACEHOLDER,
   restoreScans,
@@ -303,6 +305,18 @@ describe('favorites, trash and stats', () => {
     expect(await getScanStats()).toEqual({ total: 3, mislabeled: 2, synthetic: 0 });
   });
 
+  it('counts scans in Recently deleted, dropping ones past the retention period', async () => {
+    insertScan({ id: 'live', createdAt: minutesAfterBase(0) });
+    insertScan({ id: 'trashed', createdAt: minutesAfterBase(1), deletedAt: new Date().toISOString() });
+    insertScan({
+      id: 'expired',
+      createdAt: minutesAfterBase(2),
+      deletedAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    expect(await getDeletedScanCount()).toBe(1);
+  });
+
   it('returns zeros for stats on an empty table', async () => {
     expect(await getScanStats()).toEqual({ total: 0, mislabeled: 0, synthetic: 0 });
   });
@@ -444,6 +458,18 @@ describe('unsure scans and capture details', () => {
     expect(kindOf('natural')).toBe('not_synthetic');
     expect(kindOf('synthetic')).toBe('likely');
     expect(kindOf('unsure')).toBeNull();
+  });
+
+  it('lists photo paths of active scans and Recently deleted scans separately', async () => {
+    await saveScan(buildResult('kept', SURE_COMPOSITIONS), { imageUri: 'file:///docs/scan-images/kept.jpg' });
+    await saveScan(buildResult('trashed', SURE_COMPOSITIONS), { imageUri: 'file:///docs/scan-images/trashed.jpg' });
+    await saveScan(buildResult('no-photo', SURE_COMPOSITIONS), { imageUri: null });
+    await deleteScan('trashed');
+
+    expect(await getScanPhotoUris()).toEqual({
+      active: ['file:///docs/scan-images/kept.jpg'],
+      deleted: ['file:///docs/scan-images/trashed.jpg'],
+    });
   });
 
   it('tells the History summary why a scan is unsure, and nothing for a clear one', async () => {

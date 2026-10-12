@@ -219,6 +219,14 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="data"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: { backgroundColor: BrandColors.white },
+                }}
+              />
+              <Stack.Screen
                 name="why-synthetics-shed"
                 options={{
                   headerShown: false,

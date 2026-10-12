@@ -340,6 +340,36 @@ export async function getDeletedScansPage(
   return queryScanPage(DELETED_SCAN_FILTER, DELETED_SCAN_LIST_ORDER, query, retentionDays);
 }
 
+/** Saved photo paths of active scans and of scans in Recently deleted, for the storage breakdown. */
+export async function getScanPhotoUris(): Promise<{ active: string[]; deleted: string[] }> {
+  if (!isDatabaseAvailable()) {
+    return { active: [], deleted: [] };
+  }
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ imageUri: string; isDeleted: number }>(
+    `SELECT imageUri, CASE WHEN ${DELETED_SCAN_FILTER} THEN 1 ELSE 0 END AS isDeleted
+     FROM tblScan
+     WHERE imageUri IS NOT NULL AND imageUri != ''`,
+  );
+  return {
+    active: rows.filter((row) => row.isDeleted === 0).map((row) => row.imageUri),
+    deleted: rows.filter((row) => row.isDeleted === 1).map((row) => row.imageUri),
+  };
+}
+
+/** How many scans are in Recently deleted, after removing ones past the retention period. */
+export async function getDeletedScanCount(retentionDays = 30): Promise<number> {
+  if (!isDatabaseAvailable()) {
+    return 0;
+  }
+  await purgeExpiredDeletedScans(retentionDays);
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM tblScan WHERE ${DELETED_SCAN_FILTER}`,
+  );
+  return row?.n ?? 0;
+}
+
 /**
  * Totals for the History header. Total and mislabeled are counted in SQL; the synthetic count needs
  * each scan's fiber scores, so it loads only those and uses the same rule as the History pill.

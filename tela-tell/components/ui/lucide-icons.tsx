@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
 export type IconProps = {
   size?: number;
@@ -319,6 +319,18 @@ export const Bookmark: FC<IconProps> = (props) => {
         strokeLinejoin="round"
         fill={fill}
       />
+    </Svg>
+  );
+};
+
+export const Database: FC<IconProps> = (props) => {
+  const { color, strokeWidth } = { ...defaults, ...props };
+  const stroke = { stroke: color, strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
+  return (
+    <Svg {...iconProps(props)}>
+      <Ellipse cx="12" cy="5" rx="9" ry="3" {...stroke} />
+      <Path d="M3 5V19A9 3 0 0 0 21 19V5" {...stroke} />
+      <Path d="M3 12A9 3 0 0 0 21 12" {...stroke} />
     </Svg>
   );
 };
