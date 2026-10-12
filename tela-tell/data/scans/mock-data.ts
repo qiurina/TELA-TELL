@@ -87,8 +87,8 @@ export type SharpnessCheckStatus = 'passed' | 'overridden' | 'unchecked';
  */
 export type ScanCaptureMeta = {
   captureType: CaptureType;
-  /** The person's own answer to "using a clip-on macro lens?". The app cannot detect a lens. */
-  clipOnLens: boolean;
+  /** Legacy self-reported lens answer. Absent when the scan did not ask about a lens. */
+  clipOnLens?: boolean;
   /** Which bundled model produced the scores (see MODEL_VERSION in ml/constants.ts). */
   modelVersion: string;
   /** How many photos were classified and averaged (1 for single shots, up to 3 for a live burst). */

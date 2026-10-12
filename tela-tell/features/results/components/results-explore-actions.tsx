@@ -78,7 +78,7 @@ export function ResultsExploreActions({
             <ExploreCard
               icon={Sparkles}
               label="Insights"
-              subtitle="Colors, fit & allergies"
+              subtitle="Fit & allergies"
               onPress={onPersonalizedInsights}
             />
           </View>

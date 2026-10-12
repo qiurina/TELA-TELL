@@ -10,7 +10,8 @@ import type { ClassificationResult } from '@/features/scan/lib/ml/model';
 /** What the scan screen knows about the capture before the model runs. */
 export type CaptureInput = {
   captureType: CaptureType;
-  clipOnLens: boolean;
+  /** Optional legacy answer; omitted by the current scan screen. */
+  clipOnLens?: boolean;
   /** Sharpest reading of the capture, null if it could not be measured. */
   sharpness: number | null;
   /** One reading per captured photo, in capture order. */

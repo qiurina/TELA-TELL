@@ -22,6 +22,12 @@ beforeEach(() => {
   (deleteScanImages as jest.Mock).mockResolvedValue(undefined);
 });
 
+it('saves a current scan without inventing an unasked garment condition', async () => {
+  await saveCapturedScan(result, preview);
+  expect(saveScan).toHaveBeenCalledWith(result, { imageUri: permanent, garmentCondition: undefined });
+  expect(result).not.toHaveProperty('garmentCondition');
+});
+
 it('does not create a scan row when the permanent photo copy fails; the same preview can be retried', async () => {
   (persistScanImage as jest.Mock).mockRejectedValueOnce(new Error('Could not save the photo'));
   await expect(saveCapturedScan(result, preview, 'Good')).rejects.toThrow('Could not save the photo');

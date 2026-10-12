@@ -3,7 +3,7 @@ import { UserPreferencesPanel } from '@/features/profile/components/user-prefere
 
 type PreferenceSectionScreenProps = {
   title: string;
-  scope: 'skin-tone' | 'allergies' | 'preferred' | 'weather' | 'occasion';
+  scope: 'allergies' | 'preferred' | 'weather' | 'occasion';
 };
 
 export function PreferenceSectionScreen({ title, scope }: PreferenceSectionScreenProps) {

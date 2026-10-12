@@ -14,7 +14,6 @@ import {
 import { Calendar } from 'lucide-react-native';
 import { DRESSING_CONTEXT_ICONS } from '@/features/profile/dressing-context-icons';
 import { AllergyAlertCard } from '@/features/results/components/allergy-alert-card';
-import { SkinToneColorsSection } from '@/features/recommendations/components/skin-tone-colors-section';
 import {
   getInsightsSetupItems,
   getPreferenceMatch,
@@ -31,7 +30,6 @@ import {
   type DressingContextFitStatus,
 } from '@/data/preferences/dressing-context-fit';
 import { WEATHER_CONTEXT_OPTIONS } from '@/data/preferences/occasion-weather';
-import { getSkinToneColorGuidance } from '@/data/preferences/skin-tone-colors';
 import type { FabricComposition } from '@/data/scans/mock-data';
 import {
   getUserPreferencesSnapshot,
@@ -225,13 +223,6 @@ export function PersonalizedInsightsContent({
   );
   const compositions = detectedCompositions ?? [];
 
-  const skinToneGuidance = getSkinToneColorGuidance(
-    preferences.skinTone,
-    dominantFabric,
-    compositions,
-    preferences.skinUndertone,
-    preferences.colorSeason,
-  );
   const allergyAlert = getAllergyAlert(
     preferences.sensitiveFabrics,
     dominantFabric,
@@ -250,7 +241,6 @@ export function PersonalizedInsightsContent({
   const setupItems = getInsightsSetupItems(preferences);
   const hasDressingContexts = (preferences.dressingContexts ?? []).length > 0;
   const hasSensitivities = preferences.sensitiveFabrics.length > 0;
-  const showColor = Boolean(skinToneGuidance);
   const showSensitivities = hasSensitivities && Boolean(allergyAlert);
   const showFit = hasDressingContexts && dressingFits.length > 0;
   const showPreference = preferenceMatch.hasPreferredList;
@@ -258,12 +248,6 @@ export function PersonalizedInsightsContent({
   return (
     <View style={styles.container}>
       <SetupChecklist items={setupItems} />
-
-      {showColor ? (
-        <SectionBlock title="COLOR">
-          <SkinToneColorsSection guidance={skinToneGuidance!} />
-        </SectionBlock>
-      ) : null}
 
       {showSensitivities ? (
         <SectionBlock title="SENSITIVITIES">

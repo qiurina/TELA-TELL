@@ -53,7 +53,6 @@ jest.mock('@/features/profile/lib/storage-usage', () => ({
   ...jest.requireActual('@/features/profile/lib/storage-usage'),
   clearTemporaryFiles: jest.fn(), getFilesSize: jest.fn(), getScanPhotoStorage: jest.fn(),
 }));
-jest.mock('@/features/scan/lib/garment-condition', () => ({ clearLastGarmentCondition: jest.fn() }));
 jest.mock('@/features/scan/lib/last-seller-label', () => ({ clearLastSellerLabel: jest.fn() }));
 
 const PREFERENCES: UserPreferences = {

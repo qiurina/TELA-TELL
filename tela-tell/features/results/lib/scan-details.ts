@@ -81,8 +81,8 @@ function lightingTechnicalRows(lighting: ScanCaptureMeta['lighting']): DetailRow
 
 /**
  * Turns a scan's saved capture details into rows for the "Scan details" card. Reads only what was
- * saved; nothing is computed or inferred, and fields an older scan lacks are shown as "Not
- * recorded" instead of being guessed.
+ * saved; nothing is computed or inferred. Missing measurements show "Not recorded"; the legacy
+ * lens-answer row is omitted when no answer was saved.
  */
 export function describeScanDetails(capture: ScanCaptureMeta | null | undefined): ScanDetails {
   if (!capture) {
@@ -106,7 +106,9 @@ export function describeScanDetails(capture: ScanCaptureMeta | null | undefined)
     summary: captureTypeLabel(capture.captureType),
     rows: [
       { label: 'Capture', value: captureTypeLabel(capture.captureType) },
-      { label: 'Clip-on macro lens', value: capture.clipOnLens ? 'Using (your answer)' : 'Not using (your answer)' },
+      ...(typeof capture.clipOnLens === 'boolean'
+        ? [{ label: 'Clip-on macro lens', value: capture.clipOnLens ? 'Using (your answer)' : 'Not using (your answer)' }]
+        : []),
       { label: 'Photos analyzed', value: String(capture.burstCount) },
       { label: 'Blur check', value: BLUR_CHECK_LABELS[capture.sharpnessCheck] ?? NOT_RECORDED },
       { label: 'Lighting', value: lightingSummary(capture.lighting) },

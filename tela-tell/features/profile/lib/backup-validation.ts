@@ -47,7 +47,8 @@ function optionalText(value: unknown, field: string): void {
 function validateCapture(value: unknown): ScanCaptureMeta {
   requireValid(record(value), 'capture');
   requireValid(['live_camera', 'system_camera', 'gallery'].includes(value.captureType as string), 'capture type');
-  requireValid(typeof value.clipOnLens === 'boolean' && typeof value.modelVersion === 'string', 'capture settings');
+  requireValid(value.clipOnLens === undefined || typeof value.clipOnLens === 'boolean', 'lens setting');
+  requireValid(typeof value.modelVersion === 'string', 'capture settings');
   requireValid(Number.isInteger(value.burstCount) && numberInRange(value.burstCount, 1), 'burst count');
   requireValid(numberInRange(value.inferenceMs) && numberInRange(value.totalMs), 'capture timing');
   requireValid(value.sharpness === null || numberInRange(value.sharpness), 'sharpness');

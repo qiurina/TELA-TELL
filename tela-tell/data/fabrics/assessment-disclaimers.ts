@@ -27,19 +27,6 @@ export const LABEL_CHECK_SHEET_SECTIONS: InfoSection[] = [
   },
 ];
 
-export const COMFORT_SHEET_TITLE = 'Comfort estimate';
-
-export const COMFORT_SHEET_SECTIONS: InfoSection[] = [
-  {
-    heading: 'What it is',
-    body: 'A general estimate from the predicted fibers (breathability, moisture, heat, and feel), based on published research.',
-  },
-  {
-    heading: "What it isn't",
-    body: 'A skin or medical assessment. Weave or knit, fit, dyes, and finishes also change how a garment feels.',
-  },
-];
-
 export const COMPOSITION_SHEET_TITLE = 'About these percentages';
 
 export const COMPOSITION_SHEET_SECTIONS: InfoSection[] = [

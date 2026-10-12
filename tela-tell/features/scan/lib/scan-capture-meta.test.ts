@@ -4,6 +4,16 @@ import { buildCaptureMeta } from '@/features/scan/lib/scan-capture-meta';
 describe('buildCaptureMeta', () => {
   const run = { burstCount: 3, inferenceMs: 120, totalMs: 940 };
 
+  it('does not invent a lens answer when the screen no longer asks for one', () => {
+    const meta = buildCaptureMeta(
+      { captureType: 'gallery', sharpness: 50, sharpnessCheck: 'passed' },
+      run,
+    );
+    expect(JSON.parse(JSON.stringify(meta))).not.toHaveProperty('clipOnLens');
+    expect(meta.burstCount).toBe(3);
+    expect(meta.sharpness).toBe(50);
+  });
+
   it('combines the capture facts, the model version and the run measurements', () => {
     expect(
       buildCaptureMeta(

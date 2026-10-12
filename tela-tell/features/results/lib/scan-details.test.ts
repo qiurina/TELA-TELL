@@ -46,6 +46,14 @@ describe('isCaptureType', () => {
 });
 
 describe('describeScanDetails', () => {
+  it('omits the lens row when no answer was recorded, while keeping capture quality details', () => {
+    const { clipOnLens: _omitted, ...capture } = CAPTURE;
+    const details = describeScanDetails(capture);
+    expect(details.rows.some((row) => row.label === 'Clip-on macro lens')).toBe(false);
+    expect(details.rows.find((row) => row.label === 'Photos analyzed')?.value).toBe('3');
+    expect(details.rows.find((row) => row.label === 'Blur check')?.value).toBe('Passed');
+    expect(details.technical.find((row) => row.label === 'Model version')?.value).toBe(CAPTURE.modelVersion);
+  });
   it('lists the saved capture details and keeps measurements under technical', () => {
     const details = describeScanDetails(CAPTURE);
     expect(details.recorded).toBe(true);

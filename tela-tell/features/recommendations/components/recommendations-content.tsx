@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { InfoSheet } from '@/components/ui/info-sheet';
 import { InfoButton } from '@/components/ui/info-button';
 import { BasisSheet } from '@/features/recommendations/components/basis-sheet';
-import { HealthSafetyScores } from '@/features/recommendations/components/health-safety-scores';
 import { SyntheticMicroplasticGuide } from '@/features/recommendations/components/synthetic-microplastic-guide';
 import {
   Heart,
@@ -15,7 +14,6 @@ import {
 import { BrandColors } from '@/constants/brand';
 import { faintCardShadow } from '@/constants/shadows';
 import { getEcoGuidance, getEcoAlternativeText } from '@/data/fabrics/eco-alternatives';
-import { getHealthSafetyMetrics } from '@/data/fabrics/health-safety-scores';
 import { getFiberInformation } from '@/data/fabrics/shedding-why';
 import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 import { assessScanReliability } from '@/data/scans/scan-confidence';
@@ -211,14 +209,11 @@ export function RecommendationsContent({
   // Not shown for an Unsure scan, which names no reliable fiber.
   const fiberInfo =
     healthRisk || !assessScanReliability(compositions).reliable ? null : getFiberInformation(dominantFabric);
-  const healthMetrics = getHealthSafetyMetrics(dominantFabric, compositions);
 
   return (
     <View style={styles.container}>
       {healthRisk ? <SyntheticMicroplasticGuide risk={healthRisk} /> : null}
       {fiberInfo ? <FiberInformationCard info={fiberInfo} /> : null}
-
-      <HealthSafetyScores metrics={healthMetrics} />
 
       <EcoAlternativesSection
         alternatives={ecoGuidance.ecoAlternatives}

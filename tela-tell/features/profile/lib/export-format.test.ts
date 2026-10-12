@@ -7,6 +7,7 @@ import {
   type ExportBody,
 } from '@/features/profile/lib/export-format';
 import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
+import { buildCaptureMeta } from '@/features/scan/lib/scan-capture-meta';
 
 function scan(id = 's1') {
   const compositions = [{ material: 'Cotton', percentage: 90 }];
@@ -39,6 +40,15 @@ async function write(body: ExportBody, ids: string[], photos: Record<string, str
 }
 
 describe('writeExportJson', () => {
+  it('round-trips retained skin and color preferences through the backup format', async () => {
+    const preferences: ExportBody['preferences'] = {
+      skinTone: 'Medium', skinUndertone: 'Neutral', colorSeason: 'Bright Spring',
+      sensitiveFabrics: ['Wool'], preferredFabrics: ['Linen'], dressingContexts: ['sunny'],
+    };
+    const { text } = await write({ ...BODY, scans: [], favoriteScanIds: [], preferences }, [], {});
+    expect(parseExportPayload(text).preferences).toEqual(preferences);
+  });
+
   it('writes one valid JSON document with the data and each photo under its scan id', async () => {
     const { text, photosWritten } = await write(BODY, ['scan_a', 'scan_b'], {
       scan_a: 'QUJDREVGRw==',
@@ -87,6 +97,34 @@ describe('writeExportJson', () => {
 });
 
 describe('parseExportPayload', () => {
+  it.each([undefined, false, true])('round-trips new and legacy capture settings: lens=%s', async (clipOnLens) => {
+    const capture = buildCaptureMeta(
+      { captureType: 'gallery', clipOnLens, sharpness: 50, sharpnessCheck: 'passed' },
+      { burstCount: 1, inferenceMs: 40, totalMs: 300 },
+    );
+    const garmentCondition = clipOnLens === undefined ? undefined : 'Worn';
+    const { text } = await write({
+      ...BODY, scans: [{ ...scan(), capture, garmentCondition }], favoriteScanIds: [],
+    }, [], {});
+    const restored = parseExportPayload(text).scans[0];
+    expect(restored.capture).toEqual(capture);
+    expect(restored.garmentCondition).toBe(garmentCondition);
+    if (clipOnLens === undefined) {
+      expect(restored.capture).not.toHaveProperty('clipOnLens');
+    } else {
+      expect(restored.capture?.clipOnLens).toBe(clipOnLens);
+    }
+  });
+
+  it.each([null, 'true', 1])('rejects malformed recorded lens answers: %s', (clipOnLens) => {
+    const capture = buildCaptureMeta(
+      { captureType: 'gallery', sharpness: 50, sharpnessCheck: 'passed' },
+      { burstCount: 1, inferenceMs: 40, totalMs: 300 },
+    );
+    expect(() => parseExportPayload(JSON.stringify({ scans: [{ ...scan(), capture: { ...capture, clipOnLens } }] })))
+      .toThrow(ImportInvalidFileError);
+  });
+
   it('reads a file exported before photos were included, with no photos', () => {
     const payload = parseExportPayload(
       JSON.stringify({ exportedAt: '2026-10-10T12:00:00.000Z', scans: [scan()], preferences: {} }),

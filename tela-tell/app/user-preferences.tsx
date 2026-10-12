@@ -16,7 +16,6 @@ import { X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { primaryButtonShadow } from '@/constants/shadows';
-import { clearLastGarmentCondition } from '@/features/scan/lib/garment-condition';
 import {
   clearUserPreferences,
   persistUserPreferences,
@@ -46,7 +45,6 @@ export default function UserPreferencesScreen() {
 
   const handleClear = () => {
     clearUserPreferences();
-    clearLastGarmentCondition();
     void persistUserPreferences();
     setFormKey((current) => current + 1);
   };

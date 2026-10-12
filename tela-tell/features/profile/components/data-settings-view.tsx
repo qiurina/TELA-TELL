@@ -38,7 +38,6 @@ import {
   importUserPreferences,
   type UserPreferences,
 } from '@/features/profile/lib/user-preferences';
-import { clearLastGarmentCondition } from '@/features/scan/lib/garment-condition';
 import { clearLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
 type DataSummary = {
@@ -303,7 +302,6 @@ export function DataSettingsView() {
           dressingContexts: [],
         });
         clearLastSellerLabel();
-        clearLastGarmentCondition();
         await refreshSummary();
         showAlert('Data reset', 'All scans and preferences were removed from this device.', 'success');
       } catch {
@@ -512,7 +510,7 @@ export function DataSettingsView() {
         title={importPreferencesError ? 'Could not restore preferences' : 'Replace your preferences?'}
         message={
           pendingImport
-            ? (importPreferencesError ?? `${importSummary(pendingImport.report)} This file also has saved preferences (skin tone, allergies, preferred fabrics, etc). Replace what's on this device with them?`)
+            ? (importPreferencesError ?? `${importSummary(pendingImport.report)} This file also has saved preferences (sensitivities, preferred fabrics, weather, etc). Replace what's on this device with them?`)
             : ''
         }
         confirmLabel={isSavingImportedPreferences ? 'Saving...' : 'Replace'}

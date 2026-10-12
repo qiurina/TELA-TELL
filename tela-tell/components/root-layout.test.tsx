@@ -48,7 +48,6 @@ jest.mock('@/components/ui/alert-dialog', () => ({ AlertHost: () => null, showAl
 jest.mock('@/db/migrate', () => ({ migrateDatabase: jest.fn() }));
 jest.mock('@/features/profile/lib/user-preferences', () => ({ hydrateUserPreferences: jest.fn() }));
 jest.mock('@/features/onboarding/lib/intro-state', () => ({ loadIntroState: jest.fn(async () => undefined) }));
-jest.mock('@/features/scan/lib/clip-on-lens', () => ({ hydrateClipOnLens: jest.fn(async () => undefined) }));
 jest.mock('@/features/scan/lib/last-seller-label', () => ({ hydrateLastSellerLabel: jest.fn(async () => undefined) }));
 
 let renderer: TestRenderer;

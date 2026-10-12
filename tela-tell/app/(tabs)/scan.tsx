@@ -26,7 +26,6 @@ import { FabricPhotoPreview } from '@/features/results/components/fabric-photo-p
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { ScanLine } from '@/components/ui/lucide-icons';
 import { primaryButtonShadow } from '@/constants/shadows';
-import { DEFAULT_GARMENT_CONDITION, type GarmentCondition } from '@/data/scans/garment-condition';
 import type { CaptureType, SharpnessCheckStatus } from '@/data/scans/mock-data';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -38,13 +37,7 @@ import type { SnapshotMeasurement } from '@/features/scan/lib/preview-snapshot';
 import { sharpestIndex } from '@/features/scan/lib/ml/sharpness';
 import type { LightingAssessment } from '@/features/scan/lib/ml/lighting';
 import { LightingNoticeCard } from '@/features/scan/components/lighting-notice-card';
-import { getClipOnLens, setClipOnLens } from '@/features/scan/lib/clip-on-lens';
 import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
-import {
-  clearLastGarmentCondition,
-  getLastGarmentCondition,
-  setLastGarmentCondition,
-} from '@/features/scan/lib/garment-condition';
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
 import { createScanRecord } from '@/features/scan/lib/create-scan-record';
 
@@ -76,15 +69,11 @@ export default function ScanScreen() {
   const [burstUris, setBurstUris] = useState<string[]>([]);
   const [captureInfo, setCaptureInfo] = useState<CaptureInfo | null>(null);
   const [blurPrompt, setBlurPrompt] = useState<BlurPrompt | null>(null);
-  const [clipOnLens, setClipOnLensState] = useState<boolean>(() => getClipOnLens());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
   const [detailsExpanded, setDetailsExpanded] = useState(true);
   const [savedSellerLabel, setSavedSellerLabel] = useState<string | null>(null);
-  const [garmentCondition, setGarmentCondition] = useState<GarmentCondition>(
-    () => getLastGarmentCondition(),
-  );
   const { captureFromCamera, captureFromGallery } = useFabricCapture();
   const hasPreview = Boolean(previewUri);
   const busy = isAnalyzing || isCapturing;
@@ -96,15 +85,11 @@ export default function ScanScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // The saved answer may finish loading after this screen first rendered.
-      setClipOnLensState(getClipOnLens());
       if (consumeFreshScan()) {
         setPreviewUri(null);
         setBurstUris([]);
         setCaptureInfo(null);
         setBlurPrompt(null);
-        clearLastGarmentCondition();
-        setGarmentCondition(DEFAULT_GARMENT_CONDITION);
         setDetailsExpanded(true);
       }
       setGuideVisible(true);
@@ -187,11 +172,6 @@ export default function ScanScreen() {
     }
   };
 
-  const handleClipOnLensChange = (value: boolean) => {
-    setClipOnLensState(value);
-    setClipOnLens(value);
-  };
-
   const runAnalysis = (photoUri?: string | null, photoUris: string[] = photoUri ? [photoUri] : []) => {
     setIsAnalyzing(true);
 
@@ -203,18 +183,16 @@ export default function ScanScreen() {
           imageUris: photoUris,
           capture: {
             captureType: captureInfo?.captureType ?? 'gallery',
-            clipOnLens,
             sharpness: captureInfo?.sharpness ?? null,
             sharpnessPerPhoto: captureInfo?.sharpnessPerPhoto,
             lighting: captureInfo?.lighting,
             sharpnessCheck: captureInfo?.sharpnessCheck ?? 'unchecked',
           },
         });
-        result.garmentCondition = garmentCondition;
 
         step = 'save';
         if (!photoUri) throw new Error('No photo to save.');
-        await saveCapturedScan(result, photoUri, garmentCondition);
+        await saveCapturedScan(result, photoUri);
 
         // The stated label belongs to the garment just scanned; the next scan starts without one.
         clearLastSellerLabel();
@@ -300,8 +278,6 @@ export default function ScanScreen() {
       return;
     }
 
-    setLastGarmentCondition(garmentCondition);
-
     runAnalysis(previewUri, burstUris);
   };
 
@@ -314,13 +290,6 @@ export default function ScanScreen() {
     setBurstUris([]);
     setCaptureInfo(null);
     setDetailsExpanded(true);
-    clearLastGarmentCondition();
-    setGarmentCondition(DEFAULT_GARMENT_CONDITION);
-  };
-
-  const handleGarmentConditionChange = (condition: GarmentCondition) => {
-    setGarmentCondition(condition);
-    setLastGarmentCondition(condition);
   };
 
   const handleAddLabel = () => {
@@ -358,12 +327,8 @@ export default function ScanScreen() {
 
           <ScanDetailsPanel
             savedSellerLabel={savedSellerLabel}
-            garmentCondition={garmentCondition}
-            onGarmentConditionChange={handleGarmentConditionChange}
             onAddLabel={handleAddLabel}
             onOpenPreferences={handleOpenPreferences}
-            clipOnLens={clipOnLens}
-            onClipOnLensChange={handleClipOnLensChange}
             isAnalyzing={busy}
             expanded={detailsExpanded}
             onExpandedChange={setDetailsExpanded}

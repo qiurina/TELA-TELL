@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { OccasionWeatherGuide } from '@/features/profile/components/occasion-weather-guide';
-import { Check, CircleCheck, Plus, X } from '@/components/ui/lucide-icons';
+import { Check, Plus, X } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { SUPPORTED_FABRICS, type SupportedFabric } from '@/data/fabrics/fabrics';
 import { Fonts } from '@/constants/fonts';
@@ -18,146 +18,7 @@ import {
   toggleDressingContext,
   togglePreferredFabric,
   toggleSensitiveFabric,
-  COLOR_SEASON_GROUPS,
-  type ColorSeason,
-  type SkinTone,
-  type SkinUndertone,
-  type UserPreferences,
 } from '@/features/profile/lib/user-preferences';
-
-const SKIN_TONE_SWATCHES: Record<SkinTone, string> = {
-  Fair: '#F5D0B5',
-  Light: '#E8C4A0',
-  'Light-Medium': '#DDB88A',
-  Medium: '#C99B6E',
-  Tan: '#A67B4E',
-  'Deep Dark': '#4A3228',
-};
-
-const SKIN_TONE_OPTIONS: { value: SkinTone; label: string }[] = [
-  { value: 'Fair', label: 'Fair' },
-  { value: 'Light', label: 'Light' },
-  { value: 'Light-Medium', label: 'Light-Medium' },
-  { value: 'Medium', label: 'Medium' },
-  { value: 'Tan', label: 'Tan' },
-  { value: 'Deep Dark', label: 'Deep / Dark' },
-];
-
-const UNDERTONE_SWATCHES: Record<SkinUndertone, string> = {
-  Cool: '#C4B5D8',
-  Warm: '#E8A87C',
-  Neutral: '#D4B896',
-  Olive: '#9A8B5C',
-};
-
-const UNDERTONE_OPTIONS: { value: SkinUndertone; label: string }[] = [
-  { value: 'Cool', label: 'Cool' },
-  { value: 'Warm', label: 'Warm' },
-  { value: 'Neutral', label: 'Neutral' },
-  { value: 'Olive', label: 'Olive' },
-];
-
-const SEASON_SWATCHES: Record<ColorSeason, string> = {
-  'Light Spring': '#FAD7A0',
-  'True Spring': '#F7CA75',
-  'Bright Spring': '#F97F51',
-  'Light Summer': '#AED6F1',
-  'True Summer': '#85C1E9',
-  'Soft Summer': '#A9CCE3',
-  'Soft Autumn': '#C8A97E',
-  'True Autumn': '#BA6C35',
-  'Deep Autumn': '#784212',
-  'Deep Winter': '#1C2833',
-  'True Winter': '#2E4057',
-  'Bright Winter': '#8E44AD',
-};
-
-const SEASON_GROUP_COLORS: Record<string, string> = {
-  Spring: '#F5CBA7',
-  Summer: '#AED6F1',
-  Autumn: '#CA6F1E',
-  Winter: '#7D3C98',
-};
-
-function ColorSeasonPicker({
-  selected,
-  onSelect,
-  onClear,
-  disabled,
-}: {
-  selected: ColorSeason | null;
-  onSelect: (value: ColorSeason) => void;
-  onClear: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.seasonPickerHeader}>
-        <SectionHeader title="Color season (optional)" />
-        {selected ? (
-          <Pressable
-            onPress={onClear}
-            disabled={disabled}
-            accessibilityRole="button"
-            accessibilityLabel="Clear color season"
-            style={({ pressed }) => [styles.seasonClearBtn, pressed && styles.pressed]}>
-            <Text style={styles.seasonClearText}>Clear</Text>
-          </Pressable>
-        ) : null}
-      </View>
-      <Text style={styles.seasonHint}>
-        Know your 12-season? Pick it for more precise color suggestions.
-      </Text>
-      {COLOR_SEASON_GROUPS.map((group) => (
-        <View key={group.season} style={styles.seasonGroup}>
-          <Text style={styles.seasonGroupLabel}>
-            <Text style={[styles.seasonGroupDotInline, { color: SEASON_GROUP_COLORS[group.season] }]}>● </Text>
-            {group.season}
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalPickerContent}>
-            {group.sub.map((season) => {
-              const active = selected === season;
-              return (
-                <Pressable
-                  key={season}
-                  style={({ pressed }) => [
-                    styles.swatchCard,
-                    active && styles.swatchCardActive,
-                    pressed && styles.pressed,
-                    disabled && styles.disabled,
-                  ]}
-                  onPress={() => onSelect(season)}
-                  disabled={disabled}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={season}>
-                  <View
-                    style={[
-                      styles.swatchCircle,
-                      { backgroundColor: SEASON_SWATCHES[season] },
-                      active && styles.swatchCircleActive,
-                    ]}
-                  />
-                  <Text style={[styles.swatchLabel, active && styles.swatchLabelActive]} numberOfLines={2}>
-                    {season.replace(/ (Spring|Summer|Autumn|Winter)$/, '')}
-                  </Text>
-                  {active ? (
-                    <CircleCheck size={16} color={BrandColors.primary} strokeWidth={2.25} />
-                  ) : (
-                    <View style={styles.swatchCheckPlaceholder} />
-                  )}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      ))}
-    </View>
-  );
-}
 
 const ALLERGY_COLORS = {
   border: '#f87171',
@@ -181,68 +42,6 @@ function SectionHeader({ title }: { title: string }) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionLabel}>{title}</Text>
-    </View>
-  );
-}
-
-function HorizontalSwatchPicker<T extends string>({
-  title,
-  options,
-  swatches,
-  selected,
-  onSelect,
-  disabled,
-}: {
-  title: string;
-  options: { value: T; label: string }[];
-  swatches: Record<T, string>;
-  selected: T | null;
-  onSelect: (value: T) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <View style={styles.section}>
-      <SectionHeader title={title} />
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalPickerContent}>
-        {options.map((option) => {
-          const active = selected === option.value;
-
-          return (
-            <Pressable
-              key={option.value}
-              style={({ pressed }) => [
-                styles.swatchCard,
-                active && styles.swatchCardActive,
-                pressed && styles.pressed,
-                disabled && styles.disabled,
-              ]}
-              onPress={() => onSelect(option.value)}
-              disabled={disabled}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={option.label}>
-              <View
-                style={[
-                  styles.swatchCircle,
-                  { backgroundColor: swatches[option.value] },
-                  active && styles.swatchCircleActive,
-                ]}
-              />
-              <Text style={[styles.swatchLabel, active && styles.swatchLabelActive]} numberOfLines={2}>
-                {option.label}
-              </Text>
-              {active ? (
-                <CircleCheck size={16} color={BrandColors.primary} strokeWidth={2.25} />
-              ) : (
-                <View style={styles.swatchCheckPlaceholder} />
-              )}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
     </View>
   );
 }
@@ -359,7 +158,6 @@ type UserPreferencesPanelProps = {
   scope?:
     | 'full'
     | 'personalization'
-    | 'skin-tone'
     | 'allergies'
     | 'preferred'
     | 'weather'
@@ -411,17 +209,6 @@ export function UserPreferencesPanel({
       active = false;
     };
   }, []);
-
-  const commitPrefs = (next: UserPreferences) => {
-    hasEditedRef.current = true;
-    setUserPreferences(next);
-    void persistUserPreferences();
-    onChange?.();
-  };
-
-  const updatePref = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
-    commitPrefs({ ...prefs, [key]: value });
-  };
 
   const applyPrefsUpdate = (mutate: () => void) => {
     hasEditedRef.current = true;
@@ -477,7 +264,6 @@ export function UserPreferencesPanel({
 
   const fabricNames: SupportedFabric[] = [...SUPPORTED_FABRICS];
   const showPersonalization = scope === 'full' || scope === 'personalization';
-  const showSkinTone = showPersonalization || scope === 'skin-tone';
   const showAllergies = showPersonalization || scope === 'allergies';
   const showPreferred = showPersonalization || scope === 'preferred';
   const showWeather = showPersonalization || scope === 'weather';
@@ -497,39 +283,6 @@ export function UserPreferencesPanel({
         onConfirm={handleConfirmMove}
         onCancel={() => setPendingMove(null)}
       />
-      {showSkinTone ? (
-        <>
-          <HorizontalSwatchPicker
-            title="Skin tone"
-            options={SKIN_TONE_OPTIONS}
-            swatches={SKIN_TONE_SWATCHES}
-            selected={prefs.skinTone}
-            onSelect={(value) => updatePref('skinTone', value)}
-            disabled={disabled}
-          />
-
-          <HorizontalSwatchPicker
-            title="Skin undertone"
-            options={UNDERTONE_OPTIONS}
-            swatches={UNDERTONE_SWATCHES}
-            selected={prefs.skinUndertone}
-            onSelect={(value) => updatePref('skinUndertone', value)}
-            disabled={disabled}
-          />
-
-          <ColorSeasonPicker
-            selected={prefs.colorSeason}
-            onSelect={(value) => updatePref('colorSeason', value)}
-            onClear={() => updatePref('colorSeason', null)}
-            disabled={disabled}
-          />
-        </>
-      ) : null}
-
-      {showSkinTone && (showAllergies || showPreferred || showDressingGuide) ? (
-        <View style={styles.divider} />
-      ) : null}
-
       {showAllergies ? (
         <FabricToggleSection
           title="Fiber sensitivities"
@@ -626,51 +379,6 @@ const styles = StyleSheet.create({
     color: BrandColors.text,
     marginBottom: -4,
   },
-  horizontalPickerContent: {
-    gap: 10,
-    paddingRight: 4,
-  },
-  swatchCard: {
-    width: 88,
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: BrandColors.border,
-    backgroundColor: BrandColors.white,
-  },
-  swatchCardActive: {
-    borderColor: BrandColors.primary,
-    backgroundColor: BrandColors.lavenderCard,
-  },
-  swatchCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.8)',
-  },
-  swatchCircleActive: {
-    borderColor: BrandColors.primary,
-  },
-  swatchLabel: {
-    fontFamily: Fonts.medium,
-    fontSize: 11,
-    lineHeight: 14,
-    textAlign: 'center',
-    color: BrandColors.textMuted,
-    minHeight: 28,
-  },
-  swatchLabelActive: {
-    fontFamily: Fonts.semiBold,
-    color: BrandColors.primaryDark,
-  },
-  swatchCheckPlaceholder: {
-    width: 16,
-    height: 16,
-  },
   fabricPillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -724,39 +432,5 @@ const styles = StyleSheet.create({
     color: BrandColors.textMuted,
     textAlign: 'center',
     marginTop: 4,
-  },
-  seasonPickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  seasonClearBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: BrandColors.borderLight,
-  },
-  seasonClearText: {
-    fontFamily: Fonts.medium,
-    fontSize: 11,
-    color: BrandColors.primaryDark,
-  },
-  seasonHint: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-    lineHeight: 17,
-    marginTop: -14,
-  },
-  seasonGroup: {
-    gap: 8,
-  },
-  seasonGroupLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 12,
-    color: BrandColors.text,
-  },
-  seasonGroupDotInline: {
-    fontSize: 10,
   },
 });

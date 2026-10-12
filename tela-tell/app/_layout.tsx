@@ -29,7 +29,6 @@ import {
 } from '@/db/migration-report';
 import { loadIntroState } from '@/features/onboarding/lib/intro-state';
 import { hydrateUserPreferences } from '@/features/profile/lib/user-preferences';
-import { hydrateClipOnLens } from '@/features/scan/lib/clip-on-lens';
 import { hydrateLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
 SplashScreen.preventAutoHideAsync();
@@ -147,7 +146,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     void hydrateLastSellerLabel();
-    void hydrateClipOnLens();
     void loadIntroState();
   }, []);
 
@@ -169,14 +167,6 @@ export default function RootLayout() {
               <Stack.Screen
                 name="(tabs)"
                 options={{ headerShown: false, animation: 'fade', animationDuration: 280 }}
-              />
-              <Stack.Screen
-                name="skin-tone"
-                options={{
-                  headerShown: false,
-                  animation: 'slide_from_right',
-                  contentStyle: { backgroundColor: BrandColors.white },
-                }}
               />
               <Stack.Screen
                 name="fabric-allergies"

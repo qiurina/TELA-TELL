@@ -15,7 +15,7 @@ export type PreferenceMatchResult = {
 };
 
 export type InsightsSetupItem = {
-  key: 'skin-tone' | 'allergies' | 'preferred' | 'weather' | 'occasion';
+  key: 'allergies' | 'preferred' | 'weather' | 'occasion';
   label: string;
   href: Href;
 };
@@ -71,9 +71,6 @@ export function getInsightsSetupItems(preferences: UserPreferences): InsightsSet
   const occasionIds = new Set(OCCASION_CONTEXT_OPTIONS.map((item) => item.id));
   const contexts = preferences.dressingContexts ?? [];
 
-  if (!preferences.skinTone && !preferences.colorSeason) {
-    items.push({ key: 'skin-tone', label: 'Skin tone', href: '/skin-tone' as Href });
-  }
   if (preferences.sensitiveFabrics.length === 0) {
     items.push({ key: 'allergies', label: 'Sensitivities', href: '/fabric-allergies' as Href });
   }

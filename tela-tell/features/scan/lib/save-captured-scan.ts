@@ -8,7 +8,7 @@ import { deleteScanImages, persistScanImage } from './scan-image-storage';
 export async function saveCapturedScan(
   result: ScanResult,
   photoUri: string,
-  garmentCondition: GarmentCondition,
+  garmentCondition?: GarmentCondition,
 ): Promise<void> {
   const optimizedUri = await optimizeScanImage(photoUri);
   const storedImageUri = await persistScanImage(optimizedUri, result.id);

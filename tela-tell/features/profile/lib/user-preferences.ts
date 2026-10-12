@@ -2,6 +2,7 @@ import type { DressingContext } from '@/data/preferences/occasion-weather';
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
 import { getPreferences, savePreferences } from '@/db/preferences';
 
+// Retained for stored preferences and backups from versions with color personalization.
 export type SkinTone =
   | 'Fair'
   | 'Light'
@@ -187,7 +188,10 @@ export async function hydrateUserPreferences(options?: {
   await waitForPreferencesSave();
   const loaded = normalizePreferences(await getPreferences());
   if (options?.apply !== false) {
-    const localHasData = hasActiveUserPreferences();
+    // Hidden legacy values are still data and must survive an empty storage read.
+    const localHasData = Boolean(
+      hasActiveUserPreferences() || preferences.skinTone || preferences.skinUndertone || preferences.colorSeason,
+    );
     const loadedHasData = Boolean(
       loaded.skinTone ||
         loaded.skinUndertone ||
@@ -231,10 +235,7 @@ export async function importUserPreferences(next: UserPreferences): Promise<void
 
 export function hasActiveUserPreferences(): boolean {
   return Boolean(
-    preferences.skinTone ||
-      preferences.skinUndertone ||
-      preferences.colorSeason ||
-      preferences.sensitiveFabrics.length > 0 ||
+    preferences.sensitiveFabrics.length > 0 ||
       preferences.preferredFabrics.length > 0 ||
       (preferences.dressingContexts ?? []).length > 0,
   );
@@ -242,17 +243,6 @@ export function hasActiveUserPreferences(): boolean {
 
 export function getUserPreferencesSummary(): string | null {
   const parts: string[] = [];
-
-  if (preferences.colorSeason) {
-    parts.push(preferences.colorSeason);
-  } else {
-    if (preferences.skinTone) {
-      parts.push(preferences.skinTone === 'Deep Dark' ? 'Deep / Dark' : preferences.skinTone);
-    }
-    if (preferences.skinUndertone) {
-      parts.push(`${preferences.skinUndertone} undertone`);
-    }
-  }
 
   if (preferences.sensitiveFabrics.length > 0) {
     parts.push(`${preferences.sensitiveFabrics.length} sensitivities`);

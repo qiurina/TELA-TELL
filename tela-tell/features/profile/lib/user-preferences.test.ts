@@ -1,12 +1,16 @@
 /** @jest-environment node */
 import { getPreferences, savePreferences } from '@/db/preferences';
+import { getInsightsSetupItems } from '@/features/recommendations/lib/personalized-insights';
 import {
   clearUserPreferences,
+  getUserPreferencesSummary,
   getUserPreferencesSnapshot,
+  hasActiveUserPreferences,
   hydrateUserPreferences,
   importUserPreferences,
   persistUserPreferences,
   setUserPreferences,
+  togglePreferredFabric,
   type UserPreferences,
 } from './user-preferences';
 
@@ -60,4 +64,40 @@ it('waits for a pending regular save before replacing imported preferences', asy
   (getPreferences as jest.Mock).mockResolvedValue(imported);
   await hydrateUserPreferences();
   expect(getUserPreferencesSnapshot()).toEqual(imported);
+});
+
+const colorOnly: UserPreferences = {
+  skinTone: 'Medium', skinUndertone: 'Neutral', colorSeason: 'Bright Spring',
+  sensitiveFabrics: [], preferredFabrics: [], dressingContexts: [],
+};
+
+it('keeps legacy color preferences out of summaries, active status, and setup prompts', () => {
+  setUserPreferences(colorOnly);
+  expect(hasActiveUserPreferences()).toBe(false);
+  expect(getUserPreferencesSummary()).toBeNull();
+  expect(getInsightsSetupItems(colorOnly).map((item) => item.href)).toEqual([
+    '/fabric-allergies', '/preferred-fabrics', '/weather', '/occasion',
+  ]);
+
+  setUserPreferences({ ...current, colorSeason: 'Bright Spring' });
+  expect(hasActiveUserPreferences()).toBe(true);
+  expect(getUserPreferencesSummary()).toBe('1 sensitivities · 1 preferred fiber types · 1 dressing contexts');
+});
+
+it('loads and preserves legacy color values when saving an available preference', async () => {
+  (getPreferences as jest.Mock).mockResolvedValue(colorOnly);
+  await hydrateUserPreferences();
+  expect(getUserPreferencesSnapshot()).toEqual(colorOnly);
+  togglePreferredFabric('Linen');
+  await persistUserPreferences();
+  expect(savePreferences).toHaveBeenCalledWith({ ...colorOnly, preferredFabrics: ['Linen'] });
+});
+
+it('preserves local legacy-only preferences when storage temporarily returns no data', async () => {
+  clearUserPreferences();
+  const empty = getUserPreferencesSnapshot();
+  setUserPreferences(colorOnly);
+  (getPreferences as jest.Mock).mockResolvedValue(empty);
+  expect(await hydrateUserPreferences()).toEqual(colorOnly);
+  expect(getUserPreferencesSnapshot()).toEqual(colorOnly);
 });

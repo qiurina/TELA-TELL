@@ -24,7 +24,6 @@ import {
   getOccasionDisplay,
   getPreferredFabricsDisplay,
   getSensitiveFabricsDisplay,
-  getSkinToneDisplay,
   getWeatherDisplay,
 } from '@/features/profile/lib/profile-display';
 import {
@@ -39,7 +38,6 @@ import {
 } from '@/features/profile/lib/user-preferences';
 
 /** Root-stack routes (siblings of tabs) — tab bar stays under the push, no mid-anim hide. */
-const PROFILE_SKIN_TONE_HREF = '/skin-tone' as Href;
 const PROFILE_ALLERGIES_HREF = '/fabric-allergies' as Href;
 const PROFILE_PREFERRED_HREF = '/preferred-fabrics' as Href;
 const PROFILE_WEATHER_HREF = '/weather' as Href;
@@ -78,7 +76,6 @@ export function ProfileView() {
     router.push(href);
   };
 
-  const skinTone = getSkinToneDisplay(prefs);
   const allergies = getSensitiveFabricsDisplay(prefs);
   const preferred = getPreferredFabricsDisplay(prefs);
   const weather = getWeatherDisplay(prefs);
@@ -89,18 +86,6 @@ export function ProfileView() {
       <View style={styles.section}>
         <ProfileSectionLabel title="My preferences" />
         <ProfileGroupedCard>
-          <ProfilePreferenceRow
-            title="Skin tone"
-            value={skinTone.label}
-            icon={
-              skinTone.swatch ? (
-                <View style={[styles.toneDot, { backgroundColor: skinTone.swatch }]} />
-              ) : (
-                <View style={styles.toneDotEmpty} />
-              )
-            }
-            onPress={() => openNested(PROFILE_SKIN_TONE_HREF)}
-          />
           <ProfilePreferenceRow
             title="Fabric allergies"
             value={allergies}
@@ -182,20 +167,5 @@ export function ProfileView() {
 const styles = StyleSheet.create({
   section: {
     marginTop: 8,
-  },
-  toneDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.9)',
-  },
-  toneDotEmpty: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    borderColor: BrandColors.border,
-    backgroundColor: BrandColors.inputBackground,
   },
 });

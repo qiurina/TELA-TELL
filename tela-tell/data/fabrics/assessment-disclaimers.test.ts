@@ -1,5 +1,4 @@
 import {
-  COMFORT_SHEET_SECTIONS,
   COMPOSITION_SHEET_SECTIONS,
   FIBER_GUIDANCE_CAPTION,
   LABEL_CHECK_SHEET_SECTIONS,
@@ -11,7 +10,6 @@ import { HEALTH_RISK_DISCLAIMER } from '@/data/fabrics/synthetic-health-risk';
 const ALL_SECTIONS: Record<string, InfoSection[]> = {
   shedding: HEALTH_RISK_DISCLAIMER,
   labelCheck: LABEL_CHECK_SHEET_SECTIONS,
-  comfort: COMFORT_SHEET_SECTIONS,
   composition: COMPOSITION_SHEET_SECTIONS,
 };
 

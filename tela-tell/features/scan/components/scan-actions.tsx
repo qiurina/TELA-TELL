@@ -1,27 +1,17 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  GarmentConditionIcon,
-  GarmentConditionSheet,
-  getGarmentConditionLabel,
-} from '@/features/scan/components/garment-condition-picker';
 import {
   Camera,
   ChevronRight,
   ImagePlus,
   Plus,
-  Search,
   Settings,
   Tag,
   X,
 } from '@/components/ui/lucide-icons';
-import {
-  DEFAULT_GARMENT_CONDITION,
-  type GarmentCondition,
-} from '@/data/scans/garment-condition';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow, primaryButtonShadow } from '@/constants/shadows';
@@ -103,47 +93,13 @@ export function FloatingCaptureBar({
 
 type ScanDetailsPanelProps = {
   savedSellerLabel?: string | null;
-  garmentCondition: GarmentCondition;
-  onGarmentConditionChange: (condition: GarmentCondition) => void;
   onAddLabel: () => void;
   onOpenPreferences?: () => void;
-  /** Whether the person is using a clip-on macro lens. The row is hidden unless a handler is given. */
-  clipOnLens?: boolean;
-  onClipOnLensChange?: (value: boolean) => void;
   isAnalyzing?: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   variant?: 'chip' | 'sheet';
 };
-
-function ClipOnLensRow({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <View style={[styles.detailRow, disabled && styles.disabled]}>
-      <View style={styles.detailRowIcon}>
-        <Search size={16} color={BrandColors.primary} strokeWidth={2.25} />
-      </View>
-      <Text style={styles.detailRowLabel}>Clip-on macro lens</Text>
-      <Text style={[styles.detailRowValue, styles.detailRowValueEmpty]} numberOfLines={1}>
-        {value ? 'Using' : 'Not using'}
-      </Text>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        disabled={disabled}
-        trackColor={{ false: BrandColors.border, true: BrandColors.primary }}
-        accessibilityLabel="Using a clip-on macro lens"
-      />
-    </View>
-  );
-}
 
 function DetailActionRow({
   icon,
@@ -194,25 +150,16 @@ function DetailActionRow({
 
 export function ScanDetailsPanel({
   savedSellerLabel,
-  garmentCondition,
-  onGarmentConditionChange,
   onAddLabel,
   onOpenPreferences,
-  clipOnLens = false,
-  onClipOnLensChange,
   isAnalyzing,
   expanded,
   onExpandedChange,
   variant = 'chip',
 }: ScanDetailsPanelProps) {
-  const lensRow = onClipOnLensChange ? (
-    <ClipOnLensRow value={clipOnLens} onChange={onClipOnLensChange} disabled={isAnalyzing} />
-  ) : null;
-  const [showConditionSheet, setShowConditionSheet] = useState(false);
   const [hasPreferences, setHasPreferences] = useState(() => hasActiveUserPreferences());
   const trimmedLabel = savedSellerLabel?.trim() ?? '';
   const hasSellerLabel = trimmedLabel.length > 0;
-  const hasCustomCondition = garmentCondition !== DEFAULT_GARMENT_CONDITION;
 
   useFocusEffect(
     useCallback(() => {
@@ -221,9 +168,6 @@ export function ScanDetailsPanel({
   );
 
   const summaryParts: string[] = [];
-  if (hasCustomCondition) {
-    summaryParts.push(getGarmentConditionLabel(garmentCondition));
-  }
   if (hasSellerLabel) {
     summaryParts.push(trimmedLabel);
   }
@@ -267,23 +211,11 @@ export function ScanDetailsPanel({
                   <Text style={styles.optionalPillText}>Optional</Text>
                 </View>
               </View>
-              <Text style={styles.accordionHint}>Condition, stated label, preferences</Text>
+              <Text style={styles.accordionHint}>Stated label, preferences</Text>
             </View>
           </View>
 
           <View style={styles.detailRowsBlock}>
-            <DetailActionRow
-              icon={<GarmentConditionIcon condition={garmentCondition} />}
-              label="Fabric condition"
-              value={getGarmentConditionLabel(garmentCondition)}
-              isSet
-              onPress={() => setShowConditionSheet(true)}
-              disabled={isAnalyzing}
-              accessibilityLabel={`Fabric condition, ${getGarmentConditionLabel(garmentCondition)}. Change`}
-            />
-
-            {lensRow}
-
             <DetailActionRow
               icon={<Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />}
               label="Stated label"
@@ -334,28 +266,16 @@ export function ScanDetailsPanel({
               </View>
               <Text style={styles.accordionHint} numberOfLines={1}>
                 {expanded
-                  ? 'Condition, stated label, preferences'
+                  ? 'Stated label, preferences'
                   : hasAnyDetails
                     ? summaryParts.join(' · ')
-                    : 'Condition, stated label, preferences'}
+                    : 'Stated label, preferences'}
               </Text>
             </View>
           </Pressable>
 
           {expanded ? (
             <View style={styles.detailRowsBlock}>
-              <DetailActionRow
-                icon={<GarmentConditionIcon condition={garmentCondition} />}
-                label="Fabric condition"
-                value={getGarmentConditionLabel(garmentCondition)}
-                isSet
-                onPress={() => setShowConditionSheet(true)}
-                disabled={isAnalyzing}
-                accessibilityLabel={`Fabric condition, ${getGarmentConditionLabel(garmentCondition)}. Change`}
-              />
-
-              {lensRow}
-
               <DetailActionRow
                 icon={<Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />}
                 label="Stated label"
@@ -388,14 +308,6 @@ export function ScanDetailsPanel({
           ) : null}
         </View>
       )}
-
-      <GarmentConditionSheet
-        visible={showConditionSheet}
-        value={garmentCondition}
-        onChange={onGarmentConditionChange}
-        onClose={() => setShowConditionSheet(false)}
-      />
-
     </View>
   );
 }
