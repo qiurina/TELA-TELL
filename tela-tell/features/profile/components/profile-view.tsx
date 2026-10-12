@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
@@ -28,6 +28,7 @@ import {
   importScans,
   pickAndParseExportFile,
 } from '@/features/profile/lib/data-export';
+import { ImportScansError, importSummary, type ImportReport } from '@/features/profile/lib/import-report';
 import {
   getOccasionDisplay,
   getPreferredFabricsDisplay,
@@ -39,8 +40,8 @@ import {
   clearUserPreferences,
   getUserPreferencesSnapshot,
   hydrateUserPreferences,
+  importUserPreferences,
   persistUserPreferences,
-  setUserPreferences,
   subscribeUserPreferences,
   type UserPreferences,
 } from '@/features/profile/lib/user-preferences';
@@ -63,8 +64,11 @@ export function ProfileView() {
   const [isResetVisible, setIsResetVisible] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isSavingImportedPreferences, setIsSavingImportedPreferences] = useState(false);
+  const [importPreferencesError, setImportPreferencesError] = useState<string | null>(null);
+  const backupBusy = useRef(false);
   const [pendingImport, setPendingImport] = useState<{
-    count: number;
+    report: ImportReport;
     preferences: UserPreferences;
   } | null>(null);
 
@@ -85,10 +89,11 @@ export function ProfileView() {
   };
 
   const handleExportData = async () => {
-    if (isExporting) {
+    if (backupBusy.current || pendingImport) {
       return;
     }
 
+    backupBusy.current = true;
     setIsExporting(true);
     try {
       await exportUserData();
@@ -98,15 +103,17 @@ export function ProfileView() {
         error instanceof Error ? error.message : 'Please try again.',
       );
     } finally {
+      backupBusy.current = false;
       setIsExporting(false);
     }
   };
 
   const handleImportData = async () => {
-    if (isImporting) {
+    if (backupBusy.current || pendingImport) {
       return;
     }
 
+    backupBusy.current = true;
     setIsImporting(true);
     try {
       const payload = await pickAndParseExportFile();
@@ -114,37 +121,55 @@ export function ProfileView() {
         return;
       }
 
-      const count = await importScans(payload.scans, payload.favoriteScanIds, payload.photos);
+      const report = await importScans(payload.scans, payload.favoriteScanIds, payload.photos);
 
       if (payload.preferences) {
-        setPendingImport({ count, preferences: payload.preferences });
+        setImportPreferencesError(null);
+        setPendingImport({ report, preferences: payload.preferences });
       } else {
         showAlert(
-          'Import complete',
-          `Imported ${count} scan${count === 1 ? '' : 's'}.`,
-          'success',
+          report.missingPhotoIds.length ? 'Import completed with missing photos' : 'Import complete',
+          importSummary(report),
+          report.missingPhotoIds.length ? 'info' : 'success',
         );
       }
     } catch (error) {
       showAlert(
-        'Could not import data',
+        error instanceof ImportScansError ? 'Import stopped' : 'Could not import data',
         error instanceof Error ? error.message : 'Please try again.',
       );
     } finally {
+      backupBusy.current = false;
       setIsImporting(false);
     }
   };
 
-  const handleConfirmImportPreferences = () => {
-    if (!pendingImport) {
+  const handleConfirmImportPreferences = async () => {
+    if (!pendingImport || backupBusy.current) {
       return;
     }
-    setUserPreferences(pendingImport.preferences);
-    void persistUserPreferences();
-    setPendingImport(null);
+    backupBusy.current = true;
+    setImportPreferencesError(null);
+    setIsSavingImportedPreferences(true);
+    try {
+      await importUserPreferences(pendingImport.preferences);
+      setPendingImport(null);
+      showAlert(
+        'Import complete',
+        `${importSummary(pendingImport.report)} Preferences were restored.`,
+        pendingImport.report.missingPhotoIds.length ? 'info' : 'success',
+      );
+    } catch {
+      setImportPreferencesError(`${importSummary(pendingImport.report)} Preferences could not be saved. Your current preferences were kept. Try Replace again, or choose Keep mine.`);
+    } finally {
+      backupBusy.current = false;
+      setIsSavingImportedPreferences(false);
+    }
   };
 
   const handleConfirmReset = () => {
+    if (backupBusy.current || pendingImport) return;
+    backupBusy.current = true;
     setIsResetVisible(false);
     void (async () => {
       try {
@@ -156,6 +181,8 @@ export function ProfileView() {
         showAlert('Data reset', 'All scans and preferences were removed from this device.', 'success');
       } catch {
         showAlert('Could not reset data', 'Please try again.');
+      } finally {
+        backupBusy.current = false;
       }
     })();
   };
@@ -259,7 +286,9 @@ export function ProfileView() {
             value="Delete all scans and preferences"
             icon={<Trash2 size={18} color="#DC2626" strokeWidth={2.25} />}
             titleColor="#DC2626"
-            onPress={() => setIsResetVisible(true)}
+            onPress={() => {
+              if (!backupBusy.current && !pendingImport) setIsResetVisible(true);
+            }}
             isLast
           />
         </ProfileGroupedCard>
@@ -278,16 +307,24 @@ export function ProfileView() {
 
       <ConfirmDialog
         visible={pendingImport !== null}
-        title="Replace your preferences?"
+        title={importPreferencesError ? 'Could not restore preferences' : 'Replace your preferences?'}
         message={
           pendingImport
-            ? `Imported ${pendingImport.count} scan${pendingImport.count === 1 ? '' : 's'}. This file also has saved preferences (skin tone, allergies, preferred fabrics, etc). Replace what's on this device with them?`
+            ? (importPreferencesError ?? `${importSummary(pendingImport.report)} This file also has saved preferences (skin tone, allergies, preferred fabrics, etc). Replace what's on this device with them?`)
             : ''
         }
-        confirmLabel="Replace"
+        confirmLabel={isSavingImportedPreferences ? 'Saving...' : 'Replace'}
         cancelLabel="Keep mine"
-        onConfirm={handleConfirmImportPreferences}
-        onCancel={() => setPendingImport(null)}
+        onConfirm={() => void handleConfirmImportPreferences()}
+        onCancel={() => {
+          if (backupBusy.current || !pendingImport) return;
+          showAlert(
+            'Import complete',
+            `${importSummary(pendingImport.report)} Your current preferences were kept.`,
+            pendingImport.report.missingPhotoIds.length ? 'info' : 'success',
+          );
+          setPendingImport(null);
+        }}
       />
     </>
   );

@@ -3,13 +3,10 @@ import { useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { InfoButton } from '@/components/ui/info-button';
-import { InfoSheet } from '@/components/ui/info-sheet';
 import {
   Calendar,
   CircleCheck,
   CircleX,
-  Droplets,
   Sun,
   TriangleAlert,
   type IconProps,
@@ -17,15 +14,11 @@ import {
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
-import { SHEDDING_SHEET_TITLE } from '@/data/fabrics/assessment-disclaimers';
 import { FABRIC_REFERENCES } from '@/data/fabrics/fabric-references';
-import { getFiberSheddingSheet } from '@/data/fabrics/shedding-why';
 import { getComfortProfile } from '@/data/fabrics/comfort-profile';
 import type { FiberProfile } from '@/data/fabrics/fiber-profiles';
 import { FABRIC_CATEGORY_COLORS, FABRIC_REGISTRY } from '@/data/fabrics/fabrics';
 import { getDressingContextLabel } from '@/data/preferences/occasion-weather';
-import { FiberResearchSection } from '@/features/fabrics/components/fiber-research-section';
-import { getEnvironmentalSummary, getSheddingColor } from '@/features/fabrics/lib/fiber-profile-insights';
 
 type FiberProfileContentProps = {
   profile: FiberProfile;
@@ -33,11 +26,10 @@ type FiberProfileContentProps = {
   showHero?: boolean;
 };
 
-type ProfileTab = 'health' | 'eco' | 'care' | 'wear';
+type ProfileTab = 'health' | 'care' | 'wear';
 
 const PROFILE_TABS: { key: ProfileTab; label: string }[] = [
   { key: 'health', label: 'Comfort' },
-  { key: 'eco', label: 'Eco' },
   { key: 'care', label: 'Care' },
   { key: 'wear', label: 'Wear' },
 ];
@@ -116,35 +108,6 @@ function ComfortInsightRow({
   );
 }
 
-function InfoRow({
-  icon: Icon,
-  label,
-  value,
-  valueColor,
-  onInfoPress,
-  infoAccessibilityLabel,
-}: {
-  icon: FC<IconProps>;
-  label: string;
-  value: string;
-  valueColor?: string;
-  onInfoPress?: () => void;
-  infoAccessibilityLabel?: string;
-}) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabelWrap}>
-        <Icon size={14} color={BrandColors.textMuted} strokeWidth={2.25} />
-        <Text style={styles.infoLabel}>{label}</Text>
-        {onInfoPress ? (
-          <InfoButton onPress={onInfoPress} accessibilityLabel={infoAccessibilityLabel ?? label} />
-        ) : null}
-      </View>
-      <Text style={[styles.infoValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
-    </View>
-  );
-}
-
 function SectionLabel({ children }: { children: string }) {
   return <Text style={styles.sectionLabel}>{children}</Text>;
 }
@@ -181,12 +144,10 @@ function ContextChipGroup({
 
 export function FiberProfileContent({ profile, showHero = true }: FiberProfileContentProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>('health');
-  const [sheet, setSheet] = useState<'shedding' | null>(null);
   const reference = FABRIC_REFERENCES[profile.fabric];
   const category = FABRIC_REGISTRY.find((item) => item.name === profile.fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
   const comfort = getComfortProfile(profile);
-  const environment = getEnvironmentalSummary(profile);
 
   const categoryPill = categoryStyle ? (
     <View
@@ -205,13 +166,6 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
 
   return (
     <View style={styles.root}>
-      <InfoSheet
-        visible={sheet === 'shedding'}
-        title={SHEDDING_SHEET_TITLE}
-        sections={getFiberSheddingSheet(profile.fabric)}
-        icon={Droplets}
-        onClose={() => setSheet(null)}
-      />
       {showHero ? (
         <View style={[styles.heroCard, faintCardShadow()]}>
           <Image
@@ -273,23 +227,6 @@ export function FiberProfileContent({ profile, showHero = true }: FiberProfileCo
               tone={comfort.mechanicalComfort.tone}
             />
           </View>
-        </View>
-      ) : null}
-
-      {activeTab === 'eco' ? (
-        <View style={styles.section}>
-          <SectionLabel>Fiber shedding</SectionLabel>
-          <View style={[styles.propertiesCard, faintCardShadow()]}>
-            <InfoRow
-              icon={Droplets}
-              label="Shedding tendency"
-              value={environment.microplasticShedding}
-              valueColor={getSheddingColor(environment.microplasticShedding)}
-              onInfoPress={() => setSheet('shedding')}
-              infoAccessibilityLabel="About this shedding estimate"
-            />
-          </View>
-          <FiberResearchSection fabric={profile.fabric} />
         </View>
       ) : null}
 
@@ -446,39 +383,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: BrandColors.textMuted,
     textTransform: 'uppercase',
-  },
-  propertiesCard: {
-    backgroundColor: BrandColors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
-    padding: 16,
-    gap: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  infoLabelWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  infoLabel: {
-    fontFamily: Fonts.medium,
-    fontSize: 11,
-    color: BrandColors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  infoValue: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.text,
-    textAlign: 'right',
   },
   textCard: {
     backgroundColor: BrandColors.white,

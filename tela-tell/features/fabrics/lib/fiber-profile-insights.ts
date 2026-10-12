@@ -8,7 +8,7 @@ export type InsightTone = 'good' | 'caution' | 'warn';
 // docs/profile-screen-audit.md. This file now only covers the shedding label and shared
 // tone/color utilities. The Renewable / Biodegradable / Recyclable / Carbon impact labels that used
 // to be derived from the retired sustainability sub-scores were removed (see
-// docs/sustainability-score-archive.md); sourced research findings are in data/fabrics/fiber-research.ts.
+// docs/sustainability-score-archive.md).
 
 export type EnvironmentalSummary = {
   microplasticShedding: string;

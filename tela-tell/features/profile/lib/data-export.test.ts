@@ -8,13 +8,14 @@ import BetterSqlite3 from 'better-sqlite3';
 
 import type { ScanResult } from '@/data/scans/mock-data';
 import { SCHEMA_SQL } from '@/db/schema';
-import { getScanById, saveScan, updateScanTesterFields } from '@/db/scans';
+import { getScanById, getScansPage, isScanFavorite, saveScan, updateScanTesterFields } from '@/db/scans';
 import {
   exportUserData,
   importScans,
   parseExportPayload,
 } from '@/features/profile/lib/data-export';
-import { restoreScanImage } from '@/features/scan/lib/scan-image-storage';
+import { deleteScanImages, restoreScanImage } from '@/features/scan/lib/scan-image-storage';
+import { ImportScansError } from '@/features/profile/lib/import-report';
 import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
 import * as Sharing from 'expo-sharing';
 import * as FakeFs from 'expo-file-system';
@@ -31,7 +32,7 @@ jest.mock('@/db/client', () => {
 });
 
 jest.mock('@/features/scan/lib/scan-image-storage', () => ({
-  restoreScanImage: jest.fn(async (id: string) => `file:///docs/scan-images/${id}.jpg`),
+  restoreScanImage: jest.fn(async (id: string) => `file:///docs/scan-images/${id}-import.jpg`),
   deleteAllScanImages: jest.fn(async () => undefined),
   deleteScanImages: jest.fn(async () => undefined),
 }));
@@ -183,10 +184,10 @@ describe('importScans with photos', () => {
 
     const count = await importScans(payload.scans, payload.favoriteScanIds, payload.photos);
 
-    expect(count).toBe(1);
+    expect(count).toEqual({ imported: 1, total: 1, missingPhotoIds: [] });
     expect(restoreScanImage).toHaveBeenCalledWith('scan_a', 'QUJDRA==');
     const loaded = await getScanById('scan_a');
-    expect(loaded?.imageUri).toBe('file:///docs/scan-images/scan_a.jpg');
+    expect(loaded?.imageUri).toBe('file:///docs/scan-images/scan_a-import.jpg');
     expect(loaded?.capture?.sharpnessPerPhoto).toEqual([400, 500, 450]);
   });
 
@@ -242,13 +243,75 @@ describe('importScans with photos', () => {
   });
 
   it('never writes a photo for an unsafe scan id', async () => {
-    await importScans([buildResult('../evil')], [], { '../evil': 'QUJD' });
+    await expect(importScans([buildResult('../evil')], [], { '../evil': 'QUJD' })).rejects.toThrow('scan id');
     expect(restoreScanImage).not.toHaveBeenCalled();
   });
 
   it('falls back to the existing photo (or none) when a photo cannot be written', async () => {
     (restoreScanImage as jest.Mock).mockResolvedValueOnce(null);
-    await importScans([buildResult('scan_x')], [], { scan_x: 'QUJD' });
+    const report = await importScans([buildResult('scan_x')], [], { scan_x: 'QUJD' });
+    expect(report.missingPhotoIds).toEqual(['scan_x']);
     expect((await getScanById('scan_x'))?.imageUri).toBeNull();
+  });
+
+  it('preserves exact timestamps and favorites through an export and repeat import', async () => {
+    const createdAt = '2026-10-01T04:15:00.000Z';
+    await saveScan(buildResult('scan_date'), { createdAt, isFavorite: true });
+    await exportUserData();
+    const payload = parseExportPayload(exportedFileText());
+    expect(payload.scans[0].createdAt).toBe(createdAt);
+    mockDb.close();
+    mockDb = new BetterSqlite3(':memory:');
+    mockDb.exec(SCHEMA_SQL);
+    await importScans(payload.scans, payload.favoriteScanIds);
+    await importScans(payload.scans, payload.favoriteScanIds);
+    expect((await getScanById('scan_date'))?.createdAt).toBe(createdAt);
+    expect(await isScanFavorite('scan_date')).toBe(true);
+    const page = await getScansPage({ dateRange: { from: '2026-10-01T00:00:00Z', to: '2026-10-02T00:00:00Z' } });
+    expect(page.total).toBe(1);
+  });
+
+  it('uses a legacy scan date, and keeps an existing exact date when reimporting an older file', async () => {
+    await importScans([buildResult('scan_legacy')], []);
+    expect((await getScanById('scan_legacy'))?.createdAt?.slice(0, 10)).toBe('2026-10-01');
+    const createdAt = '2026-10-01T04:12:30.000Z';
+    await saveScan(buildResult('scan_existing'), { createdAt });
+    await importScans([buildResult('scan_existing')], []);
+    expect((await getScanById('scan_existing'))?.createdAt).toBe(createdAt);
+  });
+
+  it('validates every scan before writing rows or photos', async () => {
+    await expect(importScans([buildResult('scan_good'), { ...buildResult('scan_bad'), confidence: -1 }], [], { scan_good: 'QUJD' })).rejects.toThrow('confidence');
+    expect(restoreScanImage).not.toHaveBeenCalled();
+    expect((await getScansPage()).total).toBe(0);
+  });
+
+  it('reports the completed count and keeps an existing photo when a later save fails', async () => {
+    await saveScan(buildResult('scan_fail'), { imageUri: 'file:///docs/scan-images/original.jpg' });
+    mockDb.exec(`CREATE TRIGGER fail_import BEFORE INSERT ON tblScan
+      WHEN NEW.scan_ID = 'scan_fail' BEGIN SELECT RAISE(ABORT, 'disk full'); END;`);
+    const warn = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(importScans([buildResult('scan_ok'), buildResult('scan_fail')], ['scan_ok'], { scan_fail: 'QUJD' }))
+        .rejects.toMatchObject({ name: 'ImportScansError', report: { imported: 1, total: 2 } });
+      expect(await isScanFavorite('scan_ok')).toBe(true);
+      expect((await getScanById('scan_fail'))?.imageUri).toBe('file:///docs/scan-images/original.jpg');
+      expect(deleteScanImages).toHaveBeenCalledWith(['file:///docs/scan-images/scan_fail-import.jpg']);
+      expect(deleteScanImages).not.toHaveBeenCalledWith(['file:///docs/scan-images/original.jpg']);
+      mockDb.exec('DROP TRIGGER fail_import');
+      const retried = await importScans([buildResult('scan_ok'), buildResult('scan_fail')], ['scan_ok'], { scan_fail: 'QUJD' });
+      expect(retried.imported).toBe(2);
+      expect((await getScansPage()).total).toBe(2);
+      expect(deleteScanImages).toHaveBeenCalledWith(['file:///docs/scan-images/original.jpg']);
+    } finally { warn.mockRestore(); }
+  });
+
+  it('reports failure before the first scan accurately', async () => {
+    mockDb.exec(`CREATE TRIGGER fail_all BEFORE INSERT ON tblScan BEGIN SELECT RAISE(ABORT, 'disk full'); END;`);
+    const warn = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(importScans([buildResult('scan_fail')], [])).rejects.toBeInstanceOf(ImportScansError);
+      expect((await getScansPage()).total).toBe(0);
+    } finally { warn.mockRestore(); }
   });
 });

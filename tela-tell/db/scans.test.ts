@@ -300,11 +300,43 @@ describe('favorites, trash and stats', () => {
     insertScan({ id: 'c', createdAt: minutesAfterBase(2), rating: 'red', mislabelDetected: true });
     insertScan({ id: 'd', createdAt: minutesAfterBase(3), rating: 'green', deletedAt: new Date().toISOString() });
 
-    expect(await getScanStats()).toEqual({ total: 3, mislabeled: 2 });
+    expect(await getScanStats()).toEqual({ total: 3, mislabeled: 2, synthetic: 0 });
   });
 
   it('returns zeros for stats on an empty table', async () => {
-    expect(await getScanStats()).toEqual({ total: 0, mislabeled: 0 });
+    expect(await getScanStats()).toEqual({ total: 0, mislabeled: 0, synthetic: 0 });
+  });
+
+  it('counts synthetic scans the way the History pill does: top fiber synthetic, not unsure, not deleted', async () => {
+    insertScan({ id: 'poly', fabric: 'Polyester', createdAt: minutesAfterBase(0) });
+    insertScan({ id: 'nylon', fabric: 'Nylon', createdAt: minutesAfterBase(1) });
+    insertScan({
+      id: 'possible',
+      fabric: 'Silk',
+      compositions: [
+        { material: 'Silk', percentage: 70 },
+        { material: 'Nylon', percentage: 25 },
+      ],
+      createdAt: minutesAfterBase(2),
+    });
+    insertScan({
+      id: 'unsure-poly',
+      fabric: 'Polyester',
+      compositions: [
+        { material: 'Polyester', percentage: 45 },
+        { material: 'Cotton', percentage: 40 },
+      ],
+      createdAt: minutesAfterBase(3),
+    });
+    insertScan({ id: 'cotton', fabric: 'Cotton', createdAt: minutesAfterBase(4) });
+    insertScan({
+      id: 'deleted-poly',
+      fabric: 'Polyester',
+      createdAt: minutesAfterBase(5),
+      deletedAt: new Date().toISOString(),
+    });
+
+    expect(await getScanStats()).toMatchObject({ total: 5, synthetic: 2 });
   });
 
   it('History rows carry no sustainability fields, even for scans saved with an old rating', async () => {
@@ -380,6 +412,58 @@ describe('unsure scans and capture details', () => {
     const { items } = await getScansPage({ page: 1 });
     expect(items.find((item) => item.id === 'unsure')?.unsure).toBe(true);
     expect(items.find((item) => item.id === 'sure')?.unsure).toBe(false);
+  });
+
+  it('gives the History summary the top two candidates, highest first', async () => {
+    insertScan({
+      id: 'unsure',
+      fabric: 'Cotton',
+      compositions: [...UNSURE_COMPOSITIONS].reverse(),
+      createdAt: minutesAfterBase(1),
+    });
+
+    const { items } = await getScansPage({ page: 1 });
+    expect(items[0]?.closestCandidates).toEqual([
+      { material: 'Cotton', percentage: 45 },
+      { material: 'Rayon', percentage: 35 },
+    ]);
+  });
+
+  it('gives the History summary the same synthetic call as the results badge', async () => {
+    insertScan({ id: 'natural', fabric: 'Cotton', compositions: SURE_COMPOSITIONS, createdAt: minutesAfterBase(1) });
+    insertScan({
+      id: 'synthetic',
+      fabric: 'Polyester',
+      compositions: [{ material: 'Polyester', percentage: 92 }],
+      createdAt: minutesAfterBase(2),
+    });
+    insertScan({ id: 'unsure', fabric: 'Cotton', compositions: UNSURE_COMPOSITIONS, createdAt: minutesAfterBase(3) });
+
+    const { items } = await getScansPage({ page: 1 });
+    const kindOf = (id: string) => items.find((item) => item.id === id)?.fiberBadgeKind;
+    expect(kindOf('natural')).toBe('not_synthetic');
+    expect(kindOf('synthetic')).toBe('likely');
+    expect(kindOf('unsure')).toBeNull();
+  });
+
+  it('tells the History summary why a scan is unsure, and nothing for a clear one', async () => {
+    insertScan({ id: 'weak', fabric: 'Cotton', compositions: UNSURE_COMPOSITIONS, createdAt: minutesAfterBase(1) });
+    insertScan({
+      id: 'close',
+      fabric: 'Cotton',
+      compositions: [
+        { material: 'Cotton', percentage: 70 },
+        { material: 'Rayon', percentage: 60 },
+      ],
+      createdAt: minutesAfterBase(2),
+    });
+    insertScan({ id: 'sure', fabric: 'Cotton', compositions: SURE_COMPOSITIONS, createdAt: minutesAfterBase(3) });
+
+    const { items } = await getScansPage({ page: 1 });
+    const reasonOf = (id: string) => items.find((item) => item.id === id)?.unsureReason;
+    expect(reasonOf('weak')).toBe('low_confidence');
+    expect(reasonOf('close')).toBe('close_call');
+    expect(reasonOf('sure')).toBeNull();
   });
 
   it('saves neutral placeholders in the legacy sustainability columns and no score in the saved JSON', async () => {
@@ -618,5 +702,19 @@ describe('unsure scans and capture details', () => {
     const { items } = await getScansPage({ page: 1 });
     expect(items.find((item) => item.id === 'unsure-label')?.mislabeling).toBe(false);
     expect(items.find((item) => item.id === 'sure-label')?.mislabeling).toBe(true);
+  });
+
+  it('reports no label check in History when no label was entered, so the card claims no "Label matches"', async () => {
+    await saveScan(buildResult('no-label', SURE_COMPOSITIONS));
+    await saveScan(buildResult('matching-label', SURE_COMPOSITIONS));
+    await saveScan(buildResult('wrong-label', SURE_COMPOSITIONS));
+    await updateScanSellerLabel('matching-label', '100% Cotton');
+    await updateScanSellerLabel('wrong-label', '100% Silk');
+
+    const { items } = await getScansPage({ page: 1 });
+    const statusOf = (id: string) => items.find((item) => item.id === id)?.labelStatus;
+    expect(statusOf('no-label')).toBe('none');
+    expect(statusOf('matching-label')).toBe('match');
+    expect(statusOf('wrong-label')).toBe('mismatch');
   });
 });

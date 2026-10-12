@@ -1,5 +1,14 @@
 import type { ScanResult } from '@/data/scans/mock-data';
 import type { UserPreferences } from '@/features/profile/lib/user-preferences';
+import {
+  ImportInvalidFileError,
+  isSafeScanId,
+  validateBackupPreferences,
+  validateBackupScan,
+  validTimestamp,
+} from './backup-validation';
+
+export { ImportInvalidFileError, isSafeScanId };
 
 /**
  * The file written by Export My Data. `photos` maps a scan id to that scan's saved photo as a
@@ -7,28 +16,19 @@ import type { UserPreferences } from '@/features/profile/lib/user-preferences';
  * older versions of the app that read a newer file ignore it.
  */
 export type ExportPayload = {
-  exportedAt: string;
+  exportedAt?: string;
   scans: ScanResult[];
   favoriteScanIds: string[];
-  preferences: UserPreferences;
+  preferences?: UserPreferences;
   photos?: Record<string, string>;
 };
 
-export type ExportBody = Omit<ExportPayload, 'photos'>;
+export type ExportBody = Omit<ExportPayload, 'photos'> & { exportedAt: string; preferences: UserPreferences };
 
-export class ImportInvalidFileError extends Error {
-  constructor(message = "This doesn't look like a TELA-TELL export file.") {
-    super(message);
-    this.name = 'ImportInvalidFileError';
-  }
-}
-
-/** Scan ids become file names when photos are restored, so only plain id characters are allowed. */
-const SAFE_SCAN_ID = /^[A-Za-z0-9_-]{1,100}$/;
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 
-export function isSafeScanId(id: string): boolean {
-  return SAFE_SCAN_ID.test(id);
+function isBase64(value: unknown): value is string {
+  return typeof value === 'string' && value.length % 4 === 0 && BASE64.test(value);
 }
 
 /**
@@ -52,7 +52,7 @@ export async function writeExportJson(
       continue;
     }
     const base64 = await readPhoto(scanId);
-    if (!base64 || !BASE64.test(base64)) {
+    if (!isBase64(base64)) {
       continue;
     }
     // Base64 holds no characters that JSON would need to escape, so it is written as it is.
@@ -64,16 +64,18 @@ export async function writeExportJson(
   return { photosWritten };
 }
 
-/** Keeps only photo entries that are safe to turn into files; silently drops the rest. */
+/** Reject malformed photos rather than silently reporting a complete restore without them. */
 function cleanPhotos(photos: unknown): Record<string, string> | undefined {
+  if (photos === undefined) return undefined;
   if (!photos || typeof photos !== 'object' || Array.isArray(photos)) {
-    return undefined;
+    throw new ImportInvalidFileError('Invalid backup photos. No scans were imported.');
   }
-  const cleaned: Record<string, string> = {};
+  const cleaned: Record<string, string> = Object.create(null);
   for (const [id, value] of Object.entries(photos as Record<string, unknown>)) {
-    if (isSafeScanId(id) && typeof value === 'string' && BASE64.test(value)) {
-      cleaned[id] = value;
+    if (!isSafeScanId(id) || !isBase64(value)) {
+      throw new ImportInvalidFileError('Invalid backup photo. No scans were imported.');
     }
+    cleaned[id] = value;
   }
   return cleaned;
 }
@@ -85,7 +87,11 @@ export function parseExportPayload(text: string): ExportPayload {
   } catch {
     throw new ImportInvalidFileError();
   }
+  return validateExportPayload(parsed);
+}
 
+/** Also used by the import API, without duplicating the photo data into a JSON string. */
+export function validateExportPayload(parsed: unknown): ExportPayload {
   if (
     !parsed ||
     typeof parsed !== 'object' ||
@@ -95,11 +101,27 @@ export function parseExportPayload(text: string): ExportPayload {
   }
 
   const payload = parsed as ExportPayload;
+  if (payload.exportedAt !== undefined && !validTimestamp(payload.exportedAt)) {
+    throw new ImportInvalidFileError('Invalid backup export date. No scans were imported.');
+  }
+  const scans = payload.scans.map(validateBackupScan);
+  const scanIds = new Set(scans.map((scan) => scan.id));
+  if (scanIds.size !== scans.length) {
+    throw new ImportInvalidFileError('Duplicate scan ids in backup. No scans were imported.');
+  }
+  if (payload.favoriteScanIds !== undefined && (!Array.isArray(payload.favoriteScanIds)
+    || payload.favoriteScanIds.some((id) => typeof id !== 'string' || !scanIds.has(id)))) {
+    throw new ImportInvalidFileError('Invalid backup favorites. No scans were imported.');
+  }
   const photos = cleanPhotos(payload.photos);
-  const { photos: _raw, ...rest } = payload;
+  if (photos && Object.keys(photos).some((id) => !scanIds.has(id))) {
+    throw new ImportInvalidFileError('A backup photo has no matching scan. No scans were imported.');
+  }
   return {
-    ...rest,
-    favoriteScanIds: Array.isArray(payload.favoriteScanIds) ? payload.favoriteScanIds : [],
+    exportedAt: payload.exportedAt,
+    scans,
+    favoriteScanIds: [...new Set(payload.favoriteScanIds ?? [])],
+    ...(payload.preferences !== undefined ? { preferences: validateBackupPreferences(payload.preferences) } : {}),
     ...(photos ? { photos } : {}),
   };
 }

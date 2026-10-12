@@ -23,6 +23,7 @@ import {
   Bookmark,
   ScanLine,
   Search,
+  ShieldAlert,
   Trash2,
   TriangleAlert,
   X,
@@ -41,8 +42,9 @@ import {
 } from '@/db/scans';
 
 const SEARCH_DEBOUNCE_MS = 300;
-const EMPTY_STATS: ScanStats = { total: 0, mislabeled: 0 };
+const EMPTY_STATS: ScanStats = { total: 0, mislabeled: 0, synthetic: 0 };
 const ALERT_RED = '#dc2626';
+const SYNTHETIC_AMBER = '#b45309';
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -217,9 +219,14 @@ export default function HistoryScreen() {
             <Text style={styles.statLabel}>TOTAL SCANS</Text>
           </View>
           <View style={[styles.statCard, faintCardShadow()]}>
+            <ShieldAlert size={18} color={SYNTHETIC_AMBER} strokeWidth={2} />
+            <Text style={[styles.statValue, styles.statValueSynthetic]}>{stats.synthetic}</Text>
+            <Text style={styles.statLabel}>SYNTHETIC</Text>
+          </View>
+          <View style={[styles.statCard, faintCardShadow()]}>
             <TriangleAlert size={18} color={ALERT_RED} strokeWidth={2} />
             <Text style={[styles.statValue, styles.statValueAlert]}>{stats.mislabeled}</Text>
-            <Text style={styles.statLabel}>LABEL DIFFERS</Text>
+            <Text style={styles.statLabel}>LABEL MAY NOT MATCH</Text>
           </View>
         </View>
 
@@ -494,6 +501,9 @@ const styles = StyleSheet.create({
   },
   statValueAlert: {
     color: ALERT_RED,
+  },
+  statValueSynthetic: {
+    color: SYNTHETIC_AMBER,
   },
   statLabel: {
     fontFamily: Fonts.semiBold,

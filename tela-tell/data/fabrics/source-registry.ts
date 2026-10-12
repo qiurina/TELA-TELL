@@ -908,30 +908,6 @@ export const SOURCE_LIST = [
     ],
     usedFor: 'Cotton note (fiber profile and About).',
   },
-  {
-    id: 'collie-2024',
-    shortName: 'Wool and fiber composting study',
-    organization: 'Collie, Brorens, Hassan & Fowler',
-    title:
-      'Biodegradation behavior of wool and other textile fibers in aerobic composting conditions. International Journal of Environmental Science and Technology',
-    year: 2024,
-    url: 'https://doi.org/10.1007/s13762-024-05802-6',
-    gist: 'A 181-day lab test of how much shredded wool, viscose rayon, polyester and nylon fabric turned into CO2 under industrial-composting conditions.',
-    says: [
-      'Test: ISO 14855-1 (2012), shredded fabric mixed into inoculated vermiculite at 58 °C for 181 days, three replicates.',
-      'After 181 days the share of carbon converted to CO2 was about 83% for viscose rayon, 68% for machine-washable wool and 48% for untreated wool.',
-      'Nylon (polyamide) reached about 2% and polyester about 0%, which the authors report as not biodegrading under these conditions.',
-      'The authors found no sign that the machine-washable wool left microplastic fragments behind.',
-    ],
-    caveats: [
-      'Full text read.',
-      'A controlled industrial-composting test, not home compost, landfill or the natural environment. The authors say anaerobic landfill conditions are a gap.',
-      'The authors describe it as a comparison for research, not product certification. Its positive control missed one of the standard\'s validity checks at 45 days (66.4% against 70%) but reached 88% by the end.',
-      'One fabric of each fiber (knits, except a woven viscose), so it does not describe every wool, rayon or nylon fabric.',
-      'Funded by Australian Wool Innovation, the wool industry body.',
-    ],
-    usedFor: 'Fiber profile, Eco tab: "What research says" for wool, rayon, nylon and polyester.',
-  },
 ] as const satisfies readonly Source[];
 
 export type SourceId = (typeof SOURCE_LIST)[number]['id'];

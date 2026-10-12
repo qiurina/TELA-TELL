@@ -1,7 +1,7 @@
 import { getFiberBadge } from '@/features/results/lib/fiber-badge';
 
 describe('getFiberBadge', () => {
-  it('shows nothing for a trace synthetic share under a natural top fiber (Abaca 86%, Polyester 3%)', () => {
+  it('ignores a trace synthetic share under a natural top fiber (Abaca 86%, Polyester 3%)', () => {
     const badge = getFiberBadge(
       'Abaca',
       [
@@ -11,7 +11,7 @@ describe('getFiberBadge', () => {
       ],
       false,
     );
-    expect(badge).toBeNull();
+    expect(badge?.label).toBe('Likely not synthetic: Abaca');
   });
 
   it('names a synthetic with a clear share as "Other prediction", not as the result', () => {
@@ -50,7 +50,7 @@ describe('getFiberBadge', () => {
       false,
     );
     expect(at?.label).toBe('Other prediction: Nylon');
-    expect(below).toBeNull();
+    expect(below?.kind).toBe('not_synthetic');
   });
 
   it('lists two synthetics, most likely first, and shortens longer lists', () => {
@@ -110,9 +110,27 @@ describe('getFiberBadge', () => {
     ).toBeNull();
   });
 
-  it('never claims the fabric has no synthetic fibers', () => {
-    const none = getFiberBadge('Wool', [{ material: 'Wool', percentage: 95 }], false);
-    expect(none).toBeNull();
+  it('calls a non-synthetic top fiber "likely not synthetic" without claiming the fabric has none', () => {
+    const wool = getFiberBadge('Wool', [{ material: 'Wool', percentage: 95 }], false);
+    expect(wool).toMatchObject({ kind: 'not_synthetic', label: 'Likely not synthetic: Wool', tone: 'good' });
+    expect(wool?.infoMessage).toMatch(/can't rule out synthetic fibers blended in/);
+
+    // Rayon, leather and abaca are not in the Synthetic group, so they get the same badge.
+    expect(getFiberBadge('Rayon', [{ material: 'Rayon', percentage: 90 }], false)?.kind).toBe('not_synthetic');
+    expect(getFiberBadge('Leather', [{ material: 'Leather', percentage: 90 }], false)?.kind).toBe('not_synthetic');
+  });
+
+  it('prefers the other-prediction badge when a synthetic has a clear share, and ignores a trace', () => {
+    expect(
+      getFiberBadge('Silk', [{ material: 'Silk', percentage: 70 }, { material: 'Nylon', percentage: 25 }], false)?.kind,
+    ).toBe('possible');
+    expect(
+      getFiberBadge('Silk', [{ material: 'Silk', percentage: 85 }, { material: 'Nylon', percentage: 14 }], false)?.kind,
+    ).toBe('not_synthetic');
+  });
+
+  it('shows no badge when the top fiber is not a known fiber', () => {
+    expect(getFiberBadge('Mystery', [{ material: 'Mystery', percentage: 90 }], false)).toBeNull();
   });
 
   it('explains that it is a model prediction, not a measurement, and names the fibers', () => {

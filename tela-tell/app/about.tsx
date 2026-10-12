@@ -144,8 +144,7 @@ export default function AboutScreen() {
           &quot;Why synthetics shed&quot; page above. The studies are in the References list below.
         </Text>
         <Text style={[styles.cardBody, styles.sourcesFootnote]}>
-          The Eco tab&apos;s &quot;What research says&quot; and the eco-alternative tips use the
-          studies in the References list below. Comfort information draws on additional
+          The eco-alternative tips use the studies in the References list below. Comfort information draws on additional
           sources, such as The Woolmark Company, PhilFIDA and DermNet NZ, which this
           app&apos;s engineering documentation lists. The app no longer scores sustainability,
           because no published method compares all 12 fibers fairly.

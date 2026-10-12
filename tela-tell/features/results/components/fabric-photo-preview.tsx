@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 
 import { InfoSheet } from '@/components/ui/info-sheet';
-import { ChevronRight, Info, ScanLine, ShieldAlert } from '@/components/ui/lucide-icons';
+import { ChevronRight, Info, Leaf, ScanLine, ShieldAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { STATUS_COLORS } from '@/constants/status-colors';
@@ -106,6 +106,8 @@ export function FabricPhotoPreview({
               ]}>
               {fiberBadge.kind === 'likely' ? (
                 <ShieldAlert size={13} color={badgeColors.accent} strokeWidth={2.5} />
+              ) : fiberBadge.kind === 'not_synthetic' ? (
+                <Leaf size={13} color={badgeColors.accent} strokeWidth={2.5} />
               ) : (
                 <Info size={13} color={badgeColors.accent} strokeWidth={2.5} />
               )}
@@ -165,7 +167,13 @@ export function FabricPhotoPreview({
           visible={showBadgeInfo}
           title={fiberBadge.infoTitle}
           message={fiberBadge.infoMessage}
-          icon={fiberBadge.kind === 'likely' ? ShieldAlert : Info}
+          icon={
+            fiberBadge.kind === 'likely'
+              ? ShieldAlert
+              : fiberBadge.kind === 'not_synthetic'
+                ? Leaf
+                : Info
+          }
           tone={fiberBadge.tone}
           onClose={() => setShowBadgeInfo(false)}
         />

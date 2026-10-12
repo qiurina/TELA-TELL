@@ -438,6 +438,30 @@ describe('migrateDatabase — failure reporting', () => {
     mockFailOn = /CREATE TABLE IF NOT EXISTS tblDeviceProfile/;
     await expect(runFreshMigration()).rejects.toThrow('simulated failure');
   });
+
+  it('can retry a rejected core schema creation in the same session', async () => {
+    jest.resetModules();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { migrateDatabase } = require('@/db/migrate.native');
+    mockFailOn = /CREATE TABLE/;
+    await expect(migrateDatabase()).rejects.toThrow('simulated failure');
+    mockFailOn = null;
+    expect(realIssues(await migrateDatabase({ retry: true }))).toEqual([]);
+  });
+
+  it('retries failed steps on request while keeping a clean run cached', async () => {
+    jest.resetModules();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { migrateDatabase } = require('@/db/migrate.native');
+    mockFailOn = /CREATE INDEX IF NOT EXISTS idx_scan_createdAt/;
+    const failed = await migrateDatabase();
+    expect(failed.issues.some((issue: { step: string }) => issue.step === 'idx_scan_createdAt')).toBe(true);
+    mockFailOn = null;
+    expect(await migrateDatabase()).toBe(failed);
+    const recovered = await migrateDatabase({ retry: true });
+    expect(realIssues(recovered)).toEqual([]);
+    expect(await migrateDatabase({ retry: true })).toBe(recovered);
+  });
 });
 
 /**

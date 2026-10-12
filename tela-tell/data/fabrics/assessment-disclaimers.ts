@@ -49,6 +49,6 @@ export const COMPOSITION_SHEET_SECTIONS: InfoSection[] = [
   },
   {
     heading: "What they aren't",
-    body: 'How much of each fiber is in the garment. Fabrics can look alike in photos, so the top match can be wrong. Check the care tag for the real composition.',
+    body: "How much of each fiber is in the garment. The scan names one most likely fiber and can't see blends, and fabrics can look alike in photos, so the top match can be wrong. Check the care tag for the real composition.",
   },
 ];

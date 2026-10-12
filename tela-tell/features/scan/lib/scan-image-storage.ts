@@ -21,42 +21,52 @@ export async function scanImageExists(uri: string): Promise<boolean> {
   }
 }
 
-/** Copies a scan photo to permanent storage. Falls back to the original path if copying fails. */
+export class ScanImageSaveError extends Error {
+  constructor() {
+    super('Could not save the photo on this device. Free some space, then try Analyze again.');
+    this.name = 'ScanImageSaveError';
+  }
+}
+
+/** A scan must never be saved with a temporary photo path when permanent storage fails. */
 export async function persistScanImage(uri: string, scanId: string): Promise<string> {
   if (!SCAN_IMAGE_DIR) {
-    return uri;
+    throw new ScanImageSaveError();
   }
 
+  if (isPersistedScanImage(uri)) return uri;
+  const destination = `${SCAN_IMAGE_DIR}${scanId}.jpg`;
   try {
     await FileSystem.makeDirectoryAsync(SCAN_IMAGE_DIR, { intermediates: true });
-    const destination = `${SCAN_IMAGE_DIR}${scanId}.jpg`;
     await FileSystem.copyAsync({ from: uri, to: destination });
     return destination;
   } catch (error) {
     console.warn('[TELA-TELL] Could not persist scan image:', error);
-    return uri;
+    await deleteScanImages([destination]);
+    throw new ScanImageSaveError();
   }
 }
 
 /**
  * Writes an imported photo (base64 JPEG) into permanent storage under the scan's id and returns
  * its path, or null if it could not be written. The id is checked here as well because it becomes
- * part of a file name.
+ * part of a file name. A unique path leaves the existing photo intact until the scan is saved.
  */
 export async function restoreScanImage(scanId: string, base64: string): Promise<string | null> {
   if (!SCAN_IMAGE_DIR || !/^[A-Za-z0-9_-]{1,100}$/.test(scanId)) {
     return null;
   }
 
+  const destination = `${SCAN_IMAGE_DIR}${scanId}-import-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}.jpg`;
   try {
     await FileSystem.makeDirectoryAsync(SCAN_IMAGE_DIR, { intermediates: true });
-    const destination = `${SCAN_IMAGE_DIR}${scanId}.jpg`;
     await FileSystem.writeAsStringAsync(destination, base64, {
       encoding: FileSystem.EncodingType.Base64,
     });
     return destination;
   } catch (error) {
     console.warn('[TELA-TELL] Could not restore imported scan image:', error);
+    await deleteScanImages([destination]);
     return null;
   }
 }

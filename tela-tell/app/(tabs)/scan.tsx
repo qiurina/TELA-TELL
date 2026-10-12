@@ -31,8 +31,7 @@ import type { CaptureType, SharpnessCheckStatus } from '@/data/scans/mock-data';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
-import { persistScanImage } from '@/features/scan/lib/scan-image-storage';
-import { optimizeScanImage } from '@/features/scan/lib/crop-to-guide';
+import { saveCapturedScan } from '@/features/scan/lib/save-captured-scan';
 import { checkCapture, judgeCapture } from '@/features/scan/lib/ml/measure-sharpness';
 import type { SnapshotMeasurement } from '@/features/scan/lib/preview-snapshot';
 import { sharpestIndex } from '@/features/scan/lib/ml/sharpness';
@@ -46,7 +45,6 @@ import {
   setLastGarmentCondition,
 } from '@/features/scan/lib/garment-condition';
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
-import { saveScan } from '@/db/scans';
 import { createScanRecord } from '@/features/scan/lib/create-scan-record';
 
 /** What is known about the photo(s) on screen, saved with the scan. */
@@ -194,8 +192,6 @@ export default function ScanScreen() {
     void (async () => {
       let step: 'analyze' | 'save' = 'analyze';
       try {
-        const optimizedUri = photoUri ? await optimizeScanImage(photoUri) : null;
-
         const result = await createScanRecord({
           sellerLabel: getLastSellerLabel(),
           imageUris: photoUris,
@@ -211,13 +207,8 @@ export default function ScanScreen() {
         result.garmentCondition = garmentCondition;
 
         step = 'save';
-        const storedImageUri = optimizedUri
-          ? await persistScanImage(optimizedUri, result.id)
-          : null;
-        await saveScan(result, {
-          garmentCondition,
-          imageUri: storedImageUri,
-        });
+        if (!photoUri) throw new Error('No photo to save.');
+        await saveCapturedScan(result, photoUri, garmentCondition);
 
         // The stated label belongs to the garment just scanned; the next scan starts without one.
         clearLastSellerLabel();

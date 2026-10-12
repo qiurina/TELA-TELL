@@ -3,9 +3,21 @@ import {
   MIGRATION_WARNING_MESSAGE,
   MIGRATION_WARNING_TITLE,
   migrationHadIssues,
+  migrationBlocksStartup,
 } from '@/db/migration-report';
 
 describe('migration report', () => {
+  it.each(['ensureScanColumn:isFavorite', 'ensureScanColumn:deletedAt', 'ensureScanColumn:createdAt', 'ensureProfileColumn:colorSeason'])(
+    'blocks startup when a required step did not finish: %s', (step) => {
+      expect(migrationBlocksStartup({ issues: [{ step, status: 'failed', reason: 'x' }] })).toBe(true);
+      expect(migrationBlocksStartup({ issues: [{ step, status: 'skipped', reason: 'x' }] })).toBe(true);
+    },
+  );
+
+  it('allows clean startup and optional cleanup failures', () => {
+    expect(migrationBlocksStartup(CLEAN_MIGRATION_REPORT)).toBe(false);
+    expect(migrationBlocksStartup({ issues: [{ step: 'persistLegacyScanImages', status: 'failed', reason: 'x' }] })).toBe(false);
+  });
   it('detects whether any step failed or was skipped', () => {
     expect(migrationHadIssues(CLEAN_MIGRATION_REPORT)).toBe(false);
     expect(

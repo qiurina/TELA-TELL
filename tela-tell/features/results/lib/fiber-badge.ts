@@ -8,23 +8,26 @@ import { CLEAR_SHARE_MIN_PERCENT, type CompositionInput } from '@/data/scans/sca
  * comment on the headline fiber, and it only ever says what the model predicted:
  *  - likely:   the headline (top) fiber is itself synthetic.
  *  - possible: a synthetic fiber is a lower prediction with a clear share (>= 15%). A trace share
- *              (a few percent) is model noise and shows nothing.
- * There is no badge for an Unsure scan or when no synthetic prediction qualifies, and nothing is
- * shown that could be read as "no synthetic fibers", because the scan cannot prove that.
+ *              (a few percent) is model noise and is ignored.
+ *  - not_synthetic: the top fiber is not synthetic and no synthetic prediction has a clear share.
+ *              It describes only the top fiber; its info sheet says the scan cannot rule out a
+ *              synthetic blend, because a single-label scan cannot prove that.
+ * There is no badge for an Unsure scan or when the top fiber is not a known fiber.
  *
  * The 15% line is a display heuristic only (it reuses CLEAR_SHARE_MIN_PERCENT). It is not a
  * scientifically validated threshold and not a measure of fiber content: the classifier is
  * single-label, so these percentages are the model's confidence, not how much of each fiber the
  * fabric contains. It only keeps a trace score (a few percent) from putting a badge on the photo.
  *
- * Both badges use the same amber tone: "synthetic" is information about the predicted fiber, not a
- * warning, and the wording ("Likely" / "Other prediction") carries the difference.
+ * Both synthetic badges use the same amber tone: "synthetic" is information about the predicted
+ * fiber, not a warning, and the wording ("Likely" / "Other prediction") carries the difference.
+ * The not-synthetic badge is green.
  */
 export type FiberBadge = {
-  kind: 'likely' | 'possible';
+  kind: 'likely' | 'possible' | 'not_synthetic';
   label: string;
   fibers: SupportedFabric[];
-  tone: Extract<StatusTone, 'caution'>;
+  tone: Extract<StatusTone, 'caution' | 'good'>;
   infoTitle: string;
   infoMessage: string;
 };
@@ -76,7 +79,17 @@ export function getFiberBadge(
     CLEAR_SHARE_MIN_PERCENT,
   );
   if (possible.length === 0) {
-    return null;
+    if (!top) {
+      return null;
+    }
+    return {
+      kind: 'not_synthetic',
+      label: `Likely not synthetic: ${top}`,
+      fibers: [top],
+      tone: 'good',
+      infoTitle: 'Top fiber prediction',
+      infoMessage: `The model's top prediction is ${top}, which is not a synthetic fiber. The scan can't rule out synthetic fibers blended in. ${INFO_CLOSING}`,
+    };
   }
 
   return {

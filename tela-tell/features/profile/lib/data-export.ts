@@ -2,18 +2,21 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
-import { getAllScansForExport, getScanById, saveScan, setScanFavorite } from '@/db/scans';
+import { getAllScansForExport, getScanImportMetadata, saveScan } from '@/db/scans';
+import { isDatabaseAvailable } from '@/db/client';
 import type { ScanResult } from '@/data/scans/mock-data';
 import {
   encodeUtf8,
   ImportInvalidFileError,
-  isSafeScanId,
   parseExportPayload,
+  validateExportPayload,
   writeExportJson,
   type ExportBody,
   type ExportPayload,
 } from '@/features/profile/lib/export-format';
-import { restoreScanImage } from '@/features/scan/lib/scan-image-storage';
+import { deleteScanImages, restoreScanImage } from '@/features/scan/lib/scan-image-storage';
+import { resolveScanDate } from '@/features/scan/lib/scan-timestamp';
+import { ImportScansError, type ImportReport } from './import-report';
 import { getUserPreferencesSnapshot } from '@/features/profile/lib/user-preferences';
 
 export { ImportInvalidFileError, parseExportPayload };
@@ -116,39 +119,46 @@ export async function pickAndParseExportFile(): Promise<ExportPayload | null> {
 }
 
 /**
- * Imports scans via the existing insert-or-replace save path, which is safe to re-run on
- * the same file. saveScan's underlying INSERT OR REPLACE doesn't preserve isFavorite across
- * a conflict, so favorite status is restored as a separate explicit step after saving each scan.
- *
- * Photos: a scan whose photo is in the file gets it written back to the device. A scan without one
- * (an older export, or a missing photo) keeps whatever photo this device already has for that id,
- * so re-importing an older file never wipes photos that are already here.
+ * Validate the entire batch before writing anything. Each scan and its favorite status are saved
+ * together. A storage failure reports the completed count; retries safely replace the same ids.
+ * Imported photos use new paths so a failed save cannot overwrite an existing scan's photo.
  */
 export async function importScans(
   scans: ScanResult[],
   favoriteScanIds: string[],
   photos: Record<string, string> = {},
-): Promise<number> {
-  const favoriteIds = new Set(favoriteScanIds);
-  let imported = 0;
-  for (const scan of scans) {
-    let imageUri: string | null = null;
-    const photo = isSafeScanId(scan.id) ? photos[scan.id] : undefined;
-    if (photo) {
-      imageUri = await restoreScanImage(scan.id, photo);
+): Promise<ImportReport> {
+  const validated = validateExportPayload({ scans, favoriteScanIds, photos });
+  if (!isDatabaseAvailable()) throw new Error('Import is available in the mobile app.');
+  const favoriteIds = new Set(validated.favoriteScanIds);
+  const report: ImportReport = { imported: 0, total: validated.scans.length, missingPhotoIds: [] };
+  for (const scan of validated.scans) {
+    let restoredImage: string | null = null;
+    let saved = false;
+    try {
+      const existing = await getScanImportMetadata(scan.id);
+      const photo = validated.photos?.[scan.id];
+      if (photo) {
+        restoredImage = await restoreScanImage(scan.id, photo);
+        if (!restoredImage) report.missingPhotoIds.push(scan.id);
+      }
+      const date = resolveScanDate(scan.createdAt ?? existing?.createdAt, scan.scannedAtDate, scan.scannedAt, scan.id);
+      if (!date) throw new Error('Missing original scan date.');
+      await saveScan({ ...scan, createdAt: date.toISOString() }, {
+        garmentCondition: scan.garmentCondition,
+        imageUri: restoredImage ?? existing?.imageUri ?? null,
+        isFavorite: favoriteIds.has(scan.id),
+      });
+      saved = true;
+      report.imported += 1;
+      if (restoredImage && existing?.imageUri && restoredImage !== existing.imageUri) {
+        await deleteScanImages([existing.imageUri]);
+      }
+    } catch (error) {
+      if (restoredImage && !saved) await deleteScanImages([restoredImage]);
+      console.error('[TELA-TELL] Backup import failed:', error);
+      throw new ImportScansError(report);
     }
-    if (!imageUri) {
-      imageUri = (await getScanById(scan.id))?.imageUri ?? null;
-    }
-
-    await saveScan(scan, {
-      garmentCondition: scan.garmentCondition,
-      imageUri,
-    });
-    if (favoriteIds.has(scan.id)) {
-      await setScanFavorite(scan.id, true);
-    }
-    imported += 1;
   }
-  return imported;
+  return report;
 }

@@ -10,6 +10,8 @@ import { assessScanReliability } from '@/data/scans/scan-confidence';
 import { isCaptureType } from '@/features/results/lib/scan-details';
 import { normalizeTesterFields } from '@/features/results/lib/tester-fields';
 import { buildMislabeling } from '@/features/scan/lib/create-scan-record';
+import { getFiberBadge } from '@/features/results/lib/fiber-badge';
+import { evaluateDeclaredLabel } from '@/features/scan/lib/declared-label';
 import { deleteAllScanImages, deleteScanImages } from '@/features/scan/lib/scan-image-storage';
 import {
   formatScanDisplayTime,
@@ -22,6 +24,8 @@ const SCAN_THUMBNAIL = require('@/assets/images/testfabric.jpg') as ImageSourceP
 export type SaveScanOptions = {
   garmentCondition?: GarmentCondition;
   imageUri?: string | null;
+  createdAt?: string;
+  isFavorite?: boolean;
 };
 
 type ScanRow = {
@@ -79,6 +83,8 @@ export type ScanPage = {
 export type ScanStats = {
   total: number;
   mislabeled: number;
+  /** Scans whose History card says "Synthetic": the top fiber is synthetic and the scan is not unsure. */
+  synthetic: number;
 };
 
 function daysRemainingUntilPurge(deletedAt: string, retentionDays: number): number {
@@ -131,15 +137,15 @@ export async function saveScan(
         scannedAt, scannedAtDate, createdAt, sellerLabel, garmentCondition, imageUri,
         sustainabilityRating, sustainabilityLabel, sustainabilityScore,
         mislabelDetected, mislabelTitle, mislabelMessage,
-        resultJson
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        resultJson, isFavorite
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         result.id,
         result.dominantFabric,
         result.confidence,
         result.scannedAt,
         result.scannedAtDate,
-        new Date().toISOString(),
+        options?.createdAt ?? result.createdAt ?? new Date().toISOString(),
         result.sellerLabel ?? null,
         garmentCondition,
         imageUri,
@@ -150,6 +156,7 @@ export async function saveScan(
         result.mislabeling.title ?? null,
         result.mislabeling.message ?? null,
         JSON.stringify(withoutLegacySustainability(result)),
+        options?.isFavorite ? 1 : 0,
       ],
     );
   });
@@ -173,8 +180,9 @@ export async function getAllScansForExport(): Promise<ScanExportEntry[]> {
     resultJson: string | null;
     isFavorite: number | null;
     imageUri: string | null;
+    createdAt: string | null;
   }>(
-    `SELECT resultJson, isFavorite, imageUri FROM tblScan
+    `SELECT resultJson, isFavorite, imageUri, createdAt FROM tblScan
      WHERE ${ACTIVE_SCAN_FILTER}
      ${SCAN_LIST_ORDER}`,
   );
@@ -188,7 +196,7 @@ export async function getAllScansForExport(): Promise<ScanExportEntry[]> {
       const parsed = withoutLegacySustainability(JSON.parse(row.resultJson) as ScanResult);
       const { imageUri: jsonImageUri, ...withoutImage } = parsed;
       results.push({
-        scan: withoutImage,
+        scan: { ...withoutImage, createdAt: row.createdAt ?? parsed.createdAt },
         isFavorite: row.isFavorite === 1,
         imageUri: row.imageUri ?? jsonImageUri ?? null,
       });
@@ -199,14 +207,24 @@ export async function getAllScansForExport(): Promise<ScanExportEntry[]> {
 
   return results;
 }
+/** Includes trash rows so importing an older backup can preserve their photo and date too. */
+export async function getScanImportMetadata(scanId: string): Promise<{
+  createdAt: string | null;
+  imageUri: string | null;
+} | null> {
+  if (!isDatabaseAvailable()) return null;
+  const db = await getDatabase();
+  return db.getFirstAsync('SELECT createdAt, imageUri FROM tblScan WHERE scan_ID = ?', [scanId]);
+}
+
 export async function getScanById(scanId: string): Promise<ScanResult | undefined> {
   if (!isDatabaseAvailable()) {
     return undefined;
   }
 
   const db = await getDatabase();
-  const row = await db.getFirstAsync<{ resultJson: string | null; imageUri: string | null }>(
-    `SELECT resultJson, imageUri FROM tblScan
+  const row = await db.getFirstAsync<{ resultJson: string | null; imageUri: string | null; createdAt: string | null }>(
+    `SELECT resultJson, imageUri, createdAt FROM tblScan
      WHERE scan_ID = ? AND ${ACTIVE_SCAN_FILTER}
      LIMIT 1`,
     [scanId],
@@ -220,6 +238,7 @@ export async function getScanById(scanId: string): Promise<ScanResult | undefine
     const parsed = withoutLegacySustainability(JSON.parse(row.resultJson) as ScanResult);
     return {
       ...parsed,
+      createdAt: row.createdAt ?? parsed.createdAt,
       imageUri: row.imageUri ?? parsed.imageUri ?? null,
     };
   } catch {
@@ -321,10 +340,13 @@ export async function getDeletedScansPage(
   return queryScanPage(DELETED_SCAN_FILTER, DELETED_SCAN_LIST_ORDER, query, retentionDays);
 }
 
-/** Totals for the History header, counted in SQL so no scan rows are loaded. */
+/**
+ * Totals for the History header. Total and mislabeled are counted in SQL; the synthetic count needs
+ * each scan's fiber scores, so it loads only those and uses the same rule as the History pill.
+ */
 export async function getScanStats(): Promise<ScanStats> {
   if (!isDatabaseAvailable()) {
-    return { total: 0, mislabeled: 0 };
+    return { total: 0, mislabeled: 0, synthetic: 0 };
   }
 
   const db = await getDatabase();
@@ -338,9 +360,29 @@ export async function getScanStats(): Promise<ScanStats> {
      WHERE ${ACTIVE_SCAN_FILTER}`,
   );
 
+  const fiberRows = await db.getAllAsync<{ dominantFabric: string; compositionsJson: string | null }>(
+    `SELECT dominantFabric,
+            CASE WHEN json_valid(resultJson) THEN json_extract(resultJson, '$.compositions') END AS compositionsJson
+     FROM tblScan
+     WHERE ${ACTIVE_SCAN_FILTER}`,
+  );
+  const synthetic = fiberRows.filter((fiberRow) => {
+    if (!fiberRow.compositionsJson) {
+      return false;
+    }
+    try {
+      const compositions = JSON.parse(fiberRow.compositionsJson) as ScanResult['compositions'];
+      const unsure = !assessScanReliability(compositions).reliable;
+      return getFiberBadge(fiberRow.dominantFabric, compositions, unsure)?.kind === 'likely';
+    } catch {
+      return false;
+    }
+  }).length;
+
   return {
     total: row?.total ?? 0,
     mislabeled: row?.mislabeled ?? 0,
+    synthetic,
   };
 }
 export async function getRecentScans(limit = 5): Promise<RecentScanPreview[]> {
@@ -366,6 +408,10 @@ function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
   let compositionText = '';
   let liveMislabel = row.mislabelDetected === 1;
   let unsure = false;
+  let unsureReason: RecentScanPreview['unsureReason'] = null;
+  let labelStatus: RecentScanPreview['labelStatus'];
+  let fiberBadgeKind: RecentScanPreview['fiberBadgeKind'] = null;
+  let closestCandidates: RecentScanPreview['closestCandidates'];
 
   if (row.compositionsJson) {
     try {
@@ -373,12 +419,21 @@ function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
       compositionText = compositions
         .map((item) => `${item.material} ${item.percentage}%`)
         .join(' · ');
-      unsure = !assessScanReliability(compositions).reliable;
-      liveMislabel = buildMislabeling(
+      const reliability = assessScanReliability(compositions);
+      unsure = !reliability.reliable;
+      unsureReason = reliability.reason;
+      fiberBadgeKind = getFiberBadge(row.dominantFabric, compositions, unsure)?.kind ?? null;
+      closestCandidates = [...compositions]
+        .sort((a, b) => b.percentage - a.percentage)
+        .slice(0, 2)
+        .map(({ material, percentage }) => ({ material, percentage }));
+      labelStatus = evaluateDeclaredLabel(
         row.dominantFabric,
         row.sellerLabel ?? row.resultSellerLabel ?? null,
         compositions ?? [],
-      ).detected;
+      ).status;
+      // Same rule as buildMislabeling: only a mismatch raises the alert.
+      liveMislabel = labelStatus === 'mismatch';
     } catch {
       compositionText = '';
     }
@@ -399,7 +454,11 @@ function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
     scannedAt: resolvedDate ? formatScanDisplayTime(resolvedDate) : row.scannedAt,
     scannedAtDate: resolvedDate ? formatScannedAtDate(resolvedDate) : row.scannedAtDate,
     mislabeling: liveMislabel,
+    labelStatus,
+    fiberBadgeKind,
     unsure,
+    unsureReason,
+    closestCandidates,
     captureType: isCaptureType(row.resultCaptureType) ? row.resultCaptureType : null,
     sellerLabel: row.sellerLabel ?? undefined,
     image: row.imageUri ? { uri: row.imageUri } : SCAN_THUMBNAIL,

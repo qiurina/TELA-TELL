@@ -45,3 +45,14 @@ export function migrationWarningFor(report: MigrationReport): MigrationWarning {
 export function migrationHadIssues(report: MigrationReport): boolean {
   return report.issues.length > 0;
 }
+
+/** Screens depend on these columns; optional cleanup failures can still show a warning. */
+export function migrationBlocksStartup(report: MigrationReport): boolean {
+  const required = new Set([
+    'ensureScanColumn:isFavorite',
+    'ensureScanColumn:deletedAt',
+    'ensureScanColumn:createdAt',
+    'ensureProfileColumn:colorSeason',
+  ]);
+  return report.issues.some((issue) => required.has(issue.step));
+}

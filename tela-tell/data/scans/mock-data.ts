@@ -1,6 +1,9 @@
 import type { ImageSourcePropType } from 'react-native';
 
 import type { GarmentCondition } from '@/data/scans/garment-condition';
+import type { UnsureReason } from '@/data/scans/scan-confidence';
+import type { FiberBadge } from '@/features/results/lib/fiber-badge';
+import type { DeclaredLabelStatus } from '@/features/scan/lib/declared-label';
 import type { LightingReading, LightingWarning } from '@/features/scan/lib/ml/lighting';
 
 export type FabricComposition = {
@@ -134,6 +137,8 @@ export type ScanTesterFields = {
 
 export type ScanResult = {
   id: string;
+  /** Original scan timestamp, carried through backups; absent in older exports. */
+  createdAt?: string;
   dominantFabric: string;
   compositions: FabricComposition[];
   confidence: number;
@@ -170,8 +175,16 @@ export type RecentScanPreview = {
   scannedAt: string;
   scannedAtDate: string;
   mislabeling: boolean;
+  /** Same synthetic / not-synthetic call as the badge on the results photo; null when none. */
+  fiberBadgeKind?: FiberBadge['kind'] | null;
+  /** Result of comparing the stated label with the scan; 'none' when no label was entered. */
+  labelStatus?: DeclaredLabelStatus;
   /** The scan could not name one fiber reliably (see assessScanReliability). */
   unsure?: boolean;
+  /** Why the scan is unsure; null when it is not. */
+  unsureReason?: UnsureReason | null;
+  /** Top two candidates by confidence, highest first; what an unsure card shows instead of a fiber. */
+  closestCandidates?: { material: string; percentage: number }[];
   /** How the photo was captured; null for scans saved before this was recorded. */
   captureType?: CaptureType | null;
   sellerLabel?: string;

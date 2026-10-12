@@ -207,8 +207,8 @@ export async function hydrateUserPreferences(options?: {
   return loaded;
 }
 
-export function persistUserPreferences(): Promise<void> {
-  const snapshot = getUserPreferences();
+export function persistUserPreferences(next?: UserPreferences): Promise<void> {
+  const snapshot = normalizePreferences(next ?? preferences);
 
   pendingPreferencesSave = waitForPreferencesSave().then(async () => {
     try {
@@ -220,6 +220,13 @@ export function persistUserPreferences(): Promise<void> {
   });
 
   return pendingPreferencesSave;
+}
+
+/** Publish imported preferences only after the transaction succeeds, leaving current settings on failure. */
+export async function importUserPreferences(next: UserPreferences): Promise<void> {
+  const normalized = normalizePreferences(next);
+  await persistUserPreferences(normalized);
+  setUserPreferences(normalized);
 }
 
 export function hasActiveUserPreferences(): boolean {

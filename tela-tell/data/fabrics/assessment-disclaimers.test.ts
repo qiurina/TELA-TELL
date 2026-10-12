@@ -42,6 +42,8 @@ describe('assessment disclaimers', () => {
     expect(text(COMPOSITION_SHEET_SECTIONS)).toMatch(/How much of each fiber is in the garment/);
     expect(text(COMPOSITION_SHEET_SECTIONS)).toMatch(/look alike in photos, so the top match can be wrong/);
     expect(text(COMPOSITION_SHEET_SECTIONS)).toMatch(/Check the care tag for the real composition/);
+    // Took over from the retired blends card on the results screen.
+    expect(text(COMPOSITION_SHEET_SECTIONS)).toMatch(/can't see blends/);
     // General information only: it names no specific fibers or test results.
     expect(text(COMPOSITION_SHEET_SECTIONS)).not.toMatch(/rayon|cotton|polyester|test photos/i);
   });

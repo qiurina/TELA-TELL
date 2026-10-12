@@ -13,14 +13,9 @@ import { ResultsScreenHeader } from '@/features/results/components/results-scree
 import { ScanConfidenceBanner } from '@/features/results/components/scan-confidence-banner';
 import { SellerComparisonCard } from '@/features/results/components/seller-comparison-card';
 import { SustainableChoicesCard } from '@/features/results/components/sustainable-choices-card';
-import { getFiberInformation } from '@/data/fabrics/shedding-why';
-import { FiberInformationCard } from '@/features/results/components/fiber-information-card';
 import { SyntheticHealthRiskCard } from '@/features/results/components/synthetic-health-risk-card';
-import { UnsureDetailsCard } from '@/features/results/components/unsure-details-card';
 import { BrandColors } from '@/constants/brand';
 import { deleteScan, isScanFavorite, setScanFavorite } from '@/db/scans';
-import { getBlendCaution } from '@/data/fabrics/blend-caution';
-import { BlendCautionCard } from '@/features/results/components/blend-caution-card';
 import { useScanResult } from '@/features/results/hooks/use-scan-result';
 import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 import { getFiberBadge } from '@/features/results/lib/fiber-badge';
@@ -158,7 +153,8 @@ export default function ResultsScreen() {
   };
 
   // An unsure scan names no fiber, so nothing derived from "the" fiber (reference photo, synthetic
-  // badge, shedding estimate, fiber details, sustainable-choices card) is shown for it.
+  // badge, shedding estimate, fiber details, sustainable-choices card) is shown for it, and neither
+  // is the stated-label comparison, which has no reliable fiber to compare against.
   const reliability = assessScanReliability(result.compositions);
   const isUnsure = !reliability.reliable;
 
@@ -176,15 +172,11 @@ export default function ResultsScreen() {
 
   // "Detected" only when the most likely fiber itself is synthetic (that is when the shedding card
   // shows); a synthetic that only appears further down the top 3 is a possibility, not a finding.
-  // Information (no rating) for a natural or cellulose-based top fiber; the rated card is for the four synthetics.
-  const fiberInfo = isUnsure || healthRisk ? null : getFiberInformation(result.dominantFabric);
+  // The unrated "Fiber information" card for other fibers lives only in Eco tips.
 
   // Names the fiber and only ever says what the model predicted; null (no badge) for an Unsure
   // scan or when no synthetic prediction has a clear share.
   const fiberBadge = getFiberBadge(result.dominantFabric, result.compositions, isUnsure);
-
-  // Null for an Unsure scan and for fibers the note does not apply to.
-  const blendCaution = getBlendCaution(result.dominantFabric, result.compositions);
 
   const headline = isUnsure
     ? getUnsureHeadline(result.compositions ?? [])
@@ -235,24 +227,19 @@ export default function ResultsScreen() {
 
         <CompositionCard compositions={result.compositions ?? []} />
 
-        {blendCaution ? <BlendCautionCard caution={blendCaution} /> : null}
-
-
         {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
-        {fiberInfo ? <FiberInformationCard info={fiberInfo} /> : null}
 
-        {isUnsure ? (
-          <UnsureDetailsCard />
-        ) : (
-          <SustainableChoicesCard onEcoTips={handleEcoTips} />
+        {isUnsure ? null : (
+          <>
+            <SustainableChoicesCard onEcoTips={handleEcoTips} />
+            <SellerComparisonCard
+              sellerLabel={sellerLabel}
+              detectedLabel={headline.title}
+              check={labelCheck}
+              onAddLabel={handleAddLabel}
+            />
+          </>
         )}
-
-        <SellerComparisonCard
-          sellerLabel={sellerLabel}
-          detectedLabel={headline.title}
-          check={labelCheck}
-          onAddLabel={handleAddLabel}
-        />
 
         <ResultsExploreActions
           onProfile={handleViewProfile}

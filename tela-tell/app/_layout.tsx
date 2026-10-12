@@ -17,11 +17,12 @@ import 'react-native-reanimated';
 
 import { AppErrorFallback } from '@/components/app-error-boundary';
 import { AppSplash } from '@/components/splash/app-splash';
+import { StartupError } from '@/components/startup-error';
 import { AlertHost, showAlert } from '@/components/ui/alert-dialog';
 import { BrandColors } from '@/constants/brand';
 import { migrateDatabase } from '@/db/migrate';
 import {
-  GENERIC_MIGRATION_WARNING,
+  migrationBlocksStartup,
   migrationHadIssues,
   migrationWarningFor,
   type MigrationWarning,
@@ -62,15 +63,19 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 export default function RootLayout() {
   const [showSplashOverlay, setShowSplashOverlay] = useState(true);
   const [splashMinTimeElapsed, setSplashMinTimeElapsed] = useState(false);
-  const [databaseReady, setDatabaseReady] = useState(false);
+  const [startupStatus, setStartupStatus] = useState<'loading' | 'ready' | 'failed' | 'retrying'>('loading');
+  const [startupAttempt, setStartupAttempt] = useState(0);
   const [migrationWarning, setMigrationWarning] = useState<MigrationWarning | null>(null);
   const splashOpacity = useState(() => new Animated.Value(1))[0];
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
   });
+  // React Native uses system fonts for unregistered families. A font error must not block entry.
+  const fontsReady = fontsLoaded || fontError !== null;
+  const startupSettled = startupStatus !== 'loading';
 
   useEffect(() => {
     const timer = setTimeout(() => setSplashMinTimeElapsed(true), SPLASH_MIN_MS);
@@ -78,53 +83,69 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!fontsLoaded) {
+    if (!fontsReady) {
       return;
     }
 
     requestAnimationFrame(() => {
-      void SplashScreen.hideAsync();
+      void SplashScreen.hideAsync().catch((error) => {
+        console.warn('[TELA-TELL] Could not hide native splash:', error);
+      });
     });
-  }, [fontsLoaded]);
+  }, [fontsReady]);
 
   useEffect(() => {
-    if (!fontsLoaded || !splashMinTimeElapsed || !databaseReady) {
+    if (fontError) console.warn('[TELA-TELL] Fonts unavailable; continuing with system fonts:', fontError);
+  }, [fontError]);
+
+  useEffect(() => {
+    if (!fontsReady || !splashMinTimeElapsed || !startupSettled || !showSplashOverlay) {
       return;
     }
 
-    Animated.timing(splashOpacity, {
+    const animation = Animated.timing(splashOpacity, {
       toValue: 0,
       duration: FADE_MS,
       useNativeDriver: true,
-    }).start(({ finished }) => {
+    });
+    animation.start(({ finished }) => {
       if (finished) {
         setShowSplashOverlay(false);
       }
     });
-  }, [fontsLoaded, splashMinTimeElapsed, databaseReady, splashOpacity]);
+    return () => animation.stop();
+  }, [fontsReady, splashMinTimeElapsed, startupSettled, showSplashOverlay, splashOpacity]);
 
   // Shown once the splash has faded so the dialog isn't covered by it. Failed steps are only
   // logged; the user sees a plain message with no technical detail.
   useEffect(() => {
-    if (migrationWarning && !showSplashOverlay) {
+    if (migrationWarning && startupStatus === 'ready' && !showSplashOverlay) {
       showAlert(migrationWarning.title, migrationWarning.message, 'info');
     }
-  }, [migrationWarning, showSplashOverlay]);
+  }, [migrationWarning, startupStatus, showSplashOverlay]);
 
-  // Screens read SQLite as soon as they mount, so nothing renders until the migration has settled.
+  // Screens read SQLite on mount; a fatal failure must keep them behind the recovery screen.
   useEffect(() => {
-    void migrateDatabase()
+    let active = true;
+    void migrateDatabase({ retry: startupAttempt > 0 })
       .then(async (report) => {
-        if (migrationHadIssues(report)) {
-          setMigrationWarning(migrationWarningFor(report));
-        }
+        if (!active) return;
+        if (migrationBlocksStartup(report)) throw new Error('Required database update did not complete.');
         await hydrateUserPreferences();
+        if (!active) return;
+        setMigrationWarning(migrationHadIssues(report) ? migrationWarningFor(report) : null);
+        setStartupStatus('ready');
       })
       .catch((error: unknown) => {
-        console.warn('[TELA-TELL] SQLite migration failed:', error);
-        setMigrationWarning(GENERIC_MIGRATION_WARNING);
-      })
-      .finally(() => setDatabaseReady(true));
+        console.warn('[TELA-TELL] Database startup failed:', error);
+        if (active) setStartupStatus('failed');
+      });
+    return () => {
+      active = false;
+    };
+  }, [startupAttempt]);
+
+  useEffect(() => {
     void hydrateLastSellerLabel();
     void hydrateClipOnLens();
     void loadIntroState();
@@ -132,7 +153,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      {fontsLoaded && databaseReady ? (
+      {fontsReady && startupStatus === 'ready' ? (
         <>
           <ThemeProvider value={AppNavigationTheme}>
             <Stack
@@ -251,11 +272,23 @@ export default function RootLayout() {
             <StatusBar style="dark" />
           </ThemeProvider>
         </>
+      ) : fontsReady && (startupStatus === 'failed' || startupStatus === 'retrying') ? (
+        <>
+          <StartupError
+            retrying={startupStatus === 'retrying'}
+            onRetry={() => {
+              if (startupStatus !== 'failed') return;
+              setStartupStatus('retrying');
+              setStartupAttempt(startupAttempt + 1);
+            }}
+          />
+          <StatusBar style="dark" />
+        </>
       ) : null}
 
       {showSplashOverlay ? (
         <Animated.View
-          pointerEvents={fontsLoaded && splashMinTimeElapsed && databaseReady ? 'none' : 'auto'}
+          pointerEvents={fontsReady && splashMinTimeElapsed && startupSettled ? 'none' : 'auto'}
           style={[styles.splashOverlay, { opacity: splashOpacity }]}>
           <AppSplash fontsLoaded={fontsLoaded} />
         </Animated.View>

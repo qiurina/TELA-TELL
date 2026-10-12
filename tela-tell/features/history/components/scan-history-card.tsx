@@ -2,11 +2,13 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Check, Eye, Bookmark } from '@/components/ui/lucide-icons';
+import { Check, Eye, Bookmark, TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import type { RecentScanPreview } from '@/data/scans/mock-data';
+import type { FiberBadge } from '@/features/results/lib/fiber-badge';
+import type { DeclaredLabelStatus } from '@/features/scan/lib/declared-label';
 
 const FAVORITE_BOOKMARK = '#EAB308';
 
@@ -18,10 +20,46 @@ type ScanHistoryCardProps = {
   selected?: boolean;
 };
 
-const MISLABEL_PILL_LABEL = {
-  true: 'Label differs',
-  false: 'Label OK',
-} as const;
+type PillTone = 'alert' | 'ok' | 'caution' | 'neutral';
+
+/**
+ * Pill for the stated-label check. No label ('none') and an unsure scan get no label pill: there
+ * was nothing to compare, so "Label matches" would claim a check that never happened.
+ */
+const LABEL_PILL: Partial<Record<DeclaredLabelStatus, { text: string; tone: PillTone }>> = {
+  mismatch: { text: 'May not match', tone: 'alert' },
+  weak: { text: 'Partly matches', tone: 'caution' },
+  unreadable: { text: "Can't check label", tone: 'neutral' },
+  match: { text: 'Label matches', tone: 'ok' },
+};
+
+/** Shortened from the badge on the results photo, so both screens make the same call. */
+const FIBER_PILL: Record<FiberBadge['kind'], { text: string; tone: PillTone }> = {
+  likely: { text: 'Synthetic', tone: 'caution' },
+  possible: { text: 'Possible synthetic', tone: 'caution' },
+  not_synthetic: { text: 'Not synthetic', tone: 'ok' },
+};
+
+const UNSURE_AMBER = '#b45309';
+
+/**
+ * An unsure scan names no fiber, so the card says why instead of listing scores that read like a
+ * blend: a close call shows the two fibers it was torn between; a weak match hedges on the top
+ * fiber and suggests a rescan.
+ */
+function getUnsureCardText(scan: RecentScanPreview) {
+  const [first, second] = scan.closestCandidates ?? [];
+  if (scan.unsureReason === 'close_call' && first && second) {
+    return {
+      title: `${first.material} or ${second.material}?`,
+      subtitle: `Too close to call · ${first.percentage}% vs ${second.percentage}%`,
+    };
+  }
+  return {
+    title: `Possibly ${first?.material ?? scan.primaryFabric}`,
+    subtitle: 'Weak match · try rescanning',
+  };
+}
 
 export function ScanHistoryCard({
   scan,
@@ -30,6 +68,12 @@ export function ScanHistoryCard({
   selectionMode = false,
   selected = false,
 }: ScanHistoryCardProps) {
+  const unsureText = scan.unsure ? getUnsureCardText(scan) : null;
+  const labelPill =
+    LABEL_PILL[scan.labelStatus ?? (scan.mislabeling ? 'mismatch' : 'none')] ?? null;
+  const fiberPill = scan.fiberBadgeKind ? FIBER_PILL[scan.fiberBadgeKind] : null;
+  const pills = [fiberPill, labelPill].filter((pill) => pill !== null);
+
   return (
     <Pressable
       style={({ pressed }) => [
@@ -65,29 +109,37 @@ export function ScanHistoryCard({
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.fabric}>
-          {scan.unsure ? `Unsure (closest: ${scan.primaryFabric})` : scan.primaryFabric}
+        <Text style={styles.fabric} numberOfLines={1}>
+          {unsureText ? unsureText.title : scan.primaryFabric}
         </Text>
         <Text style={styles.composition} numberOfLines={2}>
-          {scan.composition}
+          {unsureText ? unsureText.subtitle : scan.composition}
         </Text>
         <Text style={styles.meta}>{scan.scannedAt}</Text>
-        <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.statusPill,
-              scan.mislabeling ? styles.mislabelPillAlert : styles.mislabelPillOk,
-            ]}>
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.statusPillText,
-                scan.mislabeling ? styles.mislabelTextAlert : styles.mislabelTextOk,
-              ]}>
-              {scan.mislabeling ? MISLABEL_PILL_LABEL.true : MISLABEL_PILL_LABEL.false}
-            </Text>
+        {unsureText ? (
+          <View style={styles.statusRow}>
+            <View style={[styles.statusPill, styles.cautionPill]}>
+              <TriangleAlert size={10} color={UNSURE_AMBER} strokeWidth={2.5} />
+              <Text numberOfLines={1} style={[styles.statusPillText, styles.cautionText]}>
+                Unsure
+              </Text>
+            </View>
           </View>
-        </View>
+        ) : pills.length > 0 ? (
+          <View style={styles.statusRow}>
+            {pills.map((pill) => (
+              <View
+                key={pill.text}
+                style={[styles.statusPill, PILL_TONE_STYLES[pill.tone].pill]}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.statusPillText, PILL_TONE_STYLES[pill.tone].text]}>
+                  {pill.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       {selectionMode ? (
@@ -183,13 +235,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  mislabelPillAlert: {
+  alertPill: {
     borderColor: '#fecaca',
     backgroundColor: '#fef2f2',
   },
-  mislabelPillOk: {
+  okPill: {
     borderColor: '#bbf7d0',
     backgroundColor: '#f0fdf4',
+  },
+  neutralPill: {
+    borderColor: BrandColors.borderLight,
+    backgroundColor: BrandColors.inputBackground,
   },
   statusPillText: {
     fontFamily: Fonts.medium,
@@ -197,11 +253,21 @@ const styles = StyleSheet.create({
     lineHeight: 11,
     flexShrink: 1,
   },
-  mislabelTextAlert: {
+  alertText: {
     color: '#dc2626',
   },
-  mislabelTextOk: {
+  okText: {
     color: '#16a34a',
+  },
+  neutralText: {
+    color: BrandColors.textMuted,
+  },
+  cautionPill: {
+    borderColor: '#fde68a',
+    backgroundColor: '#fffbeb',
+  },
+  cautionText: {
+    color: UNSURE_AMBER,
   },
   eyeButton: {
     width: 34,
@@ -227,3 +293,10 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.primary,
   },
 });
+
+const PILL_TONE_STYLES = {
+  alert: { pill: styles.alertPill, text: styles.alertText },
+  ok: { pill: styles.okPill, text: styles.okText },
+  caution: { pill: styles.cautionPill, text: styles.cautionText },
+  neutral: { pill: styles.neutralPill, text: styles.neutralText },
+} satisfies Record<PillTone, unknown>;

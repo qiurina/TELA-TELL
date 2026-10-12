@@ -6,6 +6,17 @@ import {
   writeExportJson,
   type ExportBody,
 } from '@/features/profile/lib/export-format';
+import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
+
+function scan(id = 's1') {
+  const compositions = [{ material: 'Cotton', percentage: 90 }];
+  return {
+    id, dominantFabric: 'Cotton', compositions, confidence: 90,
+    scannedAt: '12:00 PM', scannedAtDate: '2026-10-01',
+    mislabeling: { detected: false, title: '', message: '' },
+    ...buildScanProfile('Cotton', 'Cotton', compositions),
+  };
+}
 
 const BODY: ExportBody = {
   exportedAt: '2026-10-10T12:00:00.000Z',
@@ -31,14 +42,14 @@ describe('writeExportJson', () => {
   it('writes one valid JSON document with the data and each photo under its scan id', async () => {
     const { text, photosWritten } = await write(BODY, ['scan_a', 'scan_b'], {
       scan_a: 'QUJDREVGRw==',
-      scan_b: '/+9AbC123',
+      scan_b: '/+9AbC12',
     });
 
     const parsed = JSON.parse(text);
     expect(parsed.exportedAt).toBe(BODY.exportedAt);
     expect(parsed.scans).toEqual(BODY.scans);
     expect(parsed.favoriteScanIds).toEqual(['scan_a']);
-    expect(parsed.photos).toEqual({ scan_a: 'QUJDREVGRw==', scan_b: '/+9AbC123' });
+    expect(parsed.photos).toEqual({ scan_a: 'QUJDREVGRw==', scan_b: '/+9AbC12' });
     expect(photosWritten).toBe(2);
   });
 
@@ -78,7 +89,7 @@ describe('writeExportJson', () => {
 describe('parseExportPayload', () => {
   it('reads a file exported before photos were included, with no photos', () => {
     const payload = parseExportPayload(
-      JSON.stringify({ exportedAt: 'x', scans: [{ id: 's1' }], preferences: {} }),
+      JSON.stringify({ exportedAt: '2026-10-10T12:00:00.000Z', scans: [scan()], preferences: {} }),
     );
     expect(payload.scans).toHaveLength(1);
     expect(payload.favoriteScanIds).toEqual([]);
@@ -87,25 +98,66 @@ describe('parseExportPayload', () => {
 
   it('reads the photos from a new file', () => {
     const payload = parseExportPayload(
-      JSON.stringify({ scans: [], favoriteScanIds: ['s1'], photos: { s1: 'QUJD' } }),
+      JSON.stringify({ scans: [scan()], favoriteScanIds: ['s1'], photos: { s1: 'QUJD' } }),
     );
     expect(payload.photos).toEqual({ s1: 'QUJD' });
     expect(payload.favoriteScanIds).toEqual(['s1']);
   });
 
-  it('drops photo entries with unsafe ids or non-base64 data instead of failing the import', () => {
-    const payload = parseExportPayload(
-      JSON.stringify({
-        scans: [],
-        photos: { '../../evil': 'QUJD', 'a/b': 'QUJD', ok_1: 'QUJD', bad: '<script>', num: 5 },
-      }),
-    );
-    expect(payload.photos).toEqual({ ok_1: 'QUJD' });
+  it('validates a large photo without decoding it or overflowing the regular-expression stack', () => {
+    const photo = 'A'.repeat(2_000_000);
+    expect(parseExportPayload(JSON.stringify({ scans: [scan()], photos: { s1: photo } })).photos?.s1).toBe(photo);
   });
 
-  it('ignores a malformed photos member', () => {
-    expect(parseExportPayload(JSON.stringify({ scans: [], photos: ['QUJD'] })).photos).toBeUndefined();
-    expect(parseExportPayload(JSON.stringify({ scans: [], photos: 'QUJD' })).photos).toBeUndefined();
+  it.each([{ '../../evil': 'QUJD' }, { 'a/b': 'QUJD' }, { s1: '<script>' }, { s1: 5 }, { s1: 'Q' }])('rejects invalid photos before importing: %j', (photos) => {
+    expect(() => parseExportPayload(JSON.stringify({ scans: [scan()], photos }))).toThrow(ImportInvalidFileError);
+  });
+
+  it('rejects a malformed photos member', () => {
+    expect(() => parseExportPayload(JSON.stringify({ scans: [], photos: ['QUJD'] }))).toThrow(ImportInvalidFileError);
+    expect(() => parseExportPayload(JSON.stringify({ scans: [], photos: 'QUJD' }))).toThrow(ImportInvalidFileError);
+  });
+
+  it.each([
+    null, { ...scan(), id: '../evil' }, { ...scan(), confidence: 101 },
+    { ...scan(), compositions: [{ material: 'Cotton', percentage: '90' }] },
+    { ...scan(), dominantFabric: 'Unknown' }, { ...scan(), scannedAtDate: '2026-02-30' },
+    { ...scan(), createdAt: '2026-02-30T12:00:00Z' }, { ...scan(), garmentCondition: 'Broken' },
+    { ...scan(), capture: { captureType: 'gallery' } }, { ...scan(), testerFields: { colour: [] } },
+  ])('rejects invalid scan fields: %j', (value) => {
+    expect(() => parseExportPayload(JSON.stringify({ scans: [value] }))).toThrow(ImportInvalidFileError);
+  });
+
+  it.each([
+    [], { skinTone: 'purple' }, { skinUndertone: 1 }, { colorSeason: 'Fall' },
+    { sensitiveFabrics: 'Cotton' }, { preferredFabrics: ['Unknown'] },
+    { dressingContexts: ['mars'] }, { dressingContexts: [null] }, { dressingContexts: null },
+  ])('rejects invalid preferences: %j', (preferences) => {
+    expect(() => parseExportPayload(JSON.stringify({ scans: [], preferences }))).toThrow(ImportInvalidFileError);
+  });
+
+  it('normalizes legacy preferences and deduplicates lists', () => {
+    const payload = parseExportPayload(JSON.stringify({ scans: [], preferences: {
+      dressingContext: 'sunny', sensitiveFabrics: ['Wool', 'Wool'], preferredFabrics: ['Cotton', 'Wool'],
+    } }));
+    expect(payload.preferences).toMatchObject({ skinTone: null, colorSeason: null,
+      sensitiveFabrics: ['Wool'], preferredFabrics: ['Cotton'], dressingContexts: ['sunny'] });
+  });
+
+  it('rejects duplicate ids, dangling favorites and photos without matching scans', () => {
+    for (const payload of [
+      { scans: [scan(), scan()] }, { scans: [scan()], favoriteScanIds: [5] },
+      { scans: [], favoriteScanIds: ['missing'] }, { scans: [], photos: { missing: 'QUJD' } },
+    ]) expect(() => parseExportPayload(JSON.stringify(payload))).toThrow(ImportInvalidFileError);
+  });
+
+  it('rebuilds derived content and removes device-specific paths from imported scans', () => {
+    const payload = parseExportPayload(JSON.stringify({ scans: [{ ...scan(),
+      imageUri: 'file:///another-device/photo.jpg', profile: null, recommendations: [],
+    }] }));
+    expect(payload.scans[0].profile).toEqual(scan().profile);
+    expect(payload.scans[0].recommendations).toEqual(scan().recommendations);
+    expect(payload.scans[0].imageUri).toBeUndefined();
   });
 
   it('still rejects files that are not exports', () => {

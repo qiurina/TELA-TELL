@@ -104,13 +104,6 @@ export const UNSURE_NOTICE = {
     "The scan couldn't pick one fabric with enough confidence, so it isn't naming one. Try again closer to the threads with steady focus, or check the care tag.",
   closeCall:
     'Two fabrics scored too close together to call. Try again closer to the threads with steady focus, or check the care tag.',
-  /** Shown where the shedding and sustainable-choices cards would be. */
-  fiberDetails: {
-    title: 'Fiber details not shown',
-    pill: 'Unsure',
-    message:
-      "Shedding and fiber details depend on knowing the fiber, and this scan couldn't identify it reliably. Check the care label for the fiber content, or scan again.",
-  },
 } as const;
 
 export const LOW_CONFIDENCE_WARNING = {

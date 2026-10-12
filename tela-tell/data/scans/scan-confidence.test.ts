@@ -8,7 +8,6 @@ import {
   getSignificantFibers,
   UNSURE_MIN_CONFIDENCE_PERCENT,
   UNSURE_MIN_MARGIN_POINTS,
-  UNSURE_NOTICE,
 } from '@/data/scans/scan-confidence';
 
 describe('assessScanReliability', () => {
@@ -88,14 +87,6 @@ describe('assessScanReliability', () => {
     expect(assessScanReliability([]).reliable).toBe(true);
     expect(assessScanReliability(undefined).reliable).toBe(true);
     expect(assessScanReliability(null).reliable).toBe(true);
-  });
-
-  it('explains, where fiber-dependent details are hidden, why and what to do', () => {
-    const { message } = UNSURE_NOTICE.fiberDetails;
-    expect(message).not.toMatch(/sustainab/i);
-    expect(message).toMatch(/shedding/i);
-    expect(message).toMatch(/couldn't identify it reliably/);
-    expect(message).toMatch(/care label/);
   });
 
   it('does not mutate its input', () => {

@@ -12,22 +12,29 @@ import {
 } from '@/features/scan/lib/scan-image-storage';
 
 let migrationPromise: Promise<MigrationReport> | null = null;
+let failedSteps = false;
 
 /**
- * Runs the migration once per app session and resolves with a report of any steps that failed or
- * were skipped. It only rejects when the base schema itself can't be created.
+ * Caches the migration result for the session and reports steps that failed or were skipped.
+ * It only rejects when the database cannot open or the base schema cannot be created.
  *
- * There is no in-session retry: a failed step is simply attempted again the next time the app
- * starts. That is safe because every step is idempotent (columns and indexes are checked before
- * being added, drops use IF EXISTS, and the sustainability resync only records its fingerprint
- * after it succeeds). See the "safe to run twice" test.
+ * Startup recovery may explicitly retry a settled run with failed steps. Clean runs remain
+ * cached. Re-running is safe because every step is idempotent (columns/indexes are checked,
+ * drops use IF EXISTS, and the profile resync records its fingerprint only after success).
  */
-export function migrateDatabase(): Promise<MigrationReport> {
+export function migrateDatabase(options: { retry?: boolean } = {}): Promise<MigrationReport> {
+  if (options.retry && failedSteps) migrationPromise = null;
   if (!migrationPromise) {
-    migrationPromise = runMigration().catch((error) => {
-      migrationPromise = null;
-      throw error;
-    });
+    failedSteps = false;
+    migrationPromise = runMigration()
+      .then((report) => {
+        failedSteps = report.issues.length > 0;
+        return report;
+      })
+      .catch((error) => {
+        migrationPromise = null;
+        throw error;
+      });
   }
 
   return migrationPromise;

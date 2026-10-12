@@ -116,9 +116,7 @@ describe('shedding sources in the registry', () => {
     ['zambrano-2019', 'zambrano-2020', 'fernandes-2024', 'lara-2025', 'cotton-2020', 'gundogdu-2026'].forEach((id, index) => {
       expect(getSourceNumber(id)).toBe(36 + index);
     });
-    // Added with the "What research says" section (reference 42), also without renumbering.
-    expect(getSourceNumber('collie-2024')).toBe(42);
-    expect(SOURCE_LIST).toHaveLength(42);
+    expect(SOURCE_LIST).toHaveLength(41);
   });
 
   it('gives each new source a DOI link, a plain summary, and its own limits', () => {
