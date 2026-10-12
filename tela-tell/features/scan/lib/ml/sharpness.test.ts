@@ -2,6 +2,7 @@ import {
   BLUR_REJECT_VARIANCE,
   judgeSharpness,
   measureRgbaSharpness,
+  sharpestIndex,
 } from '@/features/scan/lib/ml/sharpness';
 
 function makeRgba(
@@ -154,5 +155,24 @@ describe('judgeSharpness', () => {
   it('accepts a custom threshold', () => {
     expect(judgeSharpness([150], 200).blurry).toBe(true);
     expect(judgeSharpness([150], 100).blurry).toBe(false);
+  });
+});
+
+describe('sharpestIndex', () => {
+  it('picks the sharpest photo of the burst', () => {
+    expect(sharpestIndex([927, 1029, 979])).toBe(1);
+  });
+
+  it('skips photos that could not be measured', () => {
+    expect(sharpestIndex([null, 120, null])).toBe(1);
+  });
+
+  it('falls back to the first photo when nothing was measured', () => {
+    expect(sharpestIndex([null, null, null])).toBe(0);
+    expect(sharpestIndex([])).toBe(0);
+  });
+
+  it('keeps the earlier photo on a tie', () => {
+    expect(sharpestIndex([500, 500])).toBe(0);
   });
 });

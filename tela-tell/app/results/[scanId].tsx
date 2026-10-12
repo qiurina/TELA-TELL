@@ -22,10 +22,8 @@ import { deleteScan, isScanFavorite, setScanFavorite } from '@/db/scans';
 import { getBlendCaution } from '@/data/fabrics/blend-caution';
 import { BlendCautionCard } from '@/features/results/components/blend-caution-card';
 import { useScanResult } from '@/features/results/hooks/use-scan-result';
-import {
-  getPredictedSyntheticFibers,
-  getSyntheticHealthRisk,
-} from '@/data/fabrics/synthetic-health-risk';
+import { getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
+import { getFiberBadge } from '@/features/results/lib/fiber-badge';
 import { getFabricReference } from '@/data/fabrics/fabric-references';
 import { assessScanReliability } from '@/data/scans/scan-confidence';
 import {
@@ -181,13 +179,9 @@ export default function ResultsScreen() {
   // Information (no rating) for a natural or cellulose-based top fiber; the rated card is for the four synthetics.
   const fiberInfo = isUnsure || healthRisk ? null : getFiberInformation(result.dominantFabric);
 
-  const fiberBadge = isUnsure
-    ? null
-    : healthRisk
-    ? { label: 'Synthetic Fiber Detected', tone: 'synthetic' as const }
-    : getPredictedSyntheticFibers(result.dominantFabric, result.compositions ?? []).length > 0
-    ? { label: 'Possible Synthetic Fiber', tone: 'synthetic' as const }
-    : { label: 'No Synthetic Detected', tone: 'clear' as const };
+  // Names the fiber and only ever says what the model predicted; null (no badge) for an Unsure
+  // scan or when no synthetic prediction has a clear share.
+  const fiberBadge = getFiberBadge(result.dominantFabric, result.compositions, isUnsure);
 
   // Null for an Unsure scan and for fibers the note does not apply to.
   const blendCaution = getBlendCaution(result.dominantFabric, result.compositions);

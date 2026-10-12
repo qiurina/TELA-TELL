@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react';
 import {
+  Animated,
   Linking,
   Platform,
   Pressable,
@@ -50,6 +51,10 @@ import {
   computeSharpnessSignals,
   getChannelLayout,
 } from '@/features/scan/lib/ml/live/frame-signals';
+import {
+  captureGuideSnapshots,
+  type SnapshotMeasurement,
+} from '@/features/scan/lib/preview-snapshot';
 
 type LiveReadiness = 'unknown' | 'good' | 'adjust';
 
@@ -57,8 +62,21 @@ const FILL_FRACTION_THRESHOLD = 0.18;
 const BLUR_VARIANCE_THRESHOLD = 60;
 const HINT_DEBOUNCE_READS = 3;
 
+/** How a live capture was taken: preview snapshots (Android) or the photo burst (iOS). */
+export type LiveCaptureMethod = 'snapshot' | 'photo';
+
+export type LiveCapture = {
+  uris: string[];
+  method: LiveCaptureMethod;
+  /**
+   * Blur and lighting readings already taken from the snapshots in memory, one per uri. Absent for
+   * the photo burst, or when they could not be read; the files are then measured instead.
+   */
+  measurements?: SnapshotMeasurement[];
+};
+
 export type CameraGuideHandle = {
-  captureAndCrop: () => Promise<string[] | null>;
+  captureAndCrop: () => Promise<LiveCapture | null>;
   getGuideLayout: () => { view: Size; guide: ViewRect } | null;
   getGuideAspect: () => number;
   hasLiveCamera: () => boolean;
@@ -71,6 +89,8 @@ const BURST_SHOT_COUNT = 3;
 type CameraGuideProps = {
   previewUri?: string | null;
   isAnalyzing?: boolean;
+  /** The capture is being checked after the shots were taken (blur and lighting). */
+  isProcessing?: boolean;
   guideVisible: boolean;
   onDismissGuide: () => void;
   onShowGuide: () => void;
@@ -100,6 +120,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   {
     previewUri,
     isAnalyzing = false,
+    isProcessing = false,
     guideVisible,
     onDismissGuide,
     onShowGuide,
@@ -128,6 +149,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   }, [window.width, window.height]);
   const photoOutput = usePhotoOutput({ targetResolution: photoTargetResolution });
   const [isCapturing, setIsCapturing] = useState(false);
+  const shutterFlash = useRef(new Animated.Value(0)).current;
   const [fillLightOn, setFillLightOn] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const zoomShared = useSharedValue(0);
@@ -280,12 +302,52 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
         return currentGuide.width / currentGuide.height;
       },
       captureAndCrop: async () => {
-        if (!cameraRef.current) {
+        const camera = cameraRef.current;
+        if (!camera) {
           return null;
         }
 
         setIsCapturing(true);
+        if (Platform.OS === 'android') {
+          // Shutter feedback the moment capture starts (the preview itself keeps moving).
+          shutterFlash.setValue(0.55);
+          Animated.timing(shutterFlash, {
+            toValue: 0,
+            duration: 220,
+            useNativeDriver: true,
+          }).start();
+        }
         try {
+          // Android: crop the guide out of snapshots of the live preview, so the result is exactly
+          // what was inside the guide, the same way up. There is deliberately no photo fallback: a
+          // photo can frame a different area than the preview, so a failed snapshot asks for a
+          // retry instead of returning a capture that does not match the guide.
+          if (Platform.OS === 'android') {
+            const view = viewSizeRef.current;
+            const guide = guideRef.current;
+            const burst =
+              guide && view.width > 0
+                ? await captureGuideSnapshots(camera, view, guide, BURST_SHOT_COUNT)
+                : {
+                    shots: [],
+                    measurements: null,
+                    error: 'The scan guide is not ready yet.',
+                  };
+            if (burst.shots.length === 0) {
+              console.warn('[TELA-TELL] preview snapshot failed:', burst.error);
+              throw new Error("Couldn't capture the fabric. Please hold steady and try again.");
+            }
+            const measured =
+              burst.measurements && burst.measurements.length === burst.shots.length
+                ? burst.measurements
+                : undefined;
+            return {
+              uris: burst.shots.map((shot) => shot.uri),
+              method: 'snapshot',
+              measurements: measured,
+            };
+          }
+
           const captured: string[] = [];
 
           for (let shot = 0; shot < BURST_SHOT_COUNT; shot += 1) {
@@ -319,30 +381,35 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
             }
           }
 
-          return captured.length > 0 ? captured : null;
+          return captured.length > 0 ? { uris: captured, method: 'photo' } : null;
         } finally {
           setIsCapturing(false);
         }
       },
     }),
-    [canUseLiveCamera],
+    [canUseLiveCamera, shutterFlash],
   );
 
+  // Android only says what to do while the snapshots are taken, and stays busy until the checks
+  // finish (instead of falling back to the readiness hint); iOS keeps its original wording.
+  const isBusy = isAnalyzing || isCapturing || isProcessing;
   const instructionText = isAnalyzing
     ? 'Analyzing fabric image...'
     : isCapturing
-      ? 'Capturing...'
-      : hasPreview
-        ? 'Photo ready'
-        : readiness === 'adjust'
-          ? 'Adjust framing'
-          : readiness === 'good'
-            ? 'Looking good — ready to scan'
-            : 'Position fabric inside the frame';
-  const showsAdjustHint =
-    !hasPreview && readiness === 'adjust' && !isAnalyzing && !isCapturing;
-  const showsGoodReadiness =
-    !hasPreview && readiness === 'good' && !isAnalyzing && !isCapturing;
+      ? Platform.OS === 'android'
+        ? 'Hold still…'
+        : 'Capturing...'
+      : isProcessing
+        ? 'Checking photo…'
+        : hasPreview
+          ? 'Photo ready'
+          : readiness === 'adjust'
+            ? 'Adjust framing'
+            : readiness === 'good'
+              ? 'Looking good — ready to scan'
+              : 'Position fabric inside the frame';
+  const showsAdjustHint = !hasPreview && readiness === 'adjust' && !isBusy;
+  const showsGoodReadiness = !hasPreview && readiness === 'good' && !isBusy;
 
   return (
     <View style={styles.viewfinder} onLayout={handleViewLayout}>
@@ -415,6 +482,12 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           </Text>
         </View>
       )}
+
+      {/* Brief white flash when a capture starts (Android) */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.shutterFlash, { opacity: shutterFlash }]}
+      />
 
       {/* Soft vignette + outside-guide dim — live only, keeps focus on the frame */}
       {!hasPreview ? (
@@ -524,7 +597,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           <View
             style={[
               styles.instructionBar,
-              (isAnalyzing || isCapturing) && styles.instructionBarActive,
+              isBusy && styles.instructionBarActive,
               showsAdjustHint && styles.instructionBarHint,
               showsGoodReadiness && styles.instructionBarGood,
             ]}>
@@ -568,6 +641,11 @@ const styles = StyleSheet.create({
   },
   feed: {
     ...StyleSheet.absoluteFillObject,
+  },
+  shutterFlash: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+    backgroundColor: '#FFFFFF',
   },
   vignetteLayer: {
     ...StyleSheet.absoluteFillObject,

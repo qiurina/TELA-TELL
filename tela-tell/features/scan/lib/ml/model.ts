@@ -1,6 +1,6 @@
 import type { FabricComposition } from '@/data/scans/mock-data';
 import { MODEL_LABELS } from '@/features/scan/lib/ml/constants';
-import { imageToInputTensor } from '@/features/scan/lib/ml/preprocess';
+import { imageToModelInput } from '@/features/scan/lib/ml/preprocess-raw';
 import { scoresToCompositions } from '@/features/scan/lib/ml/scores';
 
 export type ClassificationResult = {
@@ -91,11 +91,13 @@ export async function classifyFabric(imageUris: string[]): Promise<Classificatio
   const scoreSets: Float32Array[] = [];
   let inferenceMs = 0;
   for (const uri of imageUris) {
-    const input = await imageToInputTensor(uri);
+    const input = await imageToModelInput(uri);
     const runStartedAt = nowMs();
     const outputs = model.runSync([input.buffer as ArrayBuffer]);
     inferenceMs += nowMs() - runStartedAt;
-    scoreSets.push(new Float32Array(outputs[0]));
+    // Copy the scores: react-native-fast-tflite returns the same output buffer on every run and
+    // overwrites it, so keeping a view would leave every photo holding the last photo's scores.
+    scoreSets.push(new Float32Array(outputs[0]).slice());
   }
 
   const scores = scoreSets.length > 1 ? averageScores(scoreSets) : scoreSets[0];

@@ -33,7 +33,9 @@ import { Fonts } from '@/constants/fonts';
 import { useFabricCapture } from '@/features/scan/hooks/use-fabric-capture';
 import { persistScanImage } from '@/features/scan/lib/scan-image-storage';
 import { optimizeScanImage } from '@/features/scan/lib/crop-to-guide';
-import { checkCapture } from '@/features/scan/lib/ml/measure-sharpness';
+import { checkCapture, judgeCapture } from '@/features/scan/lib/ml/measure-sharpness';
+import type { SnapshotMeasurement } from '@/features/scan/lib/preview-snapshot';
+import { sharpestIndex } from '@/features/scan/lib/ml/sharpness';
 import type { LightingAssessment } from '@/features/scan/lib/ml/lighting';
 import { LightingNoticeCard } from '@/features/scan/components/lighting-notice-card';
 import { getClipOnLens, setClipOnLens } from '@/features/scan/lib/clip-on-lens';
@@ -59,6 +61,8 @@ type CaptureInfo = {
 /** A capture the blur check flagged, waiting for the person to choose "Retake" or "Use anyway". */
 type BlurPrompt = {
   uris: string[];
+  /** Which photo of `uris` to show and save if the person uses the capture anyway. */
+  previewIndex: number;
   captureType: CaptureType;
   sharpness: number | null;
   sharpnessPerPhoto: (number | null)[];
@@ -104,8 +108,8 @@ export default function ScanScreen() {
     }, []),
   );
 
-  const commitPreviewUri = (allUris: string[], info: CaptureInfo) => {
-    setPreviewUri(allUris[0]);
+  const commitPreviewUri = (allUris: string[], info: CaptureInfo, previewIndex = 0) => {
+    setPreviewUri(allUris[previewIndex] ?? allUris[0]);
     setBurstUris(allUris);
     setCaptureInfo(info);
     setDetailsExpanded(true);
@@ -114,13 +118,33 @@ export default function ScanScreen() {
   /**
    * Runs the blur check on a fresh capture. A photo flagged as blurry is held back and the person
    * chooses to retake or use it anyway; a check that cannot run never blocks the scan.
+   *
+   * With `showSharpest`, the sharpest photo of the burst is the one shown and saved (all of them
+   * are still classified); otherwise the first one is, as before.
    */
-  const acceptCapture = async (uris: string[], captureType: CaptureType) => {
-    // One pass over the photos gives the blur verdict (unchanged) and the lighting readings.
-    const { verdict, lighting } = await checkCapture(uris);
+  const acceptCapture = async (
+    uris: string[],
+    captureType: CaptureType,
+    {
+      showSharpest = false,
+      measurements,
+    }: { showSharpest?: boolean; measurements?: SnapshotMeasurement[] } = {},
+  ) => {
+    // Readings already taken from the snapshots in memory are judged directly; otherwise one pass
+    // over the files gives the blur verdict and the lighting readings. Either way the same
+    // judgeCapture rules decide.
+    const { verdict, lighting } =
+      measurements && measurements.length === uris.length
+        ? judgeCapture(
+            measurements.map((reading) => reading.sharpness),
+            measurements.map((reading) => reading.lighting),
+          )
+        : await checkCapture(uris);
+    const previewIndex = showSharpest ? sharpestIndex(verdict.readings) : 0;
     if (verdict.blurry) {
       setBlurPrompt({
         uris,
+        previewIndex,
         captureType,
         sharpness: verdict.sharpest,
         sharpnessPerPhoto: verdict.readings,
@@ -128,26 +152,34 @@ export default function ScanScreen() {
       });
       return;
     }
-    commitPreviewUri(uris, {
-      captureType,
-      sharpness: verdict.sharpest,
-      sharpnessPerPhoto: verdict.readings,
-      sharpnessCheck: verdict.measured ? 'passed' : 'unchecked',
-      lighting,
-    });
+    commitPreviewUri(
+      uris,
+      {
+        captureType,
+        sharpness: verdict.sharpest,
+        sharpnessPerPhoto: verdict.readings,
+        sharpnessCheck: verdict.measured ? 'passed' : 'unchecked',
+        lighting,
+      },
+      previewIndex,
+    );
   };
 
   const handleUseBlurryAnyway = () => {
     const pending = blurPrompt;
     setBlurPrompt(null);
     if (pending) {
-      commitPreviewUri(pending.uris, {
-        captureType: pending.captureType,
-        sharpness: pending.sharpness,
-        sharpnessPerPhoto: pending.sharpnessPerPhoto,
-        sharpnessCheck: 'overridden',
-        lighting: pending.lighting,
-      });
+      commitPreviewUri(
+        pending.uris,
+        {
+          captureType: pending.captureType,
+          sharpness: pending.sharpness,
+          sharpnessPerPhoto: pending.sharpnessPerPhoto,
+          sharpnessCheck: 'overridden',
+          lighting: pending.lighting,
+        },
+        pending.previewIndex,
+      );
     }
   };
 
@@ -213,9 +245,16 @@ export default function ScanScreen() {
     try {
       let photoUris: string[] | null = null;
       let captureType: CaptureType = 'live_camera';
+      let showSharpest = false;
+      let measurements: SnapshotMeasurement[] | undefined;
 
       if (cameraGuideRef.current?.hasLiveCamera()) {
-        photoUris = await cameraGuideRef.current.captureAndCrop();
+        const liveCapture = await cameraGuideRef.current.captureAndCrop();
+        photoUris = liveCapture?.uris ?? null;
+        // Only the Android preview snapshots show their sharpest frame; the iOS photo burst keeps
+        // showing its first photo.
+        showSharpest = liveCapture?.method === 'snapshot';
+        measurements = liveCapture?.measurements;
       }
 
       if (!photoUris || photoUris.length === 0) {
@@ -226,7 +265,7 @@ export default function ScanScreen() {
       }
 
       if (photoUris && photoUris.length > 0) {
-        await acceptCapture(photoUris, captureType);
+        await acceptCapture(photoUris, captureType, { showSharpest, measurements });
       }
     } catch (error) {
       showAlert(
@@ -389,6 +428,7 @@ export default function ScanScreen() {
         ref={cameraGuideRef}
         previewUri={null}
         isAnalyzing={false}
+        isProcessing={Platform.OS === 'android' && isCapturing}
         guideVisible={guideVisible}
         onDismissGuide={() => setGuideVisible(false)}
         onShowGuide={() => setGuideVisible(true)}

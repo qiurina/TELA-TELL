@@ -25,11 +25,24 @@ export function applyGrayWorldWhiteBalance(rgba: Uint8Array, width: number, heig
   const scaleG = meanG > 0 ? grayMean / meanG : 1;
   const scaleB = meanB > 0 ? grayMean / meanB : 1;
 
+  // Each channel has only 256 possible values, so the corrected value of each is worked out once
+  // (the same multiplication and truncation as per pixel) and then looked up for every pixel.
+  const lutR = channelLut(scaleR);
+  const lutG = channelLut(scaleG);
+  const lutB = channelLut(scaleB);
   for (let i = 0; i < rgba.length; i += 4) {
-    rgba[i] = clampTrunc(rgba[i] * scaleR);
-    rgba[i + 1] = clampTrunc(rgba[i + 1] * scaleG);
-    rgba[i + 2] = clampTrunc(rgba[i + 2] * scaleB);
+    rgba[i] = lutR[rgba[i]];
+    rgba[i + 1] = lutG[rgba[i + 1]];
+    rgba[i + 2] = lutB[rgba[i + 2]];
   }
+}
+
+function channelLut(scale: number): Uint8Array {
+  const lut = new Uint8Array(256);
+  for (let value = 0; value < 256; value++) {
+    lut[value] = clampTrunc(value * scale);
+  }
+  return lut;
 }
 
 /** Matches numpy's np.clip(...).astype(uint8), which truncates rather than rounds. */

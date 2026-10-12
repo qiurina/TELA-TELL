@@ -162,10 +162,11 @@ export function getFiberHealthRiskLabel(fabric: SupportedFabric): string {
 export function getPredictedSyntheticFibers(
   dominantFabric: string,
   compositions: CompositionInput[] = [],
+  minPercent: number = TRACE_DETECTION_MIN_PERCENT,
 ): SupportedFabric[] {
   const syntheticFibers: SupportedFabric[] = [];
 
-  for (const item of getSignificantFibers(compositions, TRACE_DETECTION_MIN_PERCENT)) {
+  for (const item of getSignificantFibers(compositions, minPercent)) {
     const fiber = resolveFabricAlias(item.material);
     if (fiber && isSyntheticFiber(fiber) && !syntheticFibers.includes(fiber)) {
       syntheticFibers.push(fiber);

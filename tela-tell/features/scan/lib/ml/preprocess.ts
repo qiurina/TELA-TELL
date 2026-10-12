@@ -29,7 +29,7 @@ export function base64ToUint8Array(base64: string): Uint8Array {
 }
 
 /** White balance and CLAHE run at twice the model size and are then area-averaged down (see model-input.ts). */
-const WORKING_SIZE = IMAGE_SIZE * 2;
+export const WORKING_SIZE = IMAGE_SIZE * 2;
 
 export async function imageToInputTensor(uri: string): Promise<Float32Array> {
   const resized = await ImageManipulator.manipulateAsync(

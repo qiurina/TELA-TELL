@@ -104,4 +104,14 @@ describe('getPredictedSyntheticFibers', () => {
     expect(getPredictedSyntheticFibers('Cotton', [{ material: 'Cotton', percentage: 90 }])).toEqual([]);
     expect(getPredictedSyntheticFibers('Polyester', [])).toEqual(['Polyester']);
   });
+
+  it('keeps the 2% default, and only a caller-supplied minimum raises it', () => {
+    const scan = [
+      { material: 'Abaca', percentage: 86 },
+      { material: 'Silk', percentage: 11 },
+      { material: 'Polyester', percentage: 3 },
+    ];
+    expect(getPredictedSyntheticFibers('Abaca', scan)).toEqual(['Polyester']);
+    expect(getPredictedSyntheticFibers('Abaca', scan, 15)).toEqual([]);
+  });
 });

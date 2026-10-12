@@ -93,5 +93,16 @@ export async function checkCapture(uris: string[]): Promise<CaptureCheck> {
     lighting.push(light);
   }
 
+  return judgeCapture(sharpness, lighting);
+}
+
+/**
+ * The capture verdict from readings already taken, one per photo (null where a photo could not be
+ * measured). checkCapture uses this too, so both ways of measuring are judged identically.
+ */
+export function judgeCapture(
+  sharpness: (number | null)[],
+  lighting: (LightingReading | null)[],
+): CaptureCheck {
   return { verdict: judgeSharpness(sharpness), lighting: assessLighting(lighting) };
 }

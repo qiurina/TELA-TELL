@@ -80,3 +80,85 @@ export function labToRgb8u(l: number, a: number, b: number): [number, number, nu
 
   return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
 }
+// Speed-optimized forms of rgbToLab8u and labToRgb8u for the per-pixel loops in clahe.ts. Same
+// expressions in the same order, so every result is identical (color-space-packed.test.ts compares
+// all 16.7 million inputs). They differ only in mechanics: one call per pixel instead of about ten,
+// the three outputs packed into one integer (r << 16 | g << 8 | b) instead of a new array, and
+// parts that depend on a single 8-bit input precomputed per value with the same arithmetic.
+
+const SIXTEEN_116 = 16 / 116;
+const INV_GAMMA = 1 / 2.4;
+const KAPPA_EPS = KAPPA * EPS;
+
+const tableOf = (f: (value: number) => number) => Float64Array.from({ length: 256 }, (_, v) => f(v));
+// rgbToLab8u's matrix terms, e.g. X_R[r] = 0.412453 * R.
+const X_R = tableOf((v) => 0.412453 * SRGB_TO_LINEAR[v]);
+const X_G = tableOf((v) => 0.35758 * SRGB_TO_LINEAR[v]);
+const X_B = tableOf((v) => 0.180423 * SRGB_TO_LINEAR[v]);
+const Y_R = tableOf((v) => 0.212671 * SRGB_TO_LINEAR[v]);
+const Y_G = tableOf((v) => 0.71516 * SRGB_TO_LINEAR[v]);
+const Y_B = tableOf((v) => 0.072169 * SRGB_TO_LINEAR[v]);
+const Z_R = tableOf((v) => 0.019334 * SRGB_TO_LINEAR[v]);
+const Z_G = tableOf((v) => 0.119193 * SRGB_TO_LINEAR[v]);
+const Z_B = tableOf((v) => 0.950227 * SRGB_TO_LINEAR[v]);
+// labToRgb8u's terms that depend on L, a or b alone.
+const FY_OF_L = tableOf((l) => ((l * 100) / 255 + 16) / 116);
+const Y_OF_L = tableOf((l) => {
+  const lStar = (l * 100) / 255;
+  const fy = (lStar + 16) / 116;
+  return lStar > KAPPA_EPS ? YN * fLabInv(fy) : YN * (lStar / KAPPA);
+});
+const A_OVER_500 = tableOf((a) => (a - 128) / 500);
+const B_OVER_200 = tableOf((b) => (b - 128) / 200);
+
+/** rgbToLab8u(r, g, b) as one packed integer: l << 16 | a << 8 | b. */
+export function rgbToLabPacked(r: number, g: number, b: number): number {
+  const X = X_R[r] + X_G[g] + X_B[b];
+  const Y = Y_R[r] + Y_G[g] + Y_B[b];
+  const Z = Z_R[r] + Z_G[g] + Z_B[b];
+
+  const tx = X / XN;
+  const ty = Y / YN;
+  const tz = Z / ZN;
+  const fx = tx > EPS ? Math.cbrt(tx) : 7.787 * tx + SIXTEEN_116;
+  const fy = ty > EPS ? Math.cbrt(ty) : 7.787 * ty + SIXTEEN_116;
+  const fz = tz > EPS ? Math.cbrt(tz) : 7.787 * tz + SIXTEEN_116;
+  const yr = Y / YN;
+
+  const lStar = yr > EPS ? 116 * fy - 16 : KAPPA * yr;
+  const aStar = 500 * (fx - fy);
+  const bStar = 200 * (fy - fz);
+
+  const lv = (lStar * 255) / 100;
+  const av = aStar + 128;
+  const bv = bStar + 128;
+  const l8 = lv < 0 ? 0 : lv > 255 ? 255 : Math.round(lv);
+  const a8 = av < 0 ? 0 : av > 255 ? 255 : Math.round(av);
+  const b8 = bv < 0 ? 0 : bv > 255 ? 255 : Math.round(bv);
+  return (l8 << 16) | (a8 << 8) | b8;
+}
+
+/** labToRgb8u(l, a, b) as one packed integer: r << 16 | g << 8 | b. */
+export function labToRgbPacked(l: number, a: number, b: number): number {
+  const fy = FY_OF_L[l];
+  const fx = fy + A_OVER_500[a];
+  const fz = fy - B_OVER_200[b];
+
+  const y = Y_OF_L[l];
+  const fx3 = fx * fx * fx;
+  const x = XN * (fx3 > EPS ? fx3 : (fx - SIXTEEN_116) / 7.787);
+  const fz3 = fz * fz * fz;
+  const z = ZN * (fz3 > EPS ? fz3 : (fz - SIXTEEN_116) / 7.787);
+
+  const r = 3.240479 * x - 1.53715 * y - 0.498535 * z;
+  const g = -0.969256 * x + 1.875992 * y + 0.041556 * z;
+  const bl = 0.055648 * x - 0.204043 * y + 1.057311 * z;
+
+  const rc = (r <= 0.0031308 ? 12.92 * r : 1.055 * Math.pow(r, INV_GAMMA) - 0.055) * 255;
+  const gc = (g <= 0.0031308 ? 12.92 * g : 1.055 * Math.pow(g, INV_GAMMA) - 0.055) * 255;
+  const bc = (bl <= 0.0031308 ? 12.92 * bl : 1.055 * Math.pow(bl, INV_GAMMA) - 0.055) * 255;
+  const r8 = rc < 0 ? 0 : rc > 255 ? 255 : Math.round(rc);
+  const g8 = gc < 0 ? 0 : gc > 255 ? 255 : Math.round(gc);
+  const b8 = bc < 0 ? 0 : bc > 255 ? 255 : Math.round(bc);
+  return (r8 << 16) | (g8 << 8) | b8;
+}

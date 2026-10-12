@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,16 +13,14 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 
-import { Leaf, ScanLine, ShieldAlert } from '@/components/ui/lucide-icons';
+import { InfoSheet } from '@/components/ui/info-sheet';
+import { ChevronRight, Info, ScanLine, ShieldAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
+import { STATUS_COLORS } from '@/constants/status-colors';
+import type { FiberBadge } from '@/features/results/lib/fiber-badge';
 
 const SLIDE_HEIGHT = 320;
-
-type FiberBadge = {
-  label: string;
-  tone: 'synthetic' | 'clear';
-};
 
 type FabricPhotoPreviewProps = {
   imageUri?: string | null;
@@ -44,6 +43,8 @@ export function FabricPhotoPreview({
 }: FabricPhotoPreviewProps) {
   const [slideWidth, setSlideWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [showBadgeInfo, setShowBadgeInfo] = useState(false);
+  const badgeColors = fiberBadge ? STATUS_COLORS[fiberBadge.tone] : null;
 
   const showDetection = Boolean(detectedFabric?.trim());
   const detectedLabel = detectedFabric?.trim() ?? '';
@@ -92,27 +93,27 @@ export function FabricPhotoPreview({
           {showDetection && subtitle ? (
             <Text style={styles.detectedSubtitle}>{subtitle}</Text>
           ) : null}
-          {fiberBadge ? (
-            <View
-              style={[
+          {fiberBadge && badgeColors ? (
+            <Pressable
+              onPress={() => setShowBadgeInfo(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={`${fiberBadge.label}. This is a model prediction. Tap for details.`}
+              style={({ pressed }) => [
                 styles.fiberBadge,
-                fiberBadge.tone === 'synthetic' ? styles.fiberBadgeSynthetic : styles.fiberBadgeClear,
+                { backgroundColor: badgeColors.pill, borderColor: badgeColors.border },
+                pressed && styles.fiberBadgePressed,
               ]}>
-              {fiberBadge.tone === 'synthetic' ? (
-                <ShieldAlert size={12} color="#FCA5A5" strokeWidth={2.5} />
+              {fiberBadge.kind === 'likely' ? (
+                <ShieldAlert size={13} color={badgeColors.accent} strokeWidth={2.5} />
               ) : (
-                <Leaf size={12} color="#86EFAC" strokeWidth={2.5} />
+                <Info size={13} color={badgeColors.accent} strokeWidth={2.5} />
               )}
-              <Text
-                style={[
-                  styles.fiberBadgeText,
-                  fiberBadge.tone === 'synthetic'
-                    ? styles.fiberBadgeTextSynthetic
-                    : styles.fiberBadgeTextClear,
-                ]}>
+              <Text style={[styles.fiberBadgeText, { color: badgeColors.accent }]} numberOfLines={2}>
                 {fiberBadge.label}
               </Text>
-            </View>
+              <ChevronRight size={13} color={badgeColors.accent} strokeWidth={2.5} />
+            </Pressable>
           ) : null}
         </LinearGradient>
       ) : null}
@@ -157,6 +158,17 @@ export function FabricPhotoPreview({
           <View style={[styles.dot, activeIndex === 0 && styles.dotActive]} />
           <View style={[styles.dot, activeIndex === 1 && styles.dotActive]} />
         </View>
+      ) : null}
+
+      {fiberBadge ? (
+        <InfoSheet
+          visible={showBadgeInfo}
+          title={fiberBadge.infoTitle}
+          message={fiberBadge.infoMessage}
+          icon={fiberBadge.kind === 'likely' ? ShieldAlert : Info}
+          tone={fiberBadge.tone}
+          onClose={() => setShowBadgeInfo(false)}
+        />
       ) : null}
     </View>
   );
@@ -244,30 +256,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: 5,
+    gap: 6,
     marginTop: 8,
+    maxWidth: '100%',
+    minHeight: 28,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingLeft: 10,
+    paddingRight: 8,
+    paddingVertical: 5,
     borderWidth: 1,
   },
-  fiberBadgeSynthetic: {
-    backgroundColor: 'rgba(127, 29, 29, 0.55)',
-    borderColor: 'rgba(252, 165, 165, 0.5)',
-  },
-  fiberBadgeClear: {
-    backgroundColor: 'rgba(20, 83, 45, 0.5)',
-    borderColor: 'rgba(134, 239, 172, 0.5)',
+  fiberBadgePressed: {
+    opacity: 0.8,
   },
   fiberBadgeText: {
+    flexShrink: 1,
     fontFamily: Fonts.semiBold,
-    fontSize: 11,
-  },
-  fiberBadgeTextSynthetic: {
-    color: '#FCA5A5',
-  },
-  fiberBadgeTextClear: {
-    color: '#86EFAC',
+    fontSize: 12,
+    lineHeight: 16,
   },
   dots: {
     position: 'absolute',

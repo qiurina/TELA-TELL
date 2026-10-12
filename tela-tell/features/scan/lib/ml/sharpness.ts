@@ -84,3 +84,19 @@ export function judgeSharpness(
   const sharpest = Math.max(...values);
   return { sharpest, blurry: sharpest < threshold, measured: true, readings: [...readings] };
 }
+
+/**
+ * Position of the sharpest photo in a burst, for showing and saving the best one. Falls back to the
+ * first photo when nothing was measured; ties keep the earlier photo.
+ */
+export function sharpestIndex(readings: (number | null)[]): number {
+  let best = 0;
+  let bestValue = -Infinity;
+  readings.forEach((value, index) => {
+    if (value != null && Number.isFinite(value) && value > bestValue) {
+      best = index;
+      bestValue = value;
+    }
+  });
+  return best;
+}
