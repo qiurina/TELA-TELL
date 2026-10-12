@@ -100,9 +100,10 @@ describe('shedding (i) sheet', () => {
       'This is an estimate based on the fiber the app predicts is most likely. The prediction may be wrong. The app cannot measure how many tiny fibers your garment releases.',
     );
     expect(keep.body).toBe(
-      "Shedding depends on the fabric, how it is made, its condition, and how it is washed. Natural fibers can shed too.\n\nHigh, Moderate, and Low are the app's estimates based on selected studies, not an established scientific ranking. This result does not assess health effects.",
+      "Shedding depends on the fabric, how it is made, its condition, and how it is washed. Natural fibers can shed too.\n\nHigh, Moderate, and Low are the app's estimates based on selected studies, not an established scientific ranking. Not a medical assessment: health effects of microplastics are still being studied.",
     );
-    expect(`${means.body}${keep.body}`.length).toBeLessThan(460);
+    // 480 (was 460) leaves room for the one-line health note added with the health risk advisory.
+    expect(`${means.body}${keep.body}`.length).toBeLessThan(480);
   });
 
   it('keeps the essential limits: estimate, may be wrong, not measured, natural fibers, not a scientific ranking, no health claim', () => {
@@ -112,7 +113,8 @@ describe('shedding (i) sheet', () => {
     expect(text).toMatch(/cannot measure how many tiny fibers your garment releases/);
     expect(text).toMatch(/Natural fibers can shed too/);
     expect(text).toMatch(/not an established scientific ranking/);
-    expect(text).toMatch(/does not assess health effects/);
+    expect(text).toMatch(/not a medical assessment/i);
+    expect(text).toMatch(/health effects of microplastics are still being studied/);
     expect(text).not.toMatch(/\d/);
   });
 

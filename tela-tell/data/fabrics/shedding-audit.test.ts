@@ -36,7 +36,7 @@ describe('shedding notes and limits', () => {
   it('replaces the skin-irritation claim with a statement of what the estimate does not assess', () => {
     for (const fabric of ['Polyester', 'Acrylic', 'Nylon', 'Spandex']) {
       const note = getSyntheticHealthRisk(fabric, [])!.note;
-      expect(note).toBe('This shedding estimate does not assess skin irritation, allergies, or other health effects.');
+      expect(note).toBe('Not a medical assessment. Fiber sensitivities you add in your profile are checked separately.');
       expect(note).not.toMatch(/usually caused|dyes|finishing/i);
     }
   });

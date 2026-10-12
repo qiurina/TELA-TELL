@@ -8,6 +8,7 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import { STATUS_COLORS, type StatusTone } from '@/constants/status-colors';
+import { Type } from '@/constants/typography';
 
 type StatusCardProps = {
   icon: FC<IconProps>;
@@ -41,7 +42,7 @@ export function StatusCard({
     <View style={[styles.card, faintCardShadow()]}>
       <View style={styles.header}>
         <StatusIcon icon={icon} tone={tone} />
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
         {pillLabel ? (
@@ -79,11 +80,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
+    ...Type.cardTitle,
     flex: 1,
     minWidth: 0,
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.text,
   },
   pill: {
     flexShrink: 0,

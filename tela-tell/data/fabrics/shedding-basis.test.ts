@@ -120,7 +120,9 @@ describe('shedding sources in the registry', () => {
     ['zambrano-2019', 'zambrano-2020', 'fernandes-2024', 'lara-2025', 'cotton-2020', 'gundogdu-2026'].forEach((id, index) => {
       expect(getSourceNumber(id)).toBe(18 + index);
     });
-    expect(SOURCE_LIST).toHaveLength(23);
+    // The WHO 2022 report (health risk advisory) was added after them, as reference 24.
+    expect(getSourceNumber('who-2022-microplastics')).toBe(24);
+    expect(SOURCE_LIST).toHaveLength(24);
   });
 
   it('gives each new source a DOI link, a plain summary, and its own limits', () => {

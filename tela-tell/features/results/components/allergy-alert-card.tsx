@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CircleCheck, TriangleAlert } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
-import type { AllergyAlert } from '@/data/fabrics/fabric-allergies';
+import { SENSITIVITY_CAVEAT, type AllergyAlert } from '@/data/fabrics/fabric-allergies';
 import { Fonts } from '@/constants/fonts';
 
 type AllergyAlertCardProps = {
@@ -37,20 +37,21 @@ export function AllergyAlertCard({
 
       <View style={styles.body}>
         <Text style={[styles.title, isConflict ? styles.titleConflict : styles.titleClear]}>
-          {isConflict ? 'Sensitivity alert' : 'All clear'}
+          {isConflict ? 'Sensitivity reminder' : 'No sensitivity-list match'}
         </Text>
         <Text style={styles.message} numberOfLines={stacked ? 3 : undefined}>
           {isConflict
             ? alert.message
             : stacked
-              ? 'No conflicts with your sensitivity list.'
-              : 'No conflicts with the fiber sensitivities in your profile.'}
+              ? "None of this scan's predictions are on your sensitivity list."
+              : "None of this scan's predictions are on the sensitivity list in your profile."}
         </Text>
         {isConflict && alternativeNames ? (
           <Text style={styles.altNames} numberOfLines={stacked ? 2 : undefined}>
-            Try: <Text style={styles.altNamesValue}>{alternativeNames}</Text>
+            Ideas to consider: <Text style={styles.altNamesValue}>{alternativeNames}</Text>
           </Text>
         ) : null}
+        {isConflict ? <Text style={styles.caveat}>{SENSITIVITY_CAVEAT}</Text> : null}
       </View>
     </View>
   );
@@ -115,6 +116,13 @@ const styles = StyleSheet.create({
   },
   titleClear: {
     color: BrandColors.text,
+  },
+  caveat: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: BrandColors.textMuted,
+    marginTop: 4,
   },
   message: {
     fontFamily: Fonts.regular,

@@ -13,7 +13,8 @@ import { ResultsScreenHeader } from '@/features/results/components/results-scree
 import { ScanConfidenceBanner } from '@/features/results/components/scan-confidence-banner';
 import { SellerComparisonCard } from '@/features/results/components/seller-comparison-card';
 import { SustainableChoicesCard } from '@/features/results/components/sustainable-choices-card';
-import { SyntheticHealthRiskCard } from '@/features/results/components/synthetic-health-risk-card';
+import { HealthAdvisorySection } from '@/features/results/components/health-advisory-section';
+import { SectionLabel } from '@/components/ui/section-label';
 import { BrandColors } from '@/constants/brand';
 import { deleteScan, isScanFavorite, setScanFavorite } from '@/db/scans';
 import { useScanResult } from '@/features/results/hooks/use-scan-result';
@@ -223,17 +224,29 @@ export default function ResultsScreen() {
 
         <CompositionCard compositions={result.compositions ?? []} />
 
-        {healthRisk ? <SyntheticHealthRiskCard risk={healthRisk} /> : null}
+        <HealthAdvisorySection
+          dominantFabric={result.dominantFabric}
+          compositions={result.compositions ?? []}
+          isUnsure={isUnsure}
+          healthRisk={healthRisk}
+          onReduceShedding={handleEcoTips}
+        />
 
         {isUnsure ? null : (
           <>
-            <SustainableChoicesCard />
-            <SellerComparisonCard
+            <View style={styles.section}>
+              <SectionLabel title="SUSTAINABILITY" />
+              <SustainableChoicesCard />
+            </View>
+            <View style={styles.section}>
+              <SectionLabel title="LABEL CHECK" />
+              <SellerComparisonCard
               sellerLabel={sellerLabel}
               detectedLabel={headline.title}
               check={labelCheck}
-              onAddLabel={handleAddLabel}
-            />
+                onAddLabel={handleAddLabel}
+              />
+            </View>
           </>
         )}
 
@@ -250,6 +263,9 @@ export default function ResultsScreen() {
 }
 
 const styles = StyleSheet.create({
+  section: {
+    gap: 10,
+  },
   root: {
     flex: 1,
     backgroundColor: BrandColors.white,

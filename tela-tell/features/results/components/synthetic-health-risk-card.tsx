@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { InfoSheet } from '@/components/ui/info-sheet';
+import { CardLink } from '@/components/ui/card-link';
 import { Shield } from '@/components/ui/lucide-icons';
 import { StatusCard } from '@/components/ui/status-card';
-import { BrandColors } from '@/constants/brand';
-import { Fonts } from '@/constants/fonts';
+import { Type } from '@/constants/typography';
 import type { StatusTone } from '@/constants/status-colors';
 import { SHEDDING_SHEET_TITLE } from '@/data/fabrics/assessment-disclaimers';
+import { SHEDDING_ESTIMATE_TITLE } from '@/data/fabrics/health-advisory';
 import type { HealthRiskLevel, SyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
+import { WhyItMatters } from '@/features/results/components/why-it-matters';
 
 const LEVEL_TONE: Record<HealthRiskLevel, StatusTone> = {
   low: 'good',
@@ -18,16 +20,18 @@ const LEVEL_TONE: Record<HealthRiskLevel, StatusTone> = {
 
 type SyntheticHealthRiskCardProps = {
   risk: SyntheticHealthRisk;
+  /** Opens Eco tips, where the Reduce shedding card is. Omit to hide the link. */
+  onReduceShedding?: () => void;
 };
 
-export function SyntheticHealthRiskCard({ risk }: SyntheticHealthRiskCardProps) {
+export function SyntheticHealthRiskCard({ risk, onReduceShedding }: SyntheticHealthRiskCardProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   return (
     <StatusCard
       icon={Shield}
       tone={LEVEL_TONE[risk.level]}
-      title="Fiber shedding"
+      title={SHEDDING_ESTIMATE_TITLE}
       pillLabel={risk.label}
       onInfoPress={() => setShowDisclaimer(true)}
       infoAccessibilityLabel="About this shedding estimate">
@@ -40,23 +44,24 @@ export function SyntheticHealthRiskCard({ risk }: SyntheticHealthRiskCardProps) 
         onClose={() => setShowDisclaimer(false)}
       />
 
-      <Text style={styles.summary}>
-        <Text style={styles.lead}>Why {risk.label}: </Text>
+      <Text style={Type.body}>
+        <Text style={Type.lead}>About this estimate: </Text>
         {risk.reason}
       </Text>
+
+      <View style={styles.matters}>
+        <WhyItMatters />
+      </View>
+
+      {onReduceShedding ? (
+        <CardLink label="See ways to reduce shedding" onPress={onReduceShedding} />
+      ) : null}
     </StatusCard>
   );
 }
 
 const styles = StyleSheet.create({
-  summary: {
-    fontFamily: Fonts.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: BrandColors.text,
-  },
-  lead: {
-    fontFamily: Fonts.semiBold,
-    color: BrandColors.primaryDark,
+  matters: {
+    marginTop: 4,
   },
 });

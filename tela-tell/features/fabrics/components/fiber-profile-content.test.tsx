@@ -50,6 +50,10 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 0, right: 0 }),
 }));
 
+// The first profile render (Cotton) loads the screen's modules and has exceeded Jest's 5 s default
+// in full parallel runs; 15 s keeps this suite from failing on load time alone.
+jest.setTimeout(15000);
+
 let renderer: TestRenderer | undefined;
 
 function displayedText(): string[] {

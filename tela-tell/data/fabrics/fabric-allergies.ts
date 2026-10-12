@@ -18,6 +18,37 @@ import type { FabricComposition } from '@/data/scans/mock-data';
  * "moisture-wicking comfort" note is a manufacturer-style description, not verified here.
  */
 
+/**
+ * Shown under every sensitivity reminder. Textile reactions are mostly caused by dyes and
+ * finishing chemicals (DermNet NZ, see the header above), which a photo cannot detect, and the
+ * suggested alternatives are practical ideas, not verified for any one person.
+ */
+export const SENSITIVITY_CAVEAT =
+  'A photo cannot confirm fiber content or detect dyes and finishes, which commonly cause clothing-related allergic reactions. Check the label; suggested alternatives are not guaranteed suitable for you.';
+
+function listNames(names: string[]): string {
+  if (names.length <= 1) {
+    return names[0] ?? '';
+  }
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/**
+ * The reminder text. It names the matching predictions only; prediction percentages are the
+ * model's confidence, not fiber content, so no percentage is shown.
+ */
+export function buildSensitivityMessage(matches: SupportedFabric[], topFiber: SupportedFabric | null): string {
+  const others = matches.filter((fiber) => fiber !== topFiber);
+  const plural = others.length > 1;
+  if (topFiber && matches.includes(topFiber)) {
+    const lead = `This scan's most likely fiber, ${topFiber}, is on your sensitivity list.`;
+    return others.length > 0
+      ? `${lead} ${listNames(others)} also ${plural ? 'appear' : 'appears'} among its predictions and ${plural ? 'are' : 'is'} on your list.`
+      : lead;
+  }
+  return `${listNames(others)} ${plural ? 'appear' : 'appears'} among this scan's predictions and ${plural ? 'are' : 'is'} on your sensitivity list.`;
+}
+
 export type HypoallergenicAlternative = {
   name: string;
   note: string;
@@ -198,19 +229,14 @@ export function getAllergyAlert(
     };
   }
 
-  const conflictLabel = conflictFibers
-    .map((item) =>
-      typeof item.percentage === 'number'
-        ? `${item.fabric} ${item.percentage}%`
-        : item.fabric,
-    )
-    .join(' · ');
-
   return {
     sensitiveFabric: matchedSensitive,
     detectedFabric,
     conflictDetected: true,
-    message: `Contains ${conflictLabel}`,
+    message: buildSensitivityMessage(
+      conflictFibers.map((item) => item.fabric),
+      resolveFabricAlias(dominantFabric),
+    ),
     alternatives: getAlternatives(matchedSensitive, sensitiveFabrics),
     conflictFibers,
   };

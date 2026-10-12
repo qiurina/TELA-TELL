@@ -519,6 +519,27 @@ export const SOURCE_LIST = [
     ],
     usedFor: 'Cotton note (fiber profile and About).',
   },
+  {
+    id: 'who-2022-microplastics',
+    shortName: 'WHO microplastics and health report',
+    organization: 'World Health Organization',
+    title:
+      'Dietary and inhalation exposure to nano- and microplastic particles and potential implications for human health. Geneva: World Health Organization. ISBN 978-92-4-005460-8',
+    year: 2022,
+    url: 'https://www.who.int/publications/i/item/9789240054608',
+    gist: 'A WHO review of studies up to December 2021 on microplastics in air, water, food and beverages and what they may mean for human health.',
+    says: [
+      'Microplastics have been detected in air, dust, water, food and beverages, so human exposure is widespread (executive summary, p. viii).',
+      'The available data are of only very limited use for assessing the risk to human health (p. ix).',
+      'The limited data provide little evidence that these particles have adverse effects in humans, but measures should be taken to reduce exposure (p. x).',
+    ],
+    caveats: [
+      'Full executive summary read.',
+      'It covers microplastics in general, not clothing fibers specifically, and makes no finding about wearing synthetic clothes.',
+      'It says the weight of evidence on health effects is low because of large gaps in the data, so its findings may change as research improves.',
+    ],
+    usedFor: 'Health risk advisory ("Why it matters") on Scan results and Eco tips.',
+  },
 ] as const satisfies readonly Source[];
 
 export type SourceId = (typeof SOURCE_LIST)[number]['id'];

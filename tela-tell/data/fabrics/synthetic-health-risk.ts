@@ -34,9 +34,9 @@ export const HEALTH_RISK_DISCLAIMER: InfoSection[] = [
   },
 ];
 
-// Deliberately makes no claim about skin reactions or other health effects: this estimate does not
-// assess them (see docs/profile-screen-audit.md for why an earlier claim about dyes was removed).
-const HEALTH_NOTE = 'This shedding estimate does not assess skin irritation, allergies, or other health effects.';
+// The shedding level makes no claim about skin reactions (see docs/profile-screen-audit.md for why
+// an earlier claim about dyes was removed); fiber sensitivities are a separate check.
+const HEALTH_NOTE = 'Not a medical assessment. Fiber sensitivities you add in your profile are checked separately.';
 
 const LEVEL_NOTES: Record<HealthRiskLevel, string> = {
   high: HEALTH_NOTE,

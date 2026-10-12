@@ -80,7 +80,7 @@ describe('getSyntheticHealthRisk', () => {
     const result = getSyntheticHealthRisk('Polyester', []);
     expect(result?.reason).toMatch(/polyester clothes can release tiny plastic fibers during washing/);
     expect(result?.disclaimer.map((section) => section.heading)).toEqual(['What this result means', 'Keep in mind']);
-    expect(result?.disclaimer[1].body).toMatch(/does not assess health effects/);
+    expect(result?.disclaimer[1].body).toMatch(/not a medical assessment/i);
   });
 });
 

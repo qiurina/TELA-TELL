@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CardLink } from '@/components/ui/card-link';
 import { InfoSheet } from '@/components/ui/info-sheet';
 import { CircleCheck, Tag, TriangleAlert } from '@/components/ui/lucide-icons';
 import { StatusCard } from '@/components/ui/status-card';
-import { BrandColors } from '@/constants/brand';
-import { Fonts } from '@/constants/fonts';
-import { faintCardShadow } from '@/constants/shadows';
 import type { StatusTone } from '@/constants/status-colors';
+import { Type } from '@/constants/typography';
 import {
   LABEL_CHECK_SHEET_SECTIONS,
   LABEL_CHECK_SHEET_TITLE,
@@ -49,20 +48,10 @@ export function SellerComparisonCard({
 
   if (!hasSellerLabel) {
     return (
-      <Pressable
-        style={({ pressed }) => [styles.ctaRow, faintCardShadow(), pressed && styles.pressed]}
-        onPress={onAddLabel}
-        disabled={!onAddLabel}
-        accessibilityRole="button"
-        accessibilityLabel="Add stated label to compare">
-        <View style={styles.ctaIcon}>
-          <Tag size={16} color={BrandColors.primary} strokeWidth={2.25} />
-        </View>
-        <View style={styles.ctaText}>
-          <Text style={styles.ctaTitle}>Compare stated label</Text>
-          <Text style={styles.ctaBody}>Add what the seller claimed to compare it with the prediction</Text>
-        </View>
-      </Pressable>
+      <StatusCard icon={Tag} tone="neutral" title="Compare stated label">
+        <Text style={Type.body}>Add what the seller claimed to compare it with the prediction.</Text>
+        {onAddLabel ? <CardLink label="Add stated label" onPress={onAddLabel} /> : null}
+      </StatusCard>
     );
   }
 
@@ -98,7 +87,7 @@ export function SellerComparisonCard({
       <StatusCard
         icon={STATUS_ICON[statusKey]}
         tone={STATUS_TONE[statusKey]}
-        title="Label check"
+        title="Seller's label"
         pillLabel={heading}
         onInfoPress={() => setShowInfo(true)}
         infoAccessibilityLabel="About this label check">
@@ -121,40 +110,6 @@ export function SellerComparisonCard({
 }
 
 const styles = StyleSheet.create({
-  ctaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: BrandColors.borderLight,
-    backgroundColor: BrandColors.white,
-  },
-  ctaIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BrandColors.lavenderCard,
-  },
-  ctaText: {
-    flex: 1,
-    gap: 2,
-    minWidth: 0,
-  },
-  ctaTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.primaryDark,
-  },
-  ctaBody: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.textMuted,
-  },
   compareRow: {
     flexDirection: 'row',
     gap: 12,
@@ -164,22 +119,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   compareLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 10,
-    letterSpacing: 0.8,
-    color: BrandColors.textMuted,
+    ...Type.sectionLabel,
   },
   compareValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 14,
-    color: BrandColors.text,
-    lineHeight: 20,
+    ...Type.cardTitle,
   },
   message: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.textMuted,
+    ...Type.secondary,
   },
   divider: {
     width: 1,
