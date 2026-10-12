@@ -200,15 +200,12 @@ function hashString(text: string): string {
 async function resyncScanSustainability(db: Database) {
   const { SCAN_PROFILE_LOGIC_VERSION } = await import('@/features/scan/lib/build-scan-profile');
   const { refreshStoredScan } = await import('@/features/scan/lib/refresh-stored-scan');
-  const { SUPPORTED_FABRICS } = await import('@/data/fabrics/fabrics');
   const { FIBER_PROFILES } = await import('@/data/fabrics/fiber-profiles');
-  const { getEcoGuidance } = await import('@/data/fabrics/eco-alternatives');
 
   const fingerprint = hashString(
     JSON.stringify([
       SCAN_PROFILE_LOGIC_VERSION,
       FIBER_PROFILES,
-      SUPPORTED_FABRICS.map((fabric) => getEcoGuidance(fabric)),
     ]),
   );
   if ((await AsyncStorage.getItem(SCAN_PROFILE_FINGERPRINT_KEY)) === fingerprint) {

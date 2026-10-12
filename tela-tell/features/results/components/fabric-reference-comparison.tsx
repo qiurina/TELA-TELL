@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScanLine } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
@@ -14,10 +14,16 @@ type FabricReferenceComparisonProps = {
   detectedSubtitle?: string;
   confidence?: number;
   compact?: boolean;
+  onReferencePress?: () => void;
 };
 
-function ReferenceSwatch({ reference }: { reference: FabricReference }) {
-  return <Image source={reference.image} style={styles.swatchImage} contentFit="cover" />;
+function ReferenceSwatch({ reference, onPress }: { reference: FabricReference; onPress?: () => void }) {
+  const image = <Image source={reference.image} style={styles.swatchImage} contentFit="cover" />;
+  return onPress ? (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Enlarge ${reference.title} reference image`}>
+      {image}
+    </Pressable>
+  ) : image;
 }
 
 function ScanThumb({ uri }: { uri?: string | null }) {
@@ -39,6 +45,7 @@ export function FabricReferenceComparison({
   detectedSubtitle,
   confidence,
   compact = false,
+  onReferencePress,
 }: FabricReferenceComparisonProps) {
   return (
     <View style={[styles.container, compact && styles.containerCompact, faintCardShadow()]}>
@@ -49,7 +56,7 @@ export function FabricReferenceComparison({
         </View>
 
         <View style={styles.compareColumn}>
-          <ReferenceSwatch reference={reference} />
+          <ReferenceSwatch reference={reference} onPress={onReferencePress} />
           <Text style={styles.columnCaption}>{reference.title}</Text>
         </View>
       </View>

@@ -1,15 +1,14 @@
-import { getClaimSources, getEcoGuidance } from '@/data/fabrics/eco-alternatives';
 import {
   FAST_FASHION_BASIS_TITLE,
   FAST_FASHION_CLAIMS,
-  FAST_FASHION_EDITORIAL_NOTE,
+  FAST_FASHION_KEEP_IN_MIND,
   FAST_FASHION_SOURCE_IDS,
   FAST_FASHION_TEXT,
   FAST_FASHION_TITLE,
   getFastFashionSources,
 } from '@/data/fabrics/fast-fashion-background';
 import { SUPPORTED_FABRICS } from '@/data/fabrics/fabrics';
-import { SOURCE_LIST, findUnknownSourceIds, getSourceNumber } from '@/data/fabrics/source-registry';
+import { SOURCE_LIST, findUnknownSourceIds, getClaimSources, getSourceNumber } from '@/data/fabrics/source-registry';
 
 // Sources for this note must be from the last 10 years. Fixed at the 2026 review date so the test
 // does not start failing on its own as the calendar moves.
@@ -26,15 +25,15 @@ describe('fast fashion note (About screen)', () => {
   });
 
   it('does not say a fabric or purchase is eco-friendly, or that anything is always better', () => {
-    const everything = `${FAST_FASHION_TEXT} ${FAST_FASHION_EDITORIAL_NOTE}`;
+    const everything = `${FAST_FASHION_TEXT} ${FAST_FASHION_KEEP_IN_MIND}`;
     expect(everything).not.toMatch(/\balways\b|\bnever\b|guarantee|\bgreener\b|\bbest\b/i);
     expect(FAST_FASHION_TEXT).not.toMatch(/eco-?friendly|sustainable/i);
-    expect(FAST_FASHION_EDITORIAL_NOTE).toMatch(/does not make a purchase eco-friendly/);
+    expect(FAST_FASHION_KEEP_IN_MIND).toMatch(/does not make a purchase eco-friendly/);
     expect(FAST_FASHION_TEXT).toMatch(/matters alongside which fabric you pick/);
   });
 
   it('is general information: no fabric is named', () => {
-    const everything = `${FAST_FASHION_TEXT} ${claimText} ${FAST_FASHION_EDITORIAL_NOTE}`;
+    const everything = `${FAST_FASHION_TEXT} ${claimText} ${FAST_FASHION_KEEP_IN_MIND}`;
     for (const fabric of SUPPORTED_FABRICS) {
       expect({ fabric, found: new RegExp(`\\b${fabric}\\b`, 'i').test(everything) }).toEqual({
         fabric,
@@ -88,11 +87,12 @@ describe('fast fashion note citations', () => {
     expect(fact?.sourceIds).toEqual(['emf-new-textiles-economy-2017']);
   });
 
-  it('attributes the 44% figure as the foundation’s own production-phase model, not a measurement', () => {
-    const claim = FAST_FASHION_CLAIMS.find((entry) => entry.text.includes('44%'));
-    expect(claim?.kind).toBe('benefit');
+  it('attributes the wear-more-often point to the foundation’s estimate, without quoting the 44% figure', () => {
+    const claim = FAST_FASHION_CLAIMS.find((entry) => entry.kind === 'benefit');
+    expect(claim?.text).not.toMatch(/44%/);
     expect(claim?.text).toMatch(/Ellen MacArthur Foundation estimates/);
-    expect(claim?.text).toMatch(/its own calculation for the production phase/);
+    expect(claim?.text).toMatch(/emissions from making clothes/);
+    expect(FAST_FASHION_KEEP_IN_MIND).toMatch(/not measurements of your garment/);
     expect(FAST_FASHION_TEXT).not.toMatch(/44%/);
   });
 
@@ -111,15 +111,3 @@ describe('fast fashion note citations', () => {
   });
 });
 
-describe('secondhand evidence stays with the Resale and Donate tips', () => {
-  it('keeps the benefit and its conditions on the reuse sheet for every fabric', () => {
-    for (const fabric of SUPPORTED_FABRICS) {
-      const claims = getEcoGuidance(fabric).reuseClaims;
-      const text = claims.map((claim) => claim.text).join(' ');
-      expect(text).toMatch(/replaces buying something new/);
-      expect(text).toMatch(/does not replace a new purchase/);
-      expect(text).toMatch(/extra transport/);
-      expect(text).not.toMatch(/\balways\b/i);
-    }
-  });
-});

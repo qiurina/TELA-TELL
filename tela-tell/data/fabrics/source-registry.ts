@@ -5,8 +5,8 @@
  *
  * Each entry is written for a quick read: a one-line `gist`, a few short `says` points (what the
  * source states, limited to the claims this app shows, attributed), and short `caveats` (scope,
- * funding, version or comparability limits). Add an id here before referencing it from
- * `eco-alternatives.ts` (a test checks every reference resolves).
+ * funding, version or comparability limits). Add an id here before referencing it from a claim
+ * (a test checks every reference resolves).
  */
 export type Source = {
   id: string;
@@ -29,114 +29,6 @@ export type Source = {
 
 export const SOURCE_LIST = [
   {
-    id: 'gots-8-0',
-    shortName: 'GOTS organic label',
-    organization: 'Global Standard gGmbH',
-    title: 'Global Organic Textile Standard (GOTS), Version 8.0',
-    year: 2026,
-    url: 'https://global-standard.org/images/resource-library/documents/standard-and-manual/GOTS_v8.0_signed.pdf',
-    gist: 'A label that certifies how organic-fiber clothes are made.',
-    says: [
-      'GOTS is a label for textiles made with at least 70% certified organic natural fibers.',
-      '"Organic" means at least 95% certified organic fiber.',
-      '"Made with organic materials" means at least 70%.',
-      'It covers how the fabric is made and sold. It does not cover the farm itself.',
-    ],
-    caveats: [
-      'Written by the group that runs GOTS.',
-      'Version 8.0 came out March 2, 2026 and is required from March 1, 2027.',
-      'It tells you what was certified, not how your garment affects the environment.',
-    ],
-    usedFor: 'GOTS label wording on organic cotton and cotton-spandex cards.',
-  },
-  {
-    id: 'textile-exchange-organic-cotton-lca-2014',
-    shortName: 'Organic cotton study',
-    organization: 'Textile Exchange (study by PE International)',
-    title: 'The Life Cycle Assessment of Organic Cotton Fiber: A Global Average, Summary of Findings',
-    year: 2014,
-    url: 'https://textileexchange.org/app/uploads/2025/01/the-life-cycle-assessment-of-organic-cotton-fiber_38172.pdf',
-    gist: 'A 2014 industry-funded life-cycle study of organic cotton fiber.',
-    says: [
-      'A 2014 life-cycle study by PE International, commissioned by Textile Exchange, measured organic cotton fiber and set the results against a separate study of conventional cotton.',
-      'It estimated these potential savings for organic cotton, per 1,000 kg of fiber:',
-      '46% less global warming potential',
-      '70% less acidification',
-      '26% less nutrient pollution of water (eutrophication)',
-      '91% less blue (freshwater) water use',
-      '62% less non-renewable energy',
-    ],
-    caveats: [
-      'Industry-funded: paid for by brands and groups including GOTS, H&M, Nike and Kering.',
-      'Covers farming and ginning only, not spinning, dyeing, wearing or disposal.',
-      'A global average using 2014 data.',
-      'Compared with a separate 2012 study of conventional cotton. The study says this comparison "has not been verified in the critical review."',
-      'The savings are "potentials," not measurements of a garment. Biodiversity and soil carbon were not measured.',
-      'The study says it does not intend to make a formal comparative claim under the ISO life-cycle standards.',
-    ],
-    usedFor: 'Cotton Basis sheet (organic cotton).',
-  },
-  {
-    id: 'grs-manual-4-2',
-    shortName: 'GRS recycled label (manual)',
-    organization: 'Textile Exchange',
-    title: 'Global Recycled Standard (GRS) Implementation Manual 4.2',
-    year: 2019,
-    url: 'https://textileexchange.org/app/uploads/2021/02/GRS-v4.2-Implementation-Manual.pdf',
-    gist: 'The rules behind the GRS recycled-content label (older version).',
-    says: [
-      'GRS applies to products with 20% or more recycled content.',
-      'Only products with at least 50% recycled content can carry the GRS label.',
-      'It also sets social and environmental rules for how certified products are made.',
-    ],
-    caveats: [
-      'Older version of the standard (effective November 21, 2019). Newer rules may apply today.',
-      'Written by the group that runs GRS.',
-      'The label certifies the recycled content and supply chain, not the benefit of your garment.',
-    ],
-    usedFor: 'GRS label wording on the recycled wool card.',
-  },
-  {
-    id: 'grs-quick-guide-2020',
-    shortName: 'GRS recycled label (guide)',
-    organization: 'Textile Exchange',
-    title: 'Quick Guide to the Recycled Claim Standard (RCS) and Global Recycled Standard (GRS)',
-    year: 2020,
-    url: 'https://textileexchange.org/app/uploads/2021/02/GRS-403-V4.0-Quick-Guide-to-the-RCS-and-GRS.pdf',
-    gist: 'A short guide to what the GRS checks.',
-    says: [
-      'GRS is a voluntary standard for finished products.',
-      'Outside (third-party) auditors check the recycled material, how it is tracked through the supply chain, social and environmental practices, and chemical limits.',
-    ],
-    caveats: [
-      'Older version (GRS 4.0, dated July 13, 2020).',
-      'Written by the group that runs GRS.',
-      '"Reducing harmful impacts" is its stated goal, not a measured result.',
-    ],
-    usedFor: 'GRS label wording on the recycled wool card.',
-  },
-  {
-    id: 'masters-of-flax-fibre-claims-2025',
-    shortName: 'Masters of FLAX FIBRE mark',
-    organization: 'Alliance for European Flax-Linen & Hemp',
-    title: 'The claims pertaining to Masters of FLAX FIBRE™ (formerly European Flax™)',
-    year: 2025,
-    url: 'https://allianceflaxlinenhemp.eu/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiI3MTRidTAzc3lrOWlxZ2Q2czdnNDM4aGJqbThtIiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwiTWFzdGVycyBvZiBGTEFYIEZJQlJFLUE0LWFsbGVnYXRpb25zLW1hcnF1ZXMtRU4tMjAyNjAxMTQucGRmXCI7IGZpbGVuYW1lKj1VVEYtOCcnTWFzdGVycyUyMG9mJTIwRkxBWCUyMEZJQlJFLUE0LWFsbGVnYXRpb25zLW1hcnF1ZXMtRU4tMjAyNjAxMTQucGRmIiwiY29udGVudF90eXBlIjoiYXBwbGljYXRpb24vcGRmIiwic2VydmljZV9uYW1lIjoibWVkaWEifSwicHVyIjoiYmxvYl9rZXkifX0=--706b531137c74fcec9d4105dcf7d2a462f48afc6/Masters%20of%20FLAX%20FIBRE-A4-allegations-marques-EN-20260114.pdf',
-    gist: 'A farming and origin mark for European-grown linen.',
-    says: [
-      'Covers flax grown in France, Belgium and the Netherlands, tracked from fiber to finished product.',
-      'Flax is usually grown without irrigation (only when specifically needed).',
-      'Stalks are left in the field to loosen the fibers. Soaking them in water is banned.',
-      'Seeds are certified GMO-free.',
-    ],
-    caveats: [
-      "From the flax industry's own trade body, describing its own mark.",
-      'Independent audits by Bureau Veritas Certification start in 2026.',
-      'Describes farming practices, not a measured comparison with other fibers.',
-    ],
-    usedFor: 'Linen note.',
-  },
-  {
     id: 'persson-2026',
     shortName: 'Recycled polyester study',
     organization: 'Persson, de Lima, Kadi & Persson',
@@ -157,65 +49,7 @@ export const SOURCE_LIST = [
       'The authors say the effect may apply only to moderate amounts of recycled fiber.',
       'The result applies to these test conditions. It does not apply to all recycled polyester.',
     ],
-    usedFor: 'Recycled polyester card and shedding basis sheet.',
-  },
-  {
-    id: 'aquafil-epd-econyl-2018',
-    shortName: 'ECONYL declaration',
-    organization: 'Aquafil S.p.A.',
-    title: 'Environmental Product Declaration for ECONYL® Nylon Textile Filament Yarns (Rev. 3)',
-    year: 2018,
-    url: 'https://www.aquafil.com/assets/uploads/20181010_EPD_ECONYL_NTF_Yarns_HR.pdf',
-    gist: "The maker's 2018 declaration about its ECONYL yarn.",
-    says: [
-      'Aquafil says its ECONYL yarns are made from 100% recycled nylon 6.',
-      'The recycled content (from used products and factory waste) is certified by an independent third party (DNV).',
-      'The declaration was checked by Bureau Veritas.',
-    ],
-    caveats: [
-      'Comes from the maker.',
-      'The declaration expired on April 10, 2020. It shows what the maker stated then, not current performance.',
-      'It covers production up to the factory gate, not use or disposal.',
-    ],
-    usedFor: 'Recycled nylon (ECONYL) card.',
-  },
-  {
-    id: 'aquafil-sustainability-2023',
-    shortName: 'Aquafil report',
-    organization: 'Aquafil S.p.A.',
-    title: 'Sustainability Report 2023 (consolidated non-financial statement)',
-    year: 2023,
-    url: 'https://www.aquafil.com/assets/uploads/Aquafil-DNF-2023-ENG-1.pdf',
-    gist: "Aquafil's own report on where its recycled nylon comes from.",
-    says: [
-      'Aquafil says it regenerates fishing nets and other nylon waste.',
-      'The waste it collects is mainly carpets, rugs and fishing nets.',
-    ],
-    caveats: [
-      "The maker's own report, not independently checked.",
-      'Its other marketing claims (quality, lower emissions) are not repeated in the app.',
-    ],
-    usedFor: 'Recycled nylon (ECONYL) card.',
-  },
-  {
-    id: 'oleksinska-2026-bio-leather',
-    shortName: 'Plant-based leather review',
-    organization: 'Oleksińska-Merida, Puchalski & Herczyńska',
-    title:
-      'Bio-Based and Sustainable Alternatives to Conventional and Synthetic Leather. Materials 19(6), 1198',
-    year: 2026,
-    url: 'https://doi.org/10.3390/ma19061198',
-    gist: 'A 2026 review of plant- and fungus-based leather alternatives.',
-    says: [
-      'Many commercial versions still use petroleum-based resins or coatings to be durable enough.',
-      'Common PU (plastic) coatings stand in the way of being fully biodegradable.',
-    ],
-    caveats: [
-      'A review article.',
-      'It describes products in general, so it does not show that every plant-based leather contains plastic.',
-      'It has at least one claim without a clear basis, so only the points above are used.',
-    ],
-    usedFor: 'Leather note.',
+    usedFor: 'Shedding basis sheet.',
   },
   {
     id: 'sandin-peters-2018',
@@ -238,230 +72,7 @@ export const SOURCE_LIST = [
       'Not specific to the Philippines or secondhand markets here.',
       'Covers reuse and recycling, not repair or upcycling.',
     ],
-    usedFor: 'Resale and donate tips (reuse sheet).',
-  },
-  {
-    id: 'philfida-abaca-manual',
-    shortName: 'Abaca manual',
-    organization: 'PhilFIDA, with GIZ and Glatfelter',
-    title: 'Abaca Sustainability Manual',
-    year: null,
-    url: 'https://philfida.da.gov.ph/images/Publications/abacasustainabilitymanual/ASM.pdf',
-    gist: "PhilFIDA's farming guide for abaca.",
-    says: [
-      'Names abaca as Musa textilis.',
-      'Lists its uses as ropes, textiles and specialty papers, among others.',
-    ],
-    caveats: [
-      'An undated farming guide, not a clothing source.',
-      'Its production statistics come from a 2015 bulletin. They are old and are not shown in the app.',
-    ],
-    usedFor: 'Abaca note.',
-  },
-  {
-    id: 'cherrett-sei-2005',
-    shortName: 'Cotton, hemp and polyester study',
-    organization: 'Cherrett, Barrett, Clemett, Chadwick & Chadwick (Stockholm Environment Institute)',
-    title: 'Ecological Footprint and Water Analysis of Cotton, Hemp and Polyester',
-    year: 2005,
-    url: 'https://mediamanager.sei.org/documents/Publications/SEI-Report-EcologicalFootprintAndWaterAnalysisOfCottonHempAndPolyester-2005.pdf',
-    gist: 'A 2005 footprint study of cotton, organic cotton, hemp and polyester.',
-    says: [
-      'It compared the energy, CO2 and ecological footprint of making one tonne of spun fiber.',
-      'Organic cotton used less energy to grow than conventional cotton, because it leaves out synthetic fertilizer, herbicides and, in the USA case, energy-intensive irrigation.',
-      'It found a marginal footprint reduction for organic cotton in most cases.',
-      'It cites organic yields 20-50% lower, so growing all cotton organically would need more land.',
-    ],
-    caveats: [
-      'Commissioned by BioRegional, with part of the funding from WWF-UK.',
-      'A preliminary estimate from twelve case studies, using data from around 2005. The authors note large error margins.',
-      'Covers CO2 only, not other emissions or pollution.',
-      'Per tonne of spun fiber, not per garment.',
-    ],
-    usedFor: 'Organic cotton card (energy, yield and land).',
-  },
-  {
-    id: 'shen-2010-pet',
-    shortName: 'Recycled PET fiber study',
-    organization: 'Shen, Worrell & Patel',
-    title:
-      'Open-loop recycling: A LCA case study of PET bottle-to-fibre recycling. Resources, Conservation and Recycling 55, 34-52',
-    year: 2010,
-    url: 'https://doi.org/10.1016/j.resconrec.2010.06.014',
-    gist: 'A 2010 life-cycle study of turning used PET bottles into polyester fiber.',
-    says: [
-      'It compared recycled PET fiber with new PET fiber, per tonne of fiber.',
-      'Recycled fiber saved 40-85% of non-renewable energy and 25-75% of global warming potential, depending on how the recycling impacts were shared out.',
-      'Mechanical recycling had lower impacts than new PET in at least 8 of 9 categories.',
-    ],
-    caveats: [
-      'Industry-funded: the acknowledgements say adidas AG, Lenzing AG and Wellman International funded and supported the study.',
-      'Wellman, a recycler of PET bottles, supplied inventory data for the mechanical recycling case.',
-      'Covers making the fiber only, not making clothes, wearing or disposal.',
-      'Assumes recycled and new fiber work equally well. The authors say quality depends on clean, well-sorted bottles.',
-      'Does not measure microfiber shedding.',
-      'Covers PET bottles turned into fiber, not recycled clothing.',
-    ],
-    usedFor: 'Recycled polyester card (energy and greenhouse gases).',
-  },
-  {
-    id: 'shen-cellulose-2010',
-    shortName: 'Man-made cellulose fibers study',
-    organization: 'Shen, Worrell & Patel',
-    title:
-      'Environmental impact assessment of man-made cellulose fibres. Resources, Conservation and Recycling 55(2), 260-274',
-    year: 2010,
-    url: 'https://doi.org/10.1016/j.resconrec.2010.10.001',
-    gist: 'A 2010 life-cycle study of Lenzing viscose, modal and TENCEL fibers set against cotton, polyester and polypropylene.',
-    says: [
-      'It assessed viscose, modal and TENCEL fibers made by Lenzing AG, per tonne of staple fiber from raw materials to the factory gate.',
-      'It compared them with cotton, polyester (PET) and polypropylene (PP).',
-      'It found four modern man-made cellulose fibers, including TENCEL and viscose from Austria, had the lowest overall impact of all the fibers studied.',
-      'It found viscose from Asia had a higher overall impact than the other cellulose fibers and was comparable to PET.',
-      'It identified cotton as the least preferred choice because of its ecotoxicity, eutrophication, water use and land use impacts.',
-      'It says the ranking of the fibers does not change with the allocation method.',
-    ],
-    caveats: [
-      'Only the abstract could be read, not the full text or the funding statement.',
-      'The fiber data came from Lenzing AG, which makes TENCEL. The lead author\'s 2010 PET-bottle study lists Lenzing among its funders.',
-      'Covers fiber production up to the factory gate, not spinning, dyeing, wearing or disposal.',
-      'Data are from the 2000s.',
-    ],
-    usedFor: 'TENCEL / lyocell cards and the viscose note.',
-  },
-  {
-    id: 'wendin-2016-recycled-cotton',
-    shortName: 'Recycled cotton report',
-    organization: 'Miljögiraff (Wendin), report for H&M',
-    title: 'Life Cycle Assessment on Recycling cotton (mechanically), Report 75',
-    year: 2016,
-    url: 'https://esu-services.ch/fileadmin/download/publicLCI/wendin-2016-LCA%20on%20Rec%20Cotton%20Miljogiraff%2075%20report%20for%20HM.pdf',
-    gist: 'A 2016 life-cycle report on mechanically recycling collected cotton clothes, written for H&M.',
-    says: [
-      'It compared one tonne of mechanically recycled cotton fiber, ready for spinning, with virgin cotton from two reference datasets (Cotton Incorporated and PE International 2012, and ecoinvent).',
-      'It concludes that collecting clothes and recycling cotton mechanically has a considerable potential to lower the overall environmental impact in the most important categories, though not in all.',
-      'It says the result is limited to the aspects that could be compared.',
-    ],
-    caveats: [
-      'Written for H&M, a clothing retailer with a take-back program. No independent review was confirmed.',
-      'It says the physical allocation it used can be regarded as a worst case for recycling.',
-      'Water scarcity, land use and toxicity could not be compared with the reference study.',
-      'Per tonne of fiber ready for spinning, not per garment.',
-    ],
-    usedFor: 'Recycled cotton card.',
-  },
-  {
-    id: 'bianco-2022-recycled-wool',
-    shortName: 'Recycled wool fiber study',
-    organization: 'Bianco, Gerboni, Picerno & Blengini',
-    title: 'Life Cycle Assessment (LCA) of MWool Recycled Wool Fibers. Resources 11(5), 41',
-    year: 2022,
-    url: 'https://doi.org/10.3390/resources11050041',
-    gist: 'A 2022 life-cycle study of recycled wool fiber from one Italian producer, set against virgin wool fiber.',
-    says: [
-      'It assessed recycled wool fiber made by Manteco SpA from pre- and post-consumer textiles, mostly with primary data.',
-      'It compared this with a separate assessment of virgin wool fiber that was mostly based on literature data.',
-      'It reports a carbon footprint of 0.1-0.9 kg CO2e per kg of recycled wool fiber, against 10-103 kg CO2e for virgin wool fiber.',
-      'It reports that recycled wool fiber can save about 60% of the impacts of virgin fiber when a formula for quality loss is applied.',
-      'It says recycled wool fibers had significantly lower impacts than virgin fibers even in the most unfavorable scenarios it tested.',
-    ],
-    caveats: [
-      'Only the abstract could be read. Funding and conflict-of-interest statements were not read.',
-      'The recycled data come from one company\'s process.',
-      'The virgin wool range is very wide and comes mostly from literature data.',
-      'The abstract names climate change only, so other impact categories are not confirmed.',
-    ],
-    usedFor: 'Recycled wool card.',
-  },
-  {
-    id: 'wiedemann-2022-recycled-wool-sweater',
-    shortName: 'Recycled wool sweater study',
-    organization: 'Wiedemann, Biggs, Clarke & Russell',
-    title:
-      'Reducing the Environmental Impacts of Garments through Industrially Scalable Closed-Loop Recycling: Life Cycle Assessment of a Recycled Wool Blend Sweater. Sustainability 14(3), 1081',
-    year: 2022,
-    url: 'https://doi.org/10.3390/su14031081',
-    gist: 'A 2022 cradle-to-grave life-cycle study of a recycled wool blend sweater.',
-    says: [
-      'It reports 0.05 kg CO2e, 0.63 MJ fossil energy, 0.58 L water stress and 0.95 L freshwater use per wear of a recycled wool blend sweater.',
-      'Most of the impact came from making the garment and from how it is used and cared for.',
-      'A recycled wool blend sweater kept with best-practice use and care had 66-90% lower impacts than a virgin pure wool sweater with standard maintenance.',
-    ],
-    caveats: [
-      'Only the abstract could be read.',
-      'Funded by Australian Wool Innovation, a wool industry body, according to Crossref funder data.',
-      'The 66-90% figure combines recycled content with better garment care, so it is not the effect of recycled fiber alone.',
-      'Covers climate change, fossil energy, water stress and freshwater use only.',
-    ],
-    usedFor: 'Recycled wool card (Basis sheet only).',
-  },
-  {
-    id: 'aquafil-lca-2024',
-    shortName: 'ECONYL polymer summary',
-    organization: 'Aquafil S.p.A.',
-    title: 'Life Cycle Assessment data for ECONYL polymer (one-page summary)',
-    year: null,
-    url: 'https://www.aquafil.com/assets/uploads/LCA_Grafica_ECONYL%C2%AE_POLYMER.pdf',
-    gist: "The maker's one-page summary of its life-cycle study of ECONYL nylon 6 polymer.",
-    says: [
-      'Aquafil reports a carbon footprint of 1.69 kg CO2e per kg of ECONYL nylon 6 polymer.',
-      "Aquafil reports 74% lower CO2 emissions than its own standard nylon.",
-      'It says the results come from an ISO 14040/44 study verified by a third party (Studio Fieschi & soci Srl, Turin).',
-      'The boundary is cradle to gate, using 2023-2024 data.',
-    ],
-    caveats: [
-      'Comes from the maker. A consulting firm\'s verification is not the same as journal peer review.',
-      "The comparison is with Aquafil's own standard nylon, not an industry average.",
-      'Reports carbon dioxide only, with no water, toxicity or shedding results.',
-      'Covers making the polymer only. Later steps are outside the study.',
-      'Only this one-page summary was read, not the full study.',
-      'The page has no date.',
-    ],
-    usedFor: 'Recycled nylon (ECONYL) card.',
-  },
-  {
-    id: 'van-der-velden-2014',
-    shortName: 'Fabric benchmarking study',
-    organization: 'van der Velden, Patel & Vogtländer',
-    title:
-      'LCA benchmarking study on textiles made of cotton, polyester, nylon, acryl, or elastane. International Journal of Life Cycle Assessment 19(2), 331-356',
-    year: 2014,
-    url: 'https://doi.org/10.1007/s11367-013-0626-9',
-    gist: 'A 2014 life-cycle comparison of fabrics made of cotton, polyester, nylon, acrylic and elastane.',
-    says: [
-      'It compared textiles from raw materials to the discarded textile, using four single indicators: eco-costs, carbon footprint, cumulative energy demand and ReCiPe.',
-      'It found textiles made of acrylic and PET have the least impact, followed by elastane, nylon and cotton.',
-      'It says impact depends on yarn thickness as well as on the base material.',
-      'It says results are case dependent, especially when dyeing, finishing, use and end of life are included.',
-    ],
-    caveats: [
-      'Only the abstract could be read. The funding statement was not read.',
-      'Inventory data come from literature, databases and company contacts, not one measured supply chain.',
-      'Does not cover wool, linen or recycled fibers.',
-    ],
-    usedFor: 'Acrylic and spandex notes.',
-  },
-  {
-    id: 'williams-2022-reishi',
-    shortName: 'Mycelium leather study',
-    organization: 'Williams, Cenian, Golsteijn, Morris & Scullin',
-    title:
-      "Life cycle assessment of MycoWorks' Reishi: the first low-carbon and biodegradable alternative leather. Environmental Sciences Europe 34, 120",
-    year: 2022,
-    url: 'https://doi.org/10.1186/s12302-022-00689-x',
-    gist: 'A 2022 company-funded life-cycle study of one mycelium leather compared with a modeled bovine leather.',
-    says: [
-      'It compared one square meter of MycoWorks\' Reishi (mycelium only) with a bovine leather benchmark that the authors modeled, from raw materials to the factory gate.',
-      'It reports 6.20 kg CO2e per m2 for Reishi at pilot scale (an 81% reduction) against 32.97 kg CO2e per m2 for the modeled bovine leather.',
-      'It reports a lower impact for Reishi in several categories, including eutrophication, ecotoxicity and human health effects.',
-    ],
-    caveats: [
-      'Funded by MycoWorks Inc., which makes Reishi. MycoWorks also provided the data and co-wrote parts of the paper.',
-      'The authors say the findings are specific to this case study and should not be extrapolated to all bovine leather.',
-      'Covers making the material to the factory gate only, not durability or disposal.',
-      'The bovine leather benchmark was modeled by the authors.',
-    ],
-    usedFor: 'Leather note.',
+    usedFor: 'Sustainable choices sheet (Scan results).',
   },
   {
     id: 'azevedo-2025-elastane',
@@ -505,7 +116,7 @@ export const SOURCE_LIST = [
       'The "under a year" figure is described as an estimate.',
       'Global figures from 2017. They are not specific to the Philippines.',
     ],
-    usedFor: 'Fast fashion note (About screen) and the mending tip (care tips; practical suggestion).',
+    usedFor: 'Fast fashion note (About screen), the Sustainable choices sheet (Scan results) and the Why synthetics shed page.',
   },
   {
     id: 'peters-2021-fast-fashion',
@@ -720,7 +331,7 @@ export const SOURCE_LIST = [
       'Polyester textiles only.',
       'Funding and author affiliations were not read. One author (N. J. Lant) also wrote Lant et al. (2020), whose authors work for Procter & Gamble.',
     ],
-    usedFor: 'Wash tips (care tips sheet).',
+    usedFor: 'Why synthetics shed page.',
   },
   {
     id: 'lant-2020',
@@ -744,7 +355,7 @@ export const SOURCE_LIST = [
       'Temperature and cycle length changed together, so it does not show the effect of temperature alone.',
       'Mostly UK household loads of mixed fabrics, not a test of one fiber.',
     ],
-    usedFor: 'Wash tips (care tips sheet).',
+    usedFor: 'Why synthetics shed page.',
   },
   {
     id: 'earthday-fashion-guide-2021',
@@ -763,7 +374,7 @@ export const SOURCE_LIST = [
       'A consumer guide from an advocacy nonprofit, not a study and not peer reviewed.',
       'It does not say natural fibers never shed or are better in every way. The lab studies in this list found cotton and wool shed fibers too.',
     ],
-    usedFor: 'Natural-fiber tip (care tips; practical suggestion).',
+    usedFor: 'Why synthetics shed page (sources).',
   },
   {
     id: 'earthday-care-toolkit',
@@ -783,7 +394,7 @@ export const SOURCE_LIST = [
       'It advises a delicate cycle for fragile fabrics. A lab study (Kelly et al. 2019) found delicate cycles released more microfibers, so that advice is not used.',
       'Its repair advice covers shoes only, not clothing.',
     ],
-    usedFor: 'Worn-garment tip (care tips; practical suggestion).',
+    usedFor: 'Why synthetics shed page (sources).',
   },
   {
     id: 'zambrano-2019',
@@ -805,7 +416,7 @@ export const SOURCE_LIST = [
       'Knitted fabrics, accelerated lab washing and home laundering. Not a measurement of your garment.',
       'Biodegradation was tested in the lab. A follow-up paper by the same group says such results show potential, not absolutes in nature.',
     ],
-    usedFor: 'Cotton and rayon notes, and the cooler-wash tip (fiber profile and About).',
+    usedFor: 'Cotton and rayon notes (fiber profile and About) and the Why synthetics shed page.',
   },
   {
     id: 'zambrano-2020',
@@ -938,6 +549,11 @@ export function resolveSources(ids: readonly string[] | undefined): Source[] {
     }
   }
   return sources;
+}
+
+/** Sources behind a set of claims, in order of first use. */
+export function getClaimSources(claims: readonly { sourceIds?: readonly string[] }[]): Source[] {
+  return resolveSources(claims.flatMap((claim) => claim.sourceIds ?? []));
 }
 
 export function findUnknownSourceIds(ids: readonly string[] | undefined): string[] {

@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { NotFoundFallback } from '@/components/ui/not-found-fallback';
 
@@ -20,6 +21,7 @@ export default function FabricProfileScreen() {
   const { scanId } = useLocalSearchParams<{ scanId: string | string[] }>();
   const { result, isLoading } = useScanResult(scanId);
   const router = useRouter();
+  const [identityHidden, setIdentityHidden] = useState(false);
 
   if (isLoading) {
     return (
@@ -41,35 +43,43 @@ export default function FabricProfileScreen() {
   const capturedPhotoUri = result.imageUri ?? null;
   const fiberProfile = supportedFabric ? getFiberProfile(supportedFabric) : null;
   const headline = getScanResultHeadline(result.dominantFabric, compositions);
+  const renderComparison = (onReferencePress?: () => void) => fabricReference ? (
+    <FabricReferenceComparison
+      scanImageUri={capturedPhotoUri}
+      reference={fabricReference}
+      detectedLabel={headline.title}
+      confidence={result.confidence}
+      compact
+      onReferencePress={onReferencePress}
+    />
+  ) : null;
 
   return (
     <View style={styles.root}>
-      <ResultsScreenHeader title="Fabric Profile" onBack={() => router.back()} />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}>
-        {fabricReference ? (
-          <FabricReferenceComparison
-            scanImageUri={capturedPhotoUri}
-            reference={fabricReference}
-            detectedLabel={headline.title}
-            confidence={result.confidence}
-            compact
-          />
-        ) : null}
-
-        {fiberProfile ? (
-          <FiberProfileContent profile={fiberProfile} showHero={false} />
-        ) : (
+      <ResultsScreenHeader
+        title={identityHidden && supportedFabric ? supportedFabric : 'Fabric Profile'}
+        onBack={() => router.back()}
+      />
+      {fiberProfile ? (
+        <FiberProfileContent
+          key={supportedFabric}
+          profile={fiberProfile}
+          showHero={false}
+          predicted
+          headerContent={renderComparison}
+          onIdentityHiddenChange={setIdentityHidden}
+        />
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          {renderComparison()}
           <View style={styles.missingCard}>
             <Text style={styles.missingTitle}>Detailed profile unavailable</Text>
             <Text style={styles.missingBody}>
               We could not match this scan to a known fiber profile yet.
             </Text>
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
     </View>
   );
 }

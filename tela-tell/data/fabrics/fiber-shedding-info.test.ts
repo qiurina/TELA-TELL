@@ -150,10 +150,10 @@ describe('references behind the fiber descriptions', () => {
     }
   });
 
-  it('adds six verified sources after the existing ones, numbered 36 to 41, each with DOI, limits and an honest access note', () => {
+  it('adds six verified sources after the existing ones, numbered 18 to 23, each with DOI, limits and an honest access note', () => {
     NEW_IDS.forEach((id, index) => {
       const source = getSource(id)!;
-      expect(getSourceNumber(id)).toBe(36 + index);
+      expect(getSourceNumber(id)).toBe(18 + index);
       expect(source.url).toMatch(/^https:\/\/doi\.org\/10\./);
       expect(source.says.length).toBeGreaterThan(0);
       expect(source.caveats.join(' ')).toMatch(/Only the abstract could be read/);

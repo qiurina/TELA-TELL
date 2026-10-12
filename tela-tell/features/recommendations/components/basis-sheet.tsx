@@ -1,121 +1,37 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Check, Info, TriangleAlert } from '@/components/ui/lucide-icons';
+import type { FC } from 'react';
+
+import { CircleCheck, Info, TriangleAlert, type IconProps } from '@/components/ui/lucide-icons';
+import { StatusIcon } from '@/components/ui/status-icon';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { STATUS_COLORS } from '@/constants/status-colors';
-import { getClaimSources } from '@/data/fabrics/eco-alternatives';
-import { getSourceNumber, type Source } from '@/data/fabrics/source-registry';
-import type { EcoClaim, EcoClaimKind } from '@/data/scans/mock-data';
-
-/** Shown on every Basis sheet: the suggestion itself is the authors' idea, not a finding. */
-export const EDITORIAL_NOTE =
-  "Suggesting this fabric is the app authors' idea, not a research ranking.";
-
-const DIFFERENT_IMPACTS_NOTE =
-  'These measure different things, so one does not cancel the other. Weigh them together.';
-
-const NO_EVIDENCE_NOTE =
-  'No study we checked directly compares this swap with the original fabric, so the app makes no claim that it is better for the environment.';
-
-function SourceCard({ source }: { source: Source }) {
-  const caution = STATUS_COLORS.caution;
-  const good = STATUS_COLORS.good;
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.numberBadge}>
-          <Text style={styles.numberText}>{getSourceNumber(source.id)}</Text>
-        </View>
-        <View style={styles.cardTitleBlock}>
-          <Text style={styles.cardTitle}>{source.shortName}</Text>
-          <Text style={styles.cardYear}>{source.year ?? 'No date'}</Text>
-        </View>
-      </View>
-
-      <Text style={styles.gist}>{source.gist}</Text>
-
-      <View style={styles.block}>
-        <Text style={styles.blockLabel}>WHAT IT SAYS</Text>
-        {source.says.map((point) => (
-          <View key={point} style={styles.pointRow}>
-            <View style={styles.pointIcon}>
-              <Check size={14} color={good.accent} strokeWidth={2.75} />
-            </View>
-            <Text style={styles.pointText}>{point}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={[styles.cautionBox, { backgroundColor: caution.tint, borderColor: caution.border }]}>
-        <View style={styles.cautionHeader}>
-          <TriangleAlert size={14} color={caution.accent} strokeWidth={2.25} />
-          <Text style={[styles.blockLabel, { color: caution.accent }]}>KEEP IN MIND</Text>
-        </View>
-        {source.caveats.map((point) => (
-          <View key={point} style={styles.pointRow}>
-            <Text style={[styles.bullet, { color: caution.accent }]}>•</Text>
-            <Text style={styles.pointText}>{point}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-const CLAIM_BLOCKS: { kind: EcoClaimKind; label: string }[] = [
-  { kind: 'fact', label: 'FACTS' },
-  { kind: 'certification', label: 'WHAT THE LABEL REQUIRES' },
-  { kind: 'benefit', label: 'EVIDENCE OF A BENEFIT' },
-  { kind: 'tradeoff', label: 'DOWNSIDES TO WEIGH' },
-];
-
-function sourceNumbers(claim: EcoClaim): string {
-  const numbers = (claim.sourceIds ?? [])
-    .map((id) => getSourceNumber(id))
-    .filter((n): n is number => n !== undefined);
-  return numbers.length > 0 ? ` [${numbers.join(', ')}]` : '';
-}
+import type { EcoClaim } from '@/data/scans/mock-data';
 
 type BasisSheetProps = {
   visible: boolean;
   title: string;
+  /** Icon beside the title, like the app's other (i) sheets. */
+  icon: FC<IconProps>;
+  /** Short points, each shown as a heading (its `aspect`) and one sentence. */
   claims: EcoClaim[];
-  /** Replaces the standard "authors' idea" line, e.g. for the reuse tips. */
-  editorialNote?: string;
-  /** Replaces the heading of a claim block, e.g. for evidence that is not about a swap. */
-  claimLabels?: Partial<Record<EcoClaimKind, string>>;
-  /** Replaces the "no study compares this swap" note shown when a sheet has no evidence claims; null hides it. */
-  noEvidenceNote?: string | null;
+  /** One short paragraph with the limits that apply to every point above. */
+  keepInMind: string;
   onClose: () => void;
 };
 
 /**
- * Basis for one card (or the reuse tips). Keeps four things apart: the authors' choice, what is
- * a material fact, what a label requires, and what the research found, including downsides.
- * Numbers match the About screen's reference list.
+ * The (i) sheet behind a short note: a few points and one "Keep in mind" box. Like the other cards,
+ * it does not list sources; every point keeps its source ids in the data, and the full list is in
+ * About → References.
  */
-export function BasisSheet({
-  visible,
-  title,
-  claims,
-  editorialNote = EDITORIAL_NOTE,
-  claimLabels,
-  noEvidenceNote = NO_EVIDENCE_NOTE,
-  onClose,
-}: BasisSheetProps) {
+export function BasisSheet({ visible, title, icon, claims, keepInMind, onClose }: BasisSheetProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const sources = getClaimSources(claims);
-  const hasEvidence = claims.some((c) => c.kind === 'benefit' || c.kind === 'tradeoff');
-  const aspects = new Set(
-    claims.filter((c) => c.kind === 'benefit' || c.kind === 'tradeoff').map((c) => c.aspect ?? ''),
-  );
-  // A benefit and a downside that measure different impacts (e.g. making the fiber vs washing).
-  const measuresDifferentImpacts =
-    claims.some((c) => c.kind === 'benefit') && claims.some((c) => c.kind === 'tradeoff') && aspects.size > 1;
+  const caution = STATUS_COLORS.caution;
+  const good = STATUS_COLORS.good;
 
   return (
     <Modal
@@ -134,8 +50,8 @@ export function BasisSheet({
 
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
           <View style={styles.handle} />
-
           <View style={styles.header}>
+            <StatusIcon icon={icon} tone="neutral" />
             <Text style={styles.title}>{title}</Text>
           </View>
 
@@ -143,48 +59,40 @@ export function BasisSheet({
             style={{ maxHeight: windowHeight * 0.62 }}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}>
-            <View style={styles.noteBox}>
-              <Info size={15} color={BrandColors.primaryDark} strokeWidth={2.25} />
-              <Text style={styles.noteText}>{editorialNote}</Text>
+            <View style={styles.points}>
+              {claims.map((claim, index) => {
+                // A benefit gets a green check; a plain fact gets a neutral info mark.
+                const isBenefit = claim.kind === 'benefit';
+                const PointIcon = isBenefit ? CircleCheck : Info;
+                return (
+                  <View key={claim.text}>
+                    {index > 0 ? <View style={styles.divider} /> : null}
+                    <View style={styles.point}>
+                      <View style={[styles.pointIcon, { backgroundColor: isBenefit ? good.tint : BrandColors.lavenderCard }]}>
+                        <PointIcon
+                          size={15}
+                          color={isBenefit ? good.accent : BrandColors.primaryDark}
+                          strokeWidth={2.25}
+                        />
+                      </View>
+                      <View style={styles.pointBody}>
+                        {claim.aspect ? <Text style={styles.pointHeading}>{claim.aspect}</Text> : null}
+                        <Text style={styles.pointText}>{claim.text}</Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
 
-            {CLAIM_BLOCKS.map(({ kind, label }) => {
-              // Plain definitions ("A mix of cotton and linen") need no source, so only sourced
-              // facts are listed here.
-              const lines = claims.filter(
-                (claim) => claim.kind === kind && (kind !== 'fact' || (claim.sourceIds ?? []).length > 0),
-              );
-              if (lines.length === 0) {
-                return null;
-              }
-              return (
-                <View key={kind} style={styles.block}>
-                  <Text style={styles.blockLabel}>{claimLabels?.[kind] ?? label}</Text>
-                  {lines.map((claim) => (
-                    <Text key={claim.text} style={styles.claimText}>
-                      {claim.aspect ? <Text style={styles.claimAspect}>{claim.aspect}: </Text> : null}
-                      {claim.text}
-                      <Text style={styles.claimRef}>{sourceNumbers(claim)}</Text>
-                    </Text>
-                  ))}
-                  {kind === 'tradeoff' && measuresDifferentImpacts ? (
-                    <Text style={styles.claimNote}>{DIFFERENT_IMPACTS_NOTE}</Text>
-                  ) : null}
-                </View>
-              );
-            })}
-
-            {!hasEvidence && noEvidenceNote ? (
-              <View style={styles.block}>
-                <Text style={styles.blockLabel}>ENVIRONMENTAL EVIDENCE</Text>
-                <Text style={styles.claimText}>{noEvidenceNote}</Text>
+            <View style={[styles.keepBox, { backgroundColor: caution.tint, borderColor: caution.border }]}>
+              <View style={styles.keepHeader}>
+                <TriangleAlert size={14} color={caution.accent} strokeWidth={2.25} />
+                <Text style={[styles.keepLabel, { color: caution.accent }]}>Keep in mind</Text>
               </View>
-            ) : null}
+              <Text style={styles.keepText}>{keepInMind}</Text>
+            </View>
 
-            {sources.length > 0 ? <Text style={styles.sectionLabel}>SOURCES</Text> : null}
-            {sources.map((source) => (
-              <SourceCard key={source.id} source={source} />
-            ))}
           </ScrollView>
 
           <Pressable
@@ -200,9 +108,6 @@ export function BasisSheet({
 }
 
 const styles = StyleSheet.create({
-  pressed: {
-    opacity: 0.7,
-  },
   root: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -216,8 +121,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 10,
-    paddingHorizontal: 18,
-    gap: 14,
+    paddingHorizontal: 22,
+    gap: 16,
   },
   handle: {
     alignSelf: 'center',
@@ -227,160 +132,96 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.border,
   },
   header: {
-    paddingHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   title: {
+    flex: 1,
     fontFamily: Fonts.bold,
     fontSize: 18,
     color: BrandColors.text,
   },
   list: {
-    gap: 14,
+    gap: 16,
   },
-  noteBox: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-start',
-    backgroundColor: BrandColors.lavender,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
-    padding: 12,
-  },
-  noteText: {
-    flex: 1,
-    fontFamily: Fonts.semiBold,
-    fontSize: 13,
-    lineHeight: 19,
-    color: BrandColors.text,
-  },
-  sectionLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    color: BrandColors.textMuted,
-    paddingHorizontal: 4,
-    marginTop: 4,
-  },
-  claimText: {
-    fontFamily: Fonts.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: BrandColors.text,
-  },
-  claimAspect: {
-    fontFamily: Fonts.semiBold,
-    color: BrandColors.primaryDark,
-  },
-  claimNote: {
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
-    color: BrandColors.textMuted,
-  },
-  claimRef: {
-    fontFamily: Fonts.semiBold,
-    color: BrandColors.primaryDark,
-  },
-  card: {
-    gap: 12,
-    backgroundColor: BrandColors.white,
+  points: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: BrandColors.border,
-    padding: 14,
+    borderColor: BrandColors.borderLight,
+    paddingHorizontal: 14,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  numberBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BrandColors.lavenderCard,
-  },
-  numberText: {
-    fontFamily: Fonts.bold,
-    fontSize: 13,
-    color: BrandColors.primaryDark,
-  },
-  cardTitleBlock: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: BrandColors.text,
-  },
-  cardYear: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-  },
-  gist: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    lineHeight: 20,
-    color: BrandColors.primaryDark,
-  },
-  block: {
-    gap: 6,
-  },
-  blockLabel: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    color: BrandColors.textMuted,
-  },
-  pointRow: {
+  point: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 12,
+    paddingVertical: 14,
   },
   pointIcon: {
-    width: 16,
-    paddingTop: 3,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  bullet: {
-    width: 16,
-    textAlign: 'center',
-    fontFamily: Fonts.bold,
+  pointBody: {
+    flex: 1,
+    gap: 2,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: BrandColors.border,
+  },
+  pointHeading: {
+    fontFamily: Fonts.semiBold,
     fontSize: 14,
     lineHeight: 20,
+    color: BrandColors.primaryDark,
   },
   pointText: {
-    flex: 1,
     fontFamily: Fonts.regular,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
     color: BrandColors.text,
   },
-  cautionBox: {
-    gap: 6,
-    borderRadius: 12,
+  keepBox: {
+    borderRadius: 14,
     borderWidth: 1,
     padding: 12,
+    gap: 6,
   },
-  cautionHeader: {
+  keepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  keepLabel: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  keepText: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: BrandColors.text,
   },
   button: {
     alignSelf: 'center',
-    paddingVertical: 11,
-    paddingHorizontal: 40,
+    minWidth: 140,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
     borderRadius: 999,
     backgroundColor: BrandColors.primary,
+    alignItems: 'center',
   },
   buttonText: {
     fontFamily: Fonts.semiBold,
     fontSize: 15,
     color: BrandColors.white,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

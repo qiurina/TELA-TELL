@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState, type ReactNode } from 'react';
 import { useRouter, type Href } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { InfoButton } from '@/components/ui/info-button';
 import { ReferenceItem } from '@/components/ui/reference-item';
@@ -15,10 +15,11 @@ import { faintCardShadow, heroCardShadow } from '@/constants/shadows';
 import {
   FAST_FASHION_BASIS_TITLE,
   FAST_FASHION_CLAIMS,
-  FAST_FASHION_EDITORIAL_NOTE,
+  FAST_FASHION_KEEP_IN_MIND,
   FAST_FASHION_TEXT,
   FAST_FASHION_TITLE,
 } from '@/data/fabrics/fast-fashion-background';
+import { GUIDE_SOURCES } from '@/data/fabrics/eco-guide';
 import { SOURCE_LIST } from '@/data/fabrics/source-registry';
 
 const heroGradient = [BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark] as const;
@@ -54,7 +55,8 @@ function FastFashionSection() {
         visible={basisVisible}
         title={FAST_FASHION_BASIS_TITLE}
         claims={FAST_FASHION_CLAIMS}
-        editorialNote={FAST_FASHION_EDITORIAL_NOTE}
+        keepInMind={FAST_FASHION_KEEP_IN_MIND}
+        icon={Shirt}
         onClose={() => setBasisVisible(false)}
       />
       <View style={[styles.iconWrap, { backgroundColor: BrandColors.lavenderCard }]}>
@@ -144,8 +146,8 @@ export default function AboutScreen() {
           &quot;Why synthetics shed&quot; page above. The studies are in the References list below.
         </Text>
         <Text style={[styles.cardBody, styles.sourcesFootnote]}>
-          The eco-alternative tips use the studies in the References list below. Other fiber
-          information draws on additional sources, such as The Woolmark Company, PhilFIDA and DermNet NZ, which this
+          Eco tips come from the Microplastics &amp; Sustainable Choices Guide; its sources (S01 to
+          S21) are listed at the end of this page. Other fiber information draws on additional sources, such as The Woolmark Company, PhilFIDA and DermNet NZ, which this
           app&apos;s engineering documentation lists. The app no longer scores sustainability,
           because no published method compares all 12 fibers fairly.
         </Text>
@@ -154,11 +156,38 @@ export default function AboutScreen() {
       <View style={[styles.card, faintCardShadow(), styles.sourcesCard]}>
         <Text style={styles.cardTitle}>References</Text>
         <Text style={styles.cardBody}>
-          Where the facts in the eco-alternative and reuse tips come from. The numbers match the
+          Where the facts in the app&apos;s notes come from. The numbers match the
           &quot;Basis&quot; sheets, which also explain what to keep in mind about each source.
         </Text>
         {SOURCE_LIST.map((source, index) => (
           <ReferenceItem key={source.id} source={source} number={index + 1} />
+        ))}
+      </View>
+
+      <View style={[styles.card, faintCardShadow(), styles.sourcesCard]}>
+        <Text style={styles.cardTitle}>Eco tips guide sources</Text>
+        <Text style={styles.cardBody}>
+          The Microplastics &amp; Sustainable Choices Guide behind Eco tips cites these sources.
+          Opening a source needs internet; the details below stay readable offline.
+        </Text>
+        {Object.values(GUIDE_SOURCES).map((source) => (
+          <View key={source.id} style={styles.guideSource}>
+            <Text style={styles.guideSourceText}>
+              <Text style={styles.guideSourceId}>{source.id} </Text>
+              {source.citation}. {source.title}.
+            </Text>
+            <Pressable
+              onPress={() => {
+                Linking.openURL(source.url).catch(() => {
+                  // No browser or no connection: the citation above stays readable.
+                });
+              }}
+              hitSlop={6}
+              accessibilityRole="link"
+              accessibilityLabel={`Open source ${source.id}: ${source.title}`}>
+              <Text style={styles.guideSourceLink}>Open original source (needs internet)</Text>
+            </Pressable>
+          </View>
         ))}
       </View>
 
@@ -234,6 +263,25 @@ const styles = StyleSheet.create({
   sourcesCard: {
     flexDirection: 'column',
     gap: 8,
+  },
+  guideSource: {
+    gap: 2,
+  },
+  guideSourceText: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: BrandColors.text,
+  },
+  guideSourceId: {
+    fontFamily: Fonts.semiBold,
+    color: BrandColors.primary,
+  },
+  guideSourceLink: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 12,
+    lineHeight: 18,
+    color: BrandColors.primary,
   },
   sourcesFootnote: {
     fontSize: 12,

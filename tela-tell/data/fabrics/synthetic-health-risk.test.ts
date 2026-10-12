@@ -76,14 +76,6 @@ describe('getSyntheticHealthRisk', () => {
     expect(result?.syntheticPercent).toBe(60);
   });
 
-  it('adds a garment-condition tip when the garment is damaged', () => {
-    const withoutCondition = getSyntheticHealthRisk('Polyester', []);
-    const withDamaged = getSyntheticHealthRisk('Polyester', [], 'Damaged');
-
-    expect(withDamaged?.tips.length).toBe((withoutCondition?.tips.length ?? 0) + 1);
-    expect(withDamaged?.tips.at(-1)).toMatch(/frayed|torn/i);
-  });
-
   it('gives the scan its own reason, and an (i) sheet with the limits', () => {
     const result = getSyntheticHealthRisk('Polyester', []);
     expect(result?.reason).toMatch(/polyester clothes can release tiny plastic fibers during washing/);

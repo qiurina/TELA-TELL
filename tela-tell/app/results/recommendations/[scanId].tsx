@@ -29,7 +29,7 @@ export default function RecommendationsScreen() {
 
   return (
     <View style={styles.root}>
-      <ResultsScreenHeader title="Eco and Health Tips" onBack={() => router.back()} />
+      <ResultsScreenHeader title="Eco Tips" onBack={() => router.back()} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -37,7 +37,6 @@ export default function RecommendationsScreen() {
         <RecommendationsContent
           dominantFabric={result.dominantFabric}
           detectedCompositions={result.compositions ?? []}
-          garmentCondition={result.garmentCondition}
         />
       </ScrollView>
     </View>

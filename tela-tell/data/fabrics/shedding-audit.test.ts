@@ -2,57 +2,12 @@ import { SHEDDING_BASIS_CLAIMS } from '@/data/fabrics/shedding-basis';
 import { SHEDDING_EXPLAINER_SECTIONS } from '@/data/fabrics/shedding-explainer';
 import { SHEDDING_FIBER_REASONS, SHEDDING_LIMITS_SECTIONS } from '@/data/fabrics/shedding-why';
 import { getSource } from '@/data/fabrics/source-registry';
-import {
-  HEALTH_RISK_DISCLAIMER,
-  SHEDDING_TIPS_FOOTNOTE,
-  getSyntheticHealthRisk,
-} from '@/data/fabrics/synthetic-health-risk';
+import { HEALTH_RISK_DISCLAIMER, getSyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 
-const polyester = () => getSyntheticHealthRisk('Polyester', [])!;
 const claim = (aspect: string, kind?: string) =>
   SHEDDING_BASIS_CLAIMS.find((item) => item.aspect === aspect && (!kind || item.kind === kind));
 
 describe('shedding care tips', () => {
-  it('are the four short tips, each with a bold-style lead-in', () => {
-    expect(polyester().tips).toEqual([
-      'Wash cooler and quicker: When the care label allows, try a cooler, shorter wash cycle.',
-      "Avoid tiny loads: Wash a reasonably full load, but don't overfill the machine.",
-      'Drying releases fibers too: Tumble drying can also release fibers.',
-      "Choose with care: Natural-fiber clothing may be an option if you're trying to avoid plastic fibers, but natural fibers shed too, and fabrics that mix natural and synthetic fibers can still release plastic fibers.",
-    ]);
-  });
-
-  it('does not give the old advice: no gentle/delicate cycle, no dryer-heat claim', () => {
-    const tips = polyester().tips.join(' ');
-    expect(tips).not.toMatch(/gentle cycle|cold water|delicate|high heat|hot/i);
-    expect(tips).not.toMatch(/dryer heat|heat/i);
-  });
-
-  it('does not imply natural-dominant mixes cannot release plastic fibers', () => {
-    const tip = polyester().tips[3];
-    expect(tip).toMatch(/natural fibers shed too/);
-    expect(tip).toMatch(/fabrics that mix natural and synthetic fibers can still release plastic fibers/);
-    expect(tip).not.toMatch(/don't shed plastic|do not shed plastic/);
-  });
-
-  it('says under the tips which come from lab studies and which is only a practical suggestion', () => {
-    expect(SHEDDING_TIPS_FOOTNOTE).toMatch(/first three tips come from lab studies, listed in About with their limits/);
-    expect(SHEDDING_TIPS_FOOTNOTE).toMatch(/"Choose with care", and any tip about a worn or damaged garment, are practical suggestions based on clothing-care guides, also listed in About, not research findings/);
-  });
-
-  it('keeps the worn and damaged tips as practical suggestions, not tested findings', () => {
-    const worn = getSyntheticHealthRisk('Polyester', [], 'Worn')!.tips.at(-1);
-    const damaged = getSyntheticHealthRisk('Polyester', [], 'Damaged')!.tips.at(-1);
-    expect(worn).toBe(
-      'Practical suggestion: this piece already shows wear. Wash it only when needed and follow the care label, since each wash wears a garment down. Studies disagree on whether worn clothes shed more.',
-    );
-    expect(damaged).toBe(
-      'Practical suggestion: mending a torn seam may help keep the garment in use longer. This has not been shown to reduce fiber shedding.',
-    );
-    // Neither tip claims a shedding effect.
-    expect(`${worn} ${damaged}`).not.toMatch(/reduce(s)? (fiber )?shedding(?!\.)|less shedding|shed less/i);
-  });
-
   it('keeps a verified source for each wash tip, with the limits recorded in the evidence record and on the About page', () => {
     // Cooler, shorter cycle: Lant 2020 (15 C / 30 min vs 40 C / 85 min, 30% less), limit stated.
     expect(claim('Wash cycle', 'fact')?.text).toMatch(/15 °C for 30 minutes.*30% fewer.*40 °C cycle of 85 minutes/);
@@ -171,11 +126,11 @@ describe('clothing-care guides behind the practical-suggestion tips', () => {
 
     const emf = getSource('emf-new-textiles-economy-2017')!;
     expect(emf.says.join(' ')).toMatch(/repairing or restyling and adequate washing and storing, could help preserve clothes/);
-    expect(emf.usedFor).toMatch(/mending tip/);
+    expect(emf.usedFor).toMatch(/Why synthetics shed page/);
   });
 
   it('does not use the toolkit for the wash-cycle advice, which comes from the lab studies', () => {
-    expect(getSource('earthday-care-toolkit')!.usedFor).toMatch(/Worn-garment tip/);
+    expect(getSource('earthday-care-toolkit')!.usedFor).toMatch(/Why synthetics shed page/);
     expect(getSource('earthday-care-toolkit')!.caveats.join(' ')).toMatch(/not used for the wash tip/);
   });
 });

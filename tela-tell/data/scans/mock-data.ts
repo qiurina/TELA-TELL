@@ -52,24 +52,8 @@ export type EcoClaim = {
   basisOnly?: boolean;
 };
 
-export type EcoAlternative = {
-  name: string;
-  /** The card text: the claims' sentences, in order. */
-  similarity?: string;
-  description?: string;
-  claims?: EcoClaim[];
-  /** Every source id used by the claims, in order of first use. */
-  sourceIds?: string[];
-};
-
 export type ScanRecommendations = {
   garmentPurposes: GarmentPurposeItem[];
-  ecoAlternatives: EcoAlternative[];
-  reuse: {
-    resale: string;
-    donate: string;
-    upcycle: string;
-  };
 };
 
 /** How the photo reached the app. `system_camera` is the phone's own camera app (the fallback). */

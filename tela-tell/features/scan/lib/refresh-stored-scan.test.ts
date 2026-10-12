@@ -68,14 +68,9 @@ describe('refreshStoredScan', () => {
     expect(JSON.stringify(twice)).toBe(JSON.stringify(once));
   });
 
-  it('stores only the name and text of each alternative, not claims or sources', () => {
-    const next = refreshStoredScan(OLD_SCAN as never) as unknown as {
-      recommendations: { ecoAlternatives: Record<string, unknown>[] };
-    };
-    expect(next.recommendations.ecoAlternatives.length).toBeGreaterThan(0);
-    for (const alt of next.recommendations.ecoAlternatives) {
-      expect(Object.keys(alt).sort()).toEqual(['name', 'similarity']);
-    }
+  it('no longer stores eco alternatives or reuse tips; Eco tips reads the eco guide live', () => {
+    const next = refreshStoredScan(OLD_SCAN as never) as unknown as { recommendations: Record<string, unknown> };
+    expect(Object.keys(next.recommendations)).toEqual(['garmentPurposes']);
   });
 
   it('handles missing compositions, and throws for an unknown fiber so the migration skips that row', () => {

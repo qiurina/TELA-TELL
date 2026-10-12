@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import type { FC, ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +19,8 @@ type InfoSheetProps = {
   message?: string;
   icon?: FC<IconProps>;
   tone?: StatusTone;
+  /** Extra content below the text, such as a list of links. */
+  children?: ReactNode;
 };
 
 /** Bottom sheet for short explanations: icon + title, labelled lines, one compact button. */
@@ -30,6 +32,7 @@ export function InfoSheet({
   message,
   icon,
   tone = 'neutral',
+  children,
 }: InfoSheetProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -68,6 +71,7 @@ export function InfoSheet({
               </View>
             ))}
             {message ? <Text style={styles.text}>{message}</Text> : null}
+            {children}
           </ScrollView>
 
           <Pressable

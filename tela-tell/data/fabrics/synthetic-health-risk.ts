@@ -4,7 +4,6 @@ import {
   type CompositionInput,
 } from '@/data/scans/scan-confidence';
 import { getFabricCategory, resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
-import type { GarmentCondition } from '@/data/scans/garment-condition';
 import type { InfoSection } from '@/data/fabrics/assessment-disclaimers';
 import { SHEDDING_LIMITS_SECTIONS, buildSheddingReason } from '@/data/fabrics/shedding-why';
 
@@ -20,7 +19,6 @@ export type SyntheticHealthRisk = {
   fibers: SupportedFabric[];
   /** Share of the scanned composition made up of synthetic fibers, 0-100. */
   syntheticPercent: number;
-  tips: string[];
   /** The (i) sheet: what the estimate is not. */
   disclaimer: InfoSection[];
 };
@@ -68,52 +66,6 @@ const FIBER_RISK_LEVELS: Partial<Record<SupportedFabric, HealthRiskLevel>> = {
   Nylon: 'moderate',
   Spandex: 'moderate',
 };
-
-// Care tips. Each is either what a cited study found, worded no more broadly than the study, or a
-// practical suggestion that no study tested (and is labeled that way on screen):
-// - Cooler, shorter cycle: Lant et al. (2020, PLoS ONE 15(6):e0233332, full text read). In soiled
-//   household loads, a 15 C / 30 min cycle released 30% less microfiber than a 40 C / 85 min cycle.
-//   Temperature and length changed together, so the effect of temperature alone is not shown.
-// - Less water relative to the load, full but not overfilled loads: Kelly et al. (2019, Environ.
-//   Sci. Technol. 53(20):11735-11744, abstract only; polyester textiles) found high water-to-fabric
-//   ratios, as in "delicate" cycles, released the most; Lant et al. found 3.5-6.0 kg loads released
-//   less than 1.0-3.5 kg loads and conclude "complete (but not overfilled) loads".
-// - Tumble drying: Karkkainen & Sillanpaa (2021, abstract only) measured fibers released in the
-//   first tumble drying of synthetic textiles. No study reviewed here tests whether dryer heat
-//   changes the amount, so no heat advice is given.
-// - Natural-dominant tags, and the worn / damaged tips: practical suggestions, not findings.
-const PRACTICAL_TIPS: string[] = [
-  'Wash cooler and quicker: When the care label allows, try a cooler, shorter wash cycle.',
-  "Avoid tiny loads: Wash a reasonably full load, but don't overfill the machine.",
-  'Drying releases fibers too: Tumble drying can also release fibers.',
-  "Choose with care: Natural-fiber clothing may be an option if you're trying to avoid plastic fibers, but natural fibers shed too, and fabrics that mix natural and synthetic fibers can still release plastic fibers.",
-];
-
-/**
- * Shown under the tips. The first three come from lab studies (references in About, with the
- * limits of each); the last is a practical suggestion that no study tested.
- */
-export const SHEDDING_TIPS_FOOTNOTE =
-  'The first three tips come from lab studies, listed in About with their limits. "Choose with care", and any tip about a worn or damaged garment, are practical suggestions based on clothing-care guides, also listed in About, not research findings.';
-
-// Practical suggestions only, backed by clothing-care guidance, not by shedding research:
-// - Worn: EARTHDAY.ORG care toolkit ("each washing shortens the life of a garment"; wash less) and
-//   the Ellen MacArthur Foundation report (adequate washing helps preserve clothes). Studies
-//   disagree on whether worn fabrics shed more (one found worn knits shed more; another found
-//   polyester fleece release fell and then stayed low after about eight washes), so no shedding
-//   effect is claimed.
-// - Damaged: the Ellen MacArthur Foundation report says repair services could help keep clothes in
-//   use longer. Nothing reviewed shows mending reduces shedding, and the tip says so.
-const CONDITION_TIPS: Partial<Record<GarmentCondition, string>> = {
-  Worn: 'Practical suggestion: this piece already shows wear. Wash it only when needed and follow the care label, since each wash wears a garment down. Studies disagree on whether worn clothes shed more.',
-  Damaged:
-    'Practical suggestion: mending a torn seam may help keep the garment in use longer. This has not been shown to reduce fiber shedding.',
-};
-
-function buildPracticalTips(condition?: GarmentCondition): string[] {
-  const conditionTip = condition ? CONDITION_TIPS[condition] : undefined;
-  return conditionTip ? [...PRACTICAL_TIPS, conditionTip] : PRACTICAL_TIPS;
-}
 
 const LEVEL_LABELS: Record<HealthRiskLevel, string> = {
   low: 'Low',
@@ -194,7 +146,6 @@ export function getPredictedSyntheticFibers(
 export function getSyntheticHealthRisk(
   dominantFabric: string,
   compositions: CompositionInput[] = [],
-  garmentCondition?: GarmentCondition,
 ): SyntheticHealthRisk | null {
   const top = resolveFabricAlias(dominantFabric);
   if (!top || !isSyntheticFiber(top)) {
@@ -213,7 +164,6 @@ export function getSyntheticHealthRisk(
       compositions,
       getPredictedSyntheticFibers(dominantFabric, compositions),
     ),
-    tips: buildPracticalTips(garmentCondition),
     disclaimer: SHEDDING_LIMITS_SECTIONS,
   };
 }

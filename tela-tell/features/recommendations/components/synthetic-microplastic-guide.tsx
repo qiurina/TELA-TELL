@@ -1,19 +1,15 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { InfoButton } from '@/components/ui/info-button';
 import { InfoSheet } from '@/components/ui/info-sheet';
-import { ChevronRight, Droplets, Shield } from '@/components/ui/lucide-icons';
+import { Shield } from '@/components/ui/lucide-icons';
 import { StatusCard } from '@/components/ui/status-card';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import type { StatusTone } from '@/constants/status-colors';
 import { SHEDDING_SHEET_TITLE } from '@/data/fabrics/assessment-disclaimers';
-import {
-  SHEDDING_TIPS_FOOTNOTE,
-  type HealthRiskLevel,
-  type SyntheticHealthRisk,
-} from '@/data/fabrics/synthetic-health-risk';
+import type { HealthRiskLevel, SyntheticHealthRisk } from '@/data/fabrics/synthetic-health-risk';
 
 const LEVEL_TONE: Record<HealthRiskLevel, StatusTone> = {
   low: 'good',
@@ -27,13 +23,11 @@ type SyntheticMicroplasticGuideProps = {
 
 /**
  * Eco Tips microplastic section: the section label carries the (i); the card below uses the same
- * header, frame and pastel pill as the Results status cards. Tips open on demand.
+ * header, frame and pastel pill as the Results status cards.
  */
 export function SyntheticMicroplasticGuide({ risk }: SyntheticMicroplasticGuideProps) {
-  const [sheet, setSheet] = useState<'advisory' | 'tips' | null>(null);
+  const [sheet, setSheet] = useState<'advisory' | null>(null);
   const tone = LEVEL_TONE[risk.level];
-
-  const tipsMessage = `${risk.tips.map((tip, index) => `${index + 1}. ${tip}`).join('\n\n')}\n\n${SHEDDING_TIPS_FOOTNOTE}`;
 
   return (
     <View style={styles.section}>
@@ -43,13 +37,6 @@ export function SyntheticMicroplasticGuide({ risk }: SyntheticMicroplasticGuideP
         sections={risk.disclaimer}
         icon={Shield}
         tone={tone}
-        onClose={() => setSheet(null)}
-      />
-      <InfoSheet
-        visible={sheet === 'tips'}
-        title="What you can do"
-        message={tipsMessage}
-        icon={Droplets}
         onClose={() => setSheet(null)}
       />
 
@@ -83,17 +70,6 @@ export function SyntheticMicroplasticGuide({ risk }: SyntheticMicroplasticGuideP
           </View>
         ) : null}
 
-        <Pressable
-          style={({ pressed }) => [styles.careButton, pressed && styles.pressed]}
-          onPress={() => setSheet('tips')}
-          accessibilityRole="button"
-          accessibilityLabel="What you can do">
-          <View style={styles.careLeft}>
-            <Droplets size={16} color={BrandColors.primary} strokeWidth={2.25} />
-            <Text style={styles.careLabel}>Care tips to reduce shedding</Text>
-          </View>
-          <ChevronRight size={18} color={BrandColors.textMuted} strokeWidth={2.25} />
-        </Pressable>
       </StatusCard>
     </View>
   );
@@ -160,31 +136,5 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
     fontSize: 12,
     color: BrandColors.text,
-  },
-  careButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    borderRadius: 12,
-    backgroundColor: BrandColors.lavenderCard,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  careLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 0,
-  },
-  careLabel: {
-    flex: 1,
-    fontFamily: Fonts.semiBold,
-    fontSize: 13,
-    color: BrandColors.primaryDark,
-  },
-  pressed: {
-    opacity: 0.88,
   },
 });

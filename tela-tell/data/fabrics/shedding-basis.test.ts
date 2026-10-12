@@ -102,21 +102,25 @@ describe('shedding evidence record', () => {
 });
 
 describe('shedding sources in the registry', () => {
-  it('adds eight sources after the existing ones without renumbering any', () => {
-    expect(getSourceNumber('gots-8-0')).toBe(1);
-    expect(getSourceNumber('persson-2026')).toBe(6);
-    expect(getSourceNumber('peters-2021-fast-fashion')).toBe(23);
+  it('keeps the sources in their original order after the retired eco-alternative sources were removed', () => {
+    // The 18 sources cited only by the retired eco-alternative cards were removed, so the list
+    // starts at persson-2026 and every later source moved up by the same amount, in order.
+    expect(getSourceNumber('persson-2026')).toBe(1);
+    expect(getSourceNumber('sandin-peters-2018')).toBe(2);
+    expect(getSourceNumber('azevedo-2025-elastane')).toBe(3);
+    expect(getSourceNumber('emf-new-textiles-economy-2017')).toBe(4);
+    expect(getSourceNumber('peters-2021-fast-fashion')).toBe(5);
     NEW_SOURCE_IDS.forEach((id, index) => {
-      expect(getSourceNumber(id)).toBe(24 + index);
+      expect(getSourceNumber(id)).toBe(6 + index);
     });
-    expect(getSourceNumber('kelly-2019')).toBe(32);
-    expect(getSourceNumber('lant-2020')).toBe(33);
-    expect(getSourceNumber('earthday-fashion-guide-2021')).toBe(34);
-    expect(getSourceNumber('earthday-care-toolkit')).toBe(35);
+    expect(getSourceNumber('kelly-2019')).toBe(14);
+    expect(getSourceNumber('lant-2020')).toBe(15);
+    expect(getSourceNumber('earthday-fashion-guide-2021')).toBe(16);
+    expect(getSourceNumber('earthday-care-toolkit')).toBe(17);
     ['zambrano-2019', 'zambrano-2020', 'fernandes-2024', 'lara-2025', 'cotton-2020', 'gundogdu-2026'].forEach((id, index) => {
-      expect(getSourceNumber(id)).toBe(36 + index);
+      expect(getSourceNumber(id)).toBe(18 + index);
     });
-    expect(SOURCE_LIST).toHaveLength(41);
+    expect(SOURCE_LIST).toHaveLength(23);
   });
 
   it('gives each new source a DOI link, a plain summary, and its own limits', () => {
