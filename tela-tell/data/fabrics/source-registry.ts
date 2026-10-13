@@ -636,8 +636,6 @@ export const SOURCE_LIST = [
   },
 ] as const satisfies readonly Source[];
 
-export type SourceId = (typeof SOURCE_LIST)[number]['id'];
-
 const SOURCES_BY_ID: Record<string, Source> = Object.fromEntries(
   SOURCE_LIST.map((source) => [source.id, source]),
 );

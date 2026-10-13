@@ -342,18 +342,6 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     gap: 28,
   },
-  panelTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: BrandColors.text,
-  },
-  panelHint: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: BrandColors.textMuted,
-    marginTop: -20,
-    lineHeight: 17,
-  },
   section: {
     gap: 12,
   },
@@ -366,18 +354,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     color: BrandColors.textMuted,
     textTransform: 'uppercase',
-  },
-  sectionHint: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.textMuted,
-  },
-  sectionTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 13,
-    color: BrandColors.text,
-    marginBottom: -4,
   },
   fabricPillRow: {
     flexDirection: 'row',

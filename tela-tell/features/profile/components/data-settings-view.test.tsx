@@ -113,6 +113,10 @@ async function confirm(title: string) {
   await act(async () => node('ConfirmDialog', title).props.onConfirm!());
 }
 
+// The first render loads the Data screen's modules and has exceeded Jest's 5 s default in full
+// parallel runs; 15 s keeps this suite from failing on load time alone.
+jest.setTimeout(15000);
+
 it('shows a storage failure without inventing zero scan counts or an empty trash', async () => {
   (getDeletedScanCount as jest.Mock).mockRejectedValueOnce(new Error('database unavailable'));
   await mount();

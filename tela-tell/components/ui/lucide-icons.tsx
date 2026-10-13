@@ -360,19 +360,6 @@ export const Trash2: FC<IconProps> = (props) => {
   );
 };
 
-export const Scissors: FC<IconProps> = (props) => {
-  const { color, strokeWidth } = { ...defaults, ...props };
-  return (
-    <Svg {...iconProps(props)}>
-      <Circle cx="6" cy="6" r="3" stroke={color} strokeWidth={strokeWidth} />
-      <Circle cx="6" cy="18" r="3" stroke={color} strokeWidth={strokeWidth} />
-      <Path d="M20 4 8.12 15.88" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Path d="M14.47 14.48 20 20" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Path d="M8.12 8.12 12 12" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-    </Svg>
-  );
-};
-
 export const Layers: FC<IconProps> = (props) => {
   const { color, strokeWidth } = { ...defaults, ...props };
   return (

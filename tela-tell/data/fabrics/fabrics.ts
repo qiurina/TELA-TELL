@@ -127,10 +127,6 @@ export function getFabricCategory(material: string): FabricCategory | undefined 
   return FABRIC_CATEGORY_MAP[material as SupportedFabric];
 }
 
-export function isSupportedFabric(material: string): material is SupportedFabric {
-  return SUPPORTED_FABRICS.includes(material as SupportedFabric);
-}
-
 export function resolveFabricAlias(text: string): SupportedFabric | null {
   const all = resolveAllFabricAliases(text);
   return all[0] ?? null;

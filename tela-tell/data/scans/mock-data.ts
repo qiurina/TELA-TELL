@@ -177,26 +177,3 @@ export type RecentScanPreview = {
   deletedAt?: string | null;
   daysRemaining?: number;
 };
-
-export const FABRIC_PROPERTY_COLOR = {
-  high: '#16a34a',
-  medium: '#ca8a04',
-  low: '#dc2626',
-  neutral: '#212121',
-} as const;
-
-export function getFabricPropertyColor(value: string): string {
-  const normalized = value.trim().toLowerCase();
-
-  if (normalized.includes('very high') || normalized === 'high' || normalized.includes('excellent')) {
-    return FABRIC_PROPERTY_COLOR.high;
-  }
-  if (normalized.includes('medium') || normalized.includes('moderate') || normalized.includes('fair')) {
-    return FABRIC_PROPERTY_COLOR.medium;
-  }
-  if (normalized.includes('very low') || normalized === 'low' || normalized.includes('poor') || normalized === 'none') {
-    return FABRIC_PROPERTY_COLOR.low;
-  }
-
-  return FABRIC_PROPERTY_COLOR.neutral;
-}

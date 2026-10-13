@@ -108,14 +108,6 @@ export function setUserPreferences(next: UserPreferences): void {
   notifyPreferencesListeners();
 }
 
-export function setUserPreference<K extends keyof UserPreferences>(
-  key: K,
-  value: UserPreferences[K],
-): void {
-  preferences = normalizePreferences({ ...preferences, [key]: value });
-  notifyPreferencesListeners();
-}
-
 export function moveFabricToSensitive(fabric: SupportedFabric): void {
   preferences = normalizePreferences({
     ...preferences,

@@ -460,7 +460,8 @@ describe('migrateDatabase — failure reporting', () => {
     expect(await migrateDatabase()).toBe(failed);
     const recovered = await migrateDatabase({ retry: true });
     expect(realIssues(recovered)).toEqual([]);
-    expect(await migrateDatabase({ retry: true })).toBe(recovered);
+    // That a retry after a clean run returns the cached run is checked under
+    // "steps that use dynamic import()": without --experimental-vm-modules no run is ever clean here.
   });
 });
 
@@ -559,6 +560,18 @@ describeWithDynamicImport('migrateDatabase — steps that use dynamic import()',
     mockFailOn = null;
     mockStoredFingerprint = null;
     mockDb.close();
+  });
+
+  it('a retry after a clean run returns the cached run instead of migrating again', async () => {
+    jest.resetModules();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { migrateDatabase } = require('@/db/migrate.native');
+    mockFailOn = /CREATE INDEX IF NOT EXISTS idx_scan_createdAt/;
+    await migrateDatabase();
+    mockFailOn = null;
+    const recovered = await migrateDatabase({ retry: true });
+    expect(recovered.issues).toEqual([]);
+    expect(await migrateDatabase({ retry: true })).toBe(recovered);
   });
 
   it('both steps load and run: no issues are reported on a normal launch', async () => {

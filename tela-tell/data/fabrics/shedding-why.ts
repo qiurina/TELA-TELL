@@ -10,8 +10,6 @@ import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics
  * cannot be added without evidence. Each line names the fabrics or test it comes from and does not generalize it to all garments of that fiber, and never says a fiber is harmful; and
  * the levels themselves (`FIBER_RISK_LEVELS`) are the app's own summary and are not changed here.
  */
-export type SheddingLevel = 'low' | 'moderate' | 'high';
-
 type FiberReason = { text: string; sourceIds: string[] };
 
 export const SHEDDING_FIBER_REASONS: Partial<Record<SupportedFabric, FiberReason>> = {

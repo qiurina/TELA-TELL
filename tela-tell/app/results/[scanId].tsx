@@ -169,10 +169,6 @@ export default function ResultsScreen() {
     ? null
     : getSyntheticHealthRisk(result.dominantFabric, result.compositions ?? []);
 
-  // "Detected" only when the most likely fiber itself is synthetic (that is when the shedding card
-  // shows); a synthetic that only appears further down the top 3 is a possibility, not a finding.
-  // Other fibers get the eco guide's shedding summary on Eco tips instead.
-
   // Names the fiber and only ever says what the model predicted; null (no badge) for an Unsure
   // scan or when no synthetic prediction has a clear share.
   const fiberBadge = getFiberBadge(result.dominantFabric, result.compositions, isUnsure);
@@ -245,9 +241,9 @@ export default function ResultsScreen() {
             <View style={styles.section}>
               <SectionLabel title="LABEL CHECK" />
               <SellerComparisonCard
-              sellerLabel={sellerLabel}
-              detectedLabel={headline.title}
-              check={labelCheck}
+                sellerLabel={sellerLabel}
+                detectedLabel={headline.title}
+                check={labelCheck}
                 onAddLabel={handleAddLabel}
               />
             </View>
@@ -280,9 +276,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 20,
     flexGrow: 1,
-  },
-  pressed: {
-    opacity: 0.88,
   },
   fallback: {
     flex: 1,

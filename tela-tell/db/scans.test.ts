@@ -295,14 +295,38 @@ describe('favorites, trash and stats', () => {
     });
   });
 
-  it('counts total and mislabeled scans in SQL, ignoring deleted ones, and no longer counts "sustainable" ones', async () => {
+  it('counts total and mislabeled scans, ignoring deleted ones, and no longer counts "sustainable" ones', async () => {
     // Rows seeded with old stored ratings stand in for scans saved before the score was retired.
+    // Cotton 100% stated as Silk is a mismatch.
     insertScan({ id: 'a', createdAt: minutesAfterBase(0), rating: 'green' });
-    insertScan({ id: 'b', createdAt: minutesAfterBase(1), rating: 'yellow', mislabelDetected: true });
-    insertScan({ id: 'c', createdAt: minutesAfterBase(2), rating: 'red', mislabelDetected: true });
-    insertScan({ id: 'd', createdAt: minutesAfterBase(3), rating: 'green', deletedAt: new Date().toISOString() });
+    insertScan({ id: 'b', createdAt: minutesAfterBase(1), rating: 'yellow', sellerLabel: '100% Silk', mislabelDetected: true });
+    insertScan({ id: 'c', createdAt: minutesAfterBase(2), rating: 'red', sellerLabel: '100% Silk', mislabelDetected: true });
+    insertScan({
+      id: 'd',
+      createdAt: minutesAfterBase(3),
+      rating: 'green',
+      sellerLabel: '100% Silk',
+      mislabelDetected: true,
+      deletedAt: new Date().toISOString(),
+    });
 
     expect(await getScanStats()).toEqual({ total: 3, mislabeled: 2, synthetic: 0 });
+  });
+
+  it('counts label flags the way the History cards show them, not from the flag stored at save time', async () => {
+    // Stored as flagged under older rules, but the label matches the scan today: no flag on the card.
+    insertScan({ id: 'stale-flag-1', createdAt: minutesAfterBase(0), sellerLabel: '100% Cotton', mislabelDetected: true });
+    insertScan({ id: 'stale-flag-2', createdAt: minutesAfterBase(1), sellerLabel: 'Cotton', mislabelDetected: true });
+    // Stored as not flagged, but the label does not match the scan: the card flags it.
+    insertScan({ id: 'missed-flag', createdAt: minutesAfterBase(2), sellerLabel: '100% Silk', mislabelDetected: false });
+    // No readable scores to re-check against: the card falls back to the stored flag, and so does the count.
+    insertScan({ id: 'no-scores', createdAt: minutesAfterBase(3), resultJson: null, mislabelDetected: true });
+
+    const { items } = await getScansPage({ page: 1 });
+    const flaggedOnCards = items.filter((item) => item.mislabeling).map((item) => item.id).sort();
+    expect(flaggedOnCards).toEqual(['missed-flag', 'no-scores']);
+    // The stored flags alone would give 3.
+    expect(await getScanStats()).toMatchObject({ total: 4, mislabeled: 2 });
   });
 
   it('counts scans in Recently deleted, dropping ones past the retention period', async () => {

@@ -128,13 +128,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: BrandColors.text,
   },
-  subtitle: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: BrandColors.textMuted,
-    marginTop: -4,
-  },
   section: {
     gap: 8,
   },

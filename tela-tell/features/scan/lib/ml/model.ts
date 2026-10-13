@@ -140,12 +140,3 @@ export async function classifyFabric(
     totalMs: Math.round(nowMs() - startedAt),
   };
 }
-
-export async function isModelAvailable(): Promise<boolean> {
-  try {
-    await loadModel();
-    return true;
-  } catch {
-    return false;
-  }
-}

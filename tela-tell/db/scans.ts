@@ -371,8 +371,10 @@ export async function getDeletedScanCount(retentionDays = 30): Promise<number> {
 }
 
 /**
- * Totals for the History header. Total and mislabeled are counted in SQL; the synthetic count needs
- * each scan's fiber scores, so it loads only those and uses the same rule as the History pill.
+ * Totals for the History header. The total is counted in SQL. The mislabeled and synthetic counts
+ * read each scan the way its History card does (rowToPreview), so the header always agrees with
+ * the pills: the label is re-checked live rather than read from the flag stored at save time,
+ * which goes stale when the label-matching rules change.
  */
 export async function getScanStats(): Promise<ScanStats> {
   if (!isDatabaseAvailable()) {
@@ -380,39 +382,24 @@ export async function getScanStats(): Promise<ScanStats> {
   }
 
   const db = await getDatabase();
-  const row = await db.getFirstAsync<{
-    total: number;
-    mislabeled: number | null;
-  }>(
-    `SELECT COUNT(*) AS total,
-            SUM(CASE WHEN mislabelDetected = 1 THEN 1 ELSE 0 END) AS mislabeled
+  const row = await db.getFirstAsync<{ total: number }>(
+    `SELECT COUNT(*) AS total
      FROM tblScan
      WHERE ${ACTIVE_SCAN_FILTER}`,
   );
 
-  const fiberRows = await db.getAllAsync<{ dominantFabric: string; compositionsJson: string | null }>(
-    `SELECT dominantFabric,
-            CASE WHEN json_valid(resultJson) THEN json_extract(resultJson, '$.compositions') END AS compositionsJson
-     FROM tblScan
-     WHERE ${ACTIVE_SCAN_FILTER}`,
-  );
-  const synthetic = fiberRows.filter((fiberRow) => {
-    if (!fiberRow.compositionsJson) {
-      return false;
-    }
-    try {
-      const compositions = JSON.parse(fiberRow.compositionsJson) as ScanResult['compositions'];
-      const unsure = !assessScanReliability(compositions).reliable;
-      return getFiberBadge(fiberRow.dominantFabric, compositions, unsure)?.kind === 'likely';
-    } catch {
-      return false;
-    }
-  }).length;
+  const previews = (
+    await db.getAllAsync<ScanRow>(
+      `SELECT ${SCAN_LIST_COLUMNS}
+       FROM tblScan
+       WHERE ${ACTIVE_SCAN_FILTER}`,
+    )
+  ).map((scanRow) => rowToPreview(scanRow));
 
   return {
     total: row?.total ?? 0,
-    mislabeled: row?.mislabeled ?? 0,
-    synthetic,
+    mislabeled: previews.filter((preview) => preview.mislabeling).length,
+    synthetic: previews.filter((preview) => preview.fiberBadgeKind === 'likely').length,
   };
 }
 export async function getRecentScans(limit = 5): Promise<RecentScanPreview[]> {
