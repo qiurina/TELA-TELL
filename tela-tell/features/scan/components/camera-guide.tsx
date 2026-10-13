@@ -99,20 +99,40 @@ type CameraGuideProps = {
   onBack?: () => void;
 };
 
-function ViewfinderFrame({ readiness }: { readiness: LiveReadiness }) {
-  const colorStyle =
-    readiness === 'good'
+function ViewfinderFrame({ readiness, capturing }: { readiness: LiveReadiness; capturing: boolean }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  // While the shots are taken the corners turn brand blue and pulse, so the frame itself shows
+  // that a capture is under way.
+  useEffect(() => {
+    if (!capturing) {
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.35, duration: 320, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 320, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [capturing, pulse]);
+
+  const colorStyle = capturing
+    ? styles.cornerCapturing
+    : readiness === 'good'
       ? styles.cornerGood
       : readiness === 'adjust'
         ? styles.cornerAdjust
         : null;
   return (
-    <>
+    <Animated.View style={[StyleSheet.absoluteFill, { opacity: pulse }]}>
       <View style={[styles.corner, styles.topLeft, colorStyle]} />
       <View style={[styles.corner, styles.topRight, colorStyle]} />
       <View style={[styles.corner, styles.bottomLeft, colorStyle]} />
       <View style={[styles.corner, styles.bottomRight, colorStyle]} />
-    </>
+    </Animated.View>
   );
 }
 
@@ -149,6 +169,8 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   }, [window.width, window.height]);
   const photoOutput = usePhotoOutput({ targetResolution: photoTargetResolution });
   const [isCapturing, setIsCapturing] = useState(false);
+  /** The burst shot being taken (1-based), shown as "Hold still · 2 of 3"; null between captures. */
+  const [shotNumber, setShotNumber] = useState<number | null>(null);
   const shutterFlash = useRef(new Animated.Value(0)).current;
   const [fillLightOn, setFillLightOn] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -308,6 +330,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
         }
 
         setIsCapturing(true);
+        setShotNumber(1);
         if (Platform.OS === 'android') {
           // Shutter feedback the moment capture starts (the preview itself keeps moving).
           shutterFlash.setValue(0.55);
@@ -327,7 +350,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
             const guide = guideRef.current;
             const burst =
               guide && view.width > 0
-                ? await captureGuideSnapshots(camera, view, guide, BURST_SHOT_COUNT)
+                ? await captureGuideSnapshots(camera, view, guide, BURST_SHOT_COUNT, setShotNumber)
                 : {
                     shots: [],
                     measurements: null,
@@ -351,6 +374,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           const captured: string[] = [];
 
           for (let shot = 0; shot < BURST_SHOT_COUNT; shot += 1) {
+            setShotNumber(shot + 1);
             try {
               const photoFile = await photoOutput.capturePhotoToFile(
                 { flashMode: 'off', enableShutterSound: false },
@@ -384,6 +408,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           return captured.length > 0 ? { uris: captured, method: 'photo' } : null;
         } finally {
           setIsCapturing(false);
+          setShotNumber(null);
         }
       },
     }),
@@ -396,9 +421,9 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   const instructionText = isAnalyzing
     ? 'Analyzing fabric image...'
     : isCapturing
-      ? Platform.OS === 'android'
-        ? 'Hold still…'
-        : 'Capturing...'
+      ? shotNumber !== null
+        ? `Hold still · ${shotNumber} of ${BURST_SHOT_COUNT}`
+        : 'Hold still…'
       : isProcessing
         ? 'Checking photo…'
         : hasPreview
@@ -588,7 +613,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
             },
           ]}
           pointerEvents="none">
-          <ViewfinderFrame readiness={readiness} />
+          <ViewfinderFrame readiness={readiness} capturing={isCapturing} />
         </View>
       ) : null}
 
@@ -604,6 +629,13 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
             <Text style={styles.instruction} numberOfLines={1}>
               {instructionText}
             </Text>
+            {isCapturing && shotNumber !== null ? (
+              <View style={styles.shotDots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {Array.from({ length: BURST_SHOT_COUNT }, (_, index) => (
+                  <View key={index} style={[styles.shotDot, index < shotNumber && styles.shotDotFilled]} />
+                ))}
+              </View>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -792,6 +824,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   instructionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 999,
     paddingHorizontal: 12,
@@ -819,6 +854,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 15,
   },
+  shotDots: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  shotDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: BrandColors.white,
+  },
+  shotDotFilled: {
+    backgroundColor: BrandColors.white,
+  },
   corner: {
     position: 'absolute',
     width: 28,
@@ -827,6 +876,9 @@ const styles = StyleSheet.create({
   },
   cornerGood: {
     borderColor: '#4ADE80',
+  },
+  cornerCapturing: {
+    borderColor: BrandColors.gradientStart,
   },
   cornerAdjust: {
     borderColor: '#FBBF24',

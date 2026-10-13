@@ -1,32 +1,49 @@
+import type { FC } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { ChevronRight } from '@/components/ui/lucide-icons';
+import { ChevronRight, type IconProps } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Type } from '@/constants/typography';
 
-/** The "… ›" action at the bottom of a status card. */
-export function CardLink({ label, onPress }: { label: string; onPress: () => void }) {
+/** The action at the bottom of a status card: a soft, full-width button. */
+export function CardLink({
+  label,
+  onPress,
+  icon: Icon,
+}: {
+  label: string;
+  onPress: () => void;
+  icon?: FC<IconProps>;
+}) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.link, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}>
-      <Text style={Type.link}>{label}</Text>
+      {Icon ? <Icon size={16} color={BrandColors.primaryDark} strokeWidth={2.25} /> : null}
+      <Text style={[Type.link, styles.label]}>{label}</Text>
       <ChevronRight size={16} color={BrandColors.primaryDark} strokeWidth={2.25} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  link: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 4,
-    minHeight: 44,
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 46,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    backgroundColor: BrandColors.lavenderCard,
+  },
+  label: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.75,
   },
 });

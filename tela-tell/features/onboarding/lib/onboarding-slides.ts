@@ -1,21 +1,17 @@
 import type { FC } from 'react';
+import type { ImageSourcePropType } from 'react-native';
 
 import {
   Camera,
   CircleCheck,
-  Info,
   Layers,
-  Leaf,
   ScanLine,
   Recycle,
   Search,
   Shield,
   ShieldAlert,
-  Shirt,
-  Sparkles,
   Square,
   Sun,
-  Tag,
   TriangleAlert,
   Wifi,
   type IconProps,
@@ -30,7 +26,8 @@ export type OnboardingPoint = {
 
 export type OnboardingSlide = {
   key: string;
-  icon: FC<IconProps>;
+  /** The illustration at the top of the slide (a transparent PNG). */
+  image: ImageSourcePropType;
   title: string;
   body?: string;
   points?: OnboardingPoint[];
@@ -40,46 +37,36 @@ export type OnboardingSlide = {
 export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     key: 'welcome',
-    icon: ScanLine,
+    image: require('@/assets/images/knowfabric.png'),
     title: 'Know your fabric before you buy it',
     body: 'TELA-TELL looks at a close-up photo of a fabric and tells you which fiber it most likely is. Made for ukay-ukay and tiangge shopping.',
   },
   {
     key: 'contents',
-    icon: Sparkles,
+    image: require('@/assets/images/findinside.png'),
     title: "What you'll find inside",
     points: [
       {
-        icon: Leaf,
-        title: 'Environmental research',
-        text: 'See what lab studies found about each fiber, with their sources. The app does not score sustainability.',
+        icon: ShieldAlert,
+        title: 'Health risk advisory',
+        text: "Estimated fiber shedding for synthetic fibers, what it means for health (WHO 2022), and reminders for fibers you're sensitive to.",
       },
       {
         icon: Recycle,
         title: 'Eco tips',
-        text: 'Reuse, resale and donation ideas, plus ways to reduce microplastic shedding.',
-      },
-      {
-        icon: ShieldAlert,
-        title: 'Health and safety',
-        text: 'Microplastic-shedding risk and allergy alerts for the fibers you are sensitive to.',
-      },
-      {
-        icon: Shirt,
-        title: 'Other fabrics to consider',
-        text: 'Fabric ideas for your next shop, with the evidence behind each one.',
+        text: 'Ways to reduce shedding, a better-fit fabric to consider, and reuse ideas.',
       },
       {
         icon: Layers,
         title: 'Fiber profile',
-        text: `How each of the ${SUPPORTED_FABRICS.length} fibers feels, wears and should be cared for.`,
+        text: `What each of the ${SUPPORTED_FABRICS.length} fibers is, how it looks in photos, and how to care for it.`,
       },
     ],
     footnote: 'Health notes are advisory only, not medical advice.',
   },
   {
     key: 'scan',
-    icon: Camera,
+    image: require('@/assets/images/howtoscan.png'),
     title: 'How to scan',
     points: [
       {
@@ -106,7 +93,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   },
   {
     key: 'results',
-    icon: Info,
+    image: require('@/assets/images/recordresult.png'),
     title: 'Reading your result',
     points: [
       {
@@ -128,14 +115,14 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   },
   {
     key: 'label',
-    icon: Tag,
+    image: require('@/assets/images/checklabel.png'),
     title: 'Check the label',
     body: 'Add what the care tag or the seller claims. TELA-TELL compares it with your scan and flags when the label may not match, so you can double-check.',
     footnote: 'Treat it as a hint, not proof.',
   },
   {
     key: 'offline',
-    icon: Shield,
+    image: require('@/assets/images/scananywhere.png'),
     title: 'Scan anywhere, even with no signal',
     body: 'Shop with confidence, wherever the bargains are.',
     points: [

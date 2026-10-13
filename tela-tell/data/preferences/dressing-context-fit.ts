@@ -94,14 +94,20 @@ function isBestFit(share: ResolvedShare, context: DressingContext, bestChoices: 
   return Boolean(findMatchingRec(share, bestChoices)) || fiberEndorsesContext(share.fabric, context);
 }
 
-function garmentLabel(shares: ResolvedShare[], dominantFabric: string): string {
-  if (shares.length >= 2) {
-    return `${shares[0].fabric}-${shares[1].fabric} blend`;
-  }
-  if (shares.length === 1) {
-    return shares[0].fabric;
-  }
-  return dominantFabric.replace(/\s*dominant\s*/i, '').trim() || 'This fabric';
+/**
+ * How a fiber is named in a fit sentence. The percentages are the model's confidence, not fiber
+ * content, and two predictions are not a confirmed blend, so neither is shown: the top fiber is
+ * "the most likely fiber" and any other fiber "appears among the predictions". The context
+ * ("Sunny", "Office / Work") is the row's title, so the sentence does not repeat it.
+ */
+function fiberSubject(share: ResolvedShare, shares: ResolvedShare[]): string {
+  return share.fabric === shares[0]?.fabric
+    ? `${share.fabric}, the most likely fiber,`
+    : `${share.fabric} appears among the predictions and`;
+}
+
+function topFiberName(shares: ResolvedShare[], dominantFabric: string): string {
+  return shares[0]?.fabric ?? (dominantFabric.replace(/\s*dominant\s*/i, '').trim() || 'This fabric');
 }
 
 export function getDressingContextFits(
@@ -110,7 +116,7 @@ export function getDressingContextFits(
   compositions: FabricComposition[] = [],
 ): DressingContextFit[] {
   const shares = resolveSignificantShares(dominantFabric, compositions);
-  const labelForGarment = garmentLabel(shares, dominantFabric);
+  const topName = topFiberName(shares, dominantFabric);
 
   const fits = contexts.map((context) => {
     const guide = getOccasionWeatherGuide(context);
@@ -132,10 +138,7 @@ export function getDressingContextFits(
         context,
         label,
         status: 'great' as const,
-        summary:
-          shares.length > 1
-            ? `${top.fabric} (${top.percentage}%) suits ${label.toLowerCase()}.`
-            : `${labelForGarment} is a strong match for ${label.toLowerCase()}.`,
+        summary: `${fiberSubject(top, shares)} is a strong match.`,
         alternatives: [],
       };
     }
@@ -146,7 +149,7 @@ export function getDressingContextFits(
         context,
         label,
         status: 'poor' as const,
-        summary: `${top.share.fabric} (${top.share.percentage}%) is less ideal for ${label.toLowerCase()}. ${top.rec.reason}.`,
+        summary: `${fiberSubject(top.share, shares)} is less ideal here. ${top.rec.reason}.`,
         alternatives: guide.bestChoices.slice(0, 3),
       };
     }
@@ -159,7 +162,7 @@ export function getDressingContextFits(
         context,
         label,
         status,
-        summary: `This mix has ${best.fabric} and ${avoid.share.fabric}. It can work for some uses, but is trickier for ${label.toLowerCase()}.`,
+        summary: `The predictions include ${best.fabric} and ${avoid.share.fabric}. This item may work for some uses, but check the label; it can be trickier here.`,
         alternatives: guide.bestChoices.slice(0, 3),
       };
     }
@@ -168,7 +171,7 @@ export function getDressingContextFits(
       context,
       label,
       status: 'okay' as const,
-      summary: `${labelForGarment} can work for ${label.toLowerCase()}; other fibers may feel better.`,
+      summary: `${topName} can work here; other fibers may feel better.`,
       alternatives: guide.bestChoices.slice(0, 3),
     };
   });

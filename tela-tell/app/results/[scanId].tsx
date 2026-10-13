@@ -12,9 +12,10 @@ import { ResultsExploreActions } from '@/features/results/components/results-exp
 import { ResultsScreenHeader } from '@/features/results/components/results-screen-header';
 import { ScanConfidenceBanner } from '@/features/results/components/scan-confidence-banner';
 import { SellerComparisonCard } from '@/features/results/components/seller-comparison-card';
-import { SustainableChoicesCard } from '@/features/results/components/sustainable-choices-card';
 import { HealthAdvisorySection } from '@/features/results/components/health-advisory-section';
 import { SectionLabel } from '@/components/ui/section-label';
+import { SustainabilityCard } from '@/features/results/components/sustainability-card';
+import { resolveFabricAlias } from '@/data/fabrics/fabrics';
 import { BrandColors } from '@/constants/brand';
 import { deleteScan, isScanFavorite, setScanFavorite } from '@/db/scans';
 import { useScanResult } from '@/features/results/hooks/use-scan-result';
@@ -158,6 +159,7 @@ export default function ResultsScreen() {
   // is the stated-label comparison, which has no reliable fiber to compare against.
   const reliability = assessScanReliability(result.compositions);
   const isUnsure = !reliability.reliable;
+  const topFiber = isUnsure ? null : resolveFabricAlias(result.dominantFabric);
 
   const primaryReference = isUnsure
     ? undefined
@@ -234,10 +236,12 @@ export default function ResultsScreen() {
 
         {isUnsure ? null : (
           <>
-            <View style={styles.section}>
-              <SectionLabel title="SUSTAINABILITY" />
-              <SustainableChoicesCard />
-            </View>
+            {topFiber ? (
+              <View style={styles.section}>
+                <SectionLabel title="SUSTAINABILITY" />
+                <SustainabilityCard fiber={topFiber} onEcoTips={handleEcoTips} />
+              </View>
+            ) : null}
             <View style={styles.section}>
               <SectionLabel title="LABEL CHECK" />
               <SellerComparisonCard

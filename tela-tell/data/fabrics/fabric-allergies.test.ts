@@ -1,5 +1,6 @@
 import { SENSITIVITY_CAVEAT, buildSensitivityMessage, getAllergyAlert } from '@/data/fabrics/fabric-allergies';
 import { SUPPORTED_FABRICS } from '@/data/fabrics/fabrics';
+import { getSource, getSourceNumber } from '@/data/fabrics/source-registry';
 
 describe('sensitivity reminder', () => {
   it('names the top fiber when it is on the list, and never shows a percentage', () => {
@@ -55,6 +56,14 @@ describe('sensitivity reminder', () => {
   it('does not suggest a fallback when every supported fiber is on the sensitivity list', () => {
     const alert = getAllergyAlert([...SUPPORTED_FABRICS], 'Cotton', [{ material: 'Cotton', percentage: 100 }])!;
     expect(alert.alternatives).toEqual([]);
+  });
+
+  it('backs the caveat with DermNet (25) and Reich & Warshaw (26) in the reference list', () => {
+    expect(getSourceNumber('dermnet-textile-dermatitis')).toBe(25);
+    expect(getSourceNumber('reich-warshaw-2010')).toBe(26);
+    expect(getSource('dermnet-textile-dermatitis')!.says.join(' ')).toMatch(/formaldehyde finishing resins and dyes/);
+    expect(getSource('dermnet-textile-dermatitis')!.says.join(' ')).toMatch(/rare for the fibers themselves/);
+    expect(getSource('reich-warshaw-2010')!.caveats.join(' ')).toMatch(/formaldehyde finishing resins only/);
   });
 
   it('says a photo cannot confirm content or see dyes and finishes, and alternatives are not guaranteed', () => {

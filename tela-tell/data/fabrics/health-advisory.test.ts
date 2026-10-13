@@ -3,7 +3,7 @@ import {
   FIBER_SHEDDING_TITLE,
   NOT_MEDICAL_NOTE,
   SHEDDING_ESTIMATE_TITLE,
-  WHY_IT_MATTERS,
+  getWhyItMatters,
   getFiberStatusAdvisory,
   isSyntheticFiber,
   otherSyntheticNote,
@@ -14,23 +14,47 @@ import { findUnknownSourceIds, getSource, getSourceNumber } from '@/data/fabrics
 // verify the scientific claims; those are recorded with their sources in source-registry.ts.
 
 describe('health risk advisory', () => {
-  it('backs "Why it matters" with the WHO 2022 report, added as reference 24 without renumbering', () => {
-    expect(findUnknownSourceIds(WHY_IT_MATTERS.sourceIds)).toEqual([]);
+  it('backs "Why it matters" with BfR 2019 (28), EEA 2022 (27), BfR 2025 (29) and WHO 2022 (24)', () => {
+    const lines = getWhyItMatters('Polyester');
+    expect(findUnknownSourceIds(lines.flatMap((line) => line.sourceIds))).toEqual([]);
+    expect(lines.map((line) => line.key)).toEqual(['where', 'people', 'known', 'limit']);
+    expect(lines.map((line) => line.sourceIds)).toEqual([
+      ['bfr-2019-microplastics-faq', 'eea-2022-textiles'],
+      ['eea-2022-textiles', 'bfr-2025-microplastics'],
+      ['who-2022-microplastics'],
+      [],
+    ]);
+    expect(getSourceNumber('bfr-2019-microplastics-faq')).toBe(28);
+    expect(getSourceNumber('bfr-2025-microplastics')).toBe(29);
+    expect(getSource('bfr-2019-microplastics-faq')!.says.join(' ')).toMatch(/wearing and washing of textiles/);
+    expect(getSource('bfr-2025-microplastics')!.says.join(' ')).toMatch(/mainly enter the body through inhalation or ingestion/);
     expect(getSourceNumber('who-2022-microplastics')).toBe(24);
-    expect(getSourceNumber('gundogdu-2026')).toBe(23);
-    const who = getSource('who-2022-microplastics')!;
-    expect(who.year).toBe(2022);
-    expect(who.title).toMatch(/ISBN 978-92-4-005460-8/);
-    expect(who.gist).toMatch(/up to December 2021/);
+    expect(getSourceNumber('eea-2022-textiles')).toBe(27);
+    expect(getSource('who-2022-microplastics')!.gist).toMatch(/up to December 2021/);
+    expect(getSource('eea-2022-textiles')!.says.join(' ')).toMatch(/discharged with the washing machine effluent/);
+    expect(getSource('eea-2022-textiles')!.says.join(' ')).toMatch(/release microplastics into the air/);
   });
 
-  it('dates the WHO finding, stresses limited evidence, keeps its recommendation, and estimates nothing', () => {
-    expect(WHY_IT_MATTERS.text).toMatch(/WHO’s 2022 review, covering studies through December 2021/);
-    expect(WHY_IT_MATTERS.text).toMatch(/too limited to assess human health risks reliably/);
-    expect(WHY_IT_MATTERS.text).toMatch(/recommended reducing exposure/);
-    expect(WHY_IT_MATTERS.text).toMatch(/This app cannot estimate your exposure or health risk/);
-    // WHO makes no finding about wearing clothes, so the advisory must not claim one.
-    expect(WHY_IT_MATTERS.text).not.toMatch(/wear|skin|cause|toxic|dangerous|cancer|so far/i);
+  it('names the scanned fiber, stresses limited evidence, keeps the WHO recommendation, and estimates nothing', () => {
+    const [where, people, known, limit] = getWhyItMatters('Nylon');
+    expect(where.text).toBe('When you wear or wash nylon, the tiny plastic fibers it sheds can go into the air and out with the wash water.');
+    expect(people.text).toMatch(/^Fibers shed from nylon clothes can get into the air\./);
+    expect(people.text).toMatch(/Microplastics mainly enter the body by being breathed in or swallowed\./);
+    expect(people.label).toBe('How they reach people');
+    expect(people.text).not.toMatch(/dust|food|water|WHO/);
+    expect(known.label).toBe('What’s known');
+    expect(known.text).toBe('Health effects are still uncertain (WHO, 2022), but reducing exposure is recommended.');
+    expect(limit.text).toMatch(/can’t tell how much this garment sheds or estimate your own exposure/);
+    // Neither source makes a finding about wearing clothes, so the advisory must not claim one.
+    const all = getWhyItMatters('Polyester').map((line) => line.text).join(' ');
+    expect(all).not.toMatch(/skin|cause|toxic|dangerous|cancer|so far|harms?/i);
+  });
+
+  it('says "clothes with spandex", since spandex is almost always a small part of a blend', () => {
+    const [where, people] = getWhyItMatters('Spandex');
+    expect(where.text).toBe('When you wear or wash clothes with spandex, the tiny plastic fibers they shed can go into the air and out with the wash water.');
+    expect(people.text).toMatch(/^Fibers shed from clothes with spandex can get into the air\./);
+    expect(`${where.text} ${people.text}`).not.toMatch(/spandex clothes/);
   });
 
   it('labels the synthetic card as an estimate and is never presented as a medical result', () => {

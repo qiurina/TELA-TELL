@@ -37,6 +37,8 @@ import type { SnapshotMeasurement } from '@/features/scan/lib/preview-snapshot';
 import { sharpestIndex } from '@/features/scan/lib/ml/sharpness';
 import type { LightingAssessment } from '@/features/scan/lib/ml/lighting';
 import { LightingNoticeCard } from '@/features/scan/components/lighting-notice-card';
+import { AnalyzingModal } from '@/features/scan/components/analyzing-modal';
+import type { AnalysisProgress } from '@/features/scan/lib/analysis-progress';
 import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
 import { createScanRecord } from '@/features/scan/lib/create-scan-record';
@@ -70,6 +72,7 @@ export default function ScanScreen() {
   const [captureInfo, setCaptureInfo] = useState<CaptureInfo | null>(null);
   const [blurPrompt, setBlurPrompt] = useState<BlurPrompt | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
   const [detailsExpanded, setDetailsExpanded] = useState(true);
@@ -173,6 +176,7 @@ export default function ScanScreen() {
   };
 
   const runAnalysis = (photoUri?: string | null, photoUris: string[] = photoUri ? [photoUri] : []) => {
+    setAnalysisProgress(null);
     setIsAnalyzing(true);
 
     void (async () => {
@@ -188,9 +192,11 @@ export default function ScanScreen() {
             lighting: captureInfo?.lighting,
             sharpnessCheck: captureInfo?.sharpnessCheck ?? 'unchecked',
           },
+          onProgress: setAnalysisProgress,
         });
 
         step = 'save';
+        setAnalysisProgress({ stage: 'saving' });
         if (!photoUri) throw new Error('No photo to save.');
         await saveCapturedScan(result, photoUri);
 
@@ -311,6 +317,7 @@ export default function ScanScreen() {
   if (hasPreview && previewUri) {
     return (
       <View style={styles.reviewRoot}>
+        <AnalyzingModal visible={isAnalyzing} progress={analysisProgress} />
         <ResultsScreenHeader title="Scan Fabric" onBack={handleBack} />
 
         <ScrollView

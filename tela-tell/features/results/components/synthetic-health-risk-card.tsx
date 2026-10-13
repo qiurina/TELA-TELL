@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { InfoSheet } from '@/components/ui/info-sheet';
 import { CardLink } from '@/components/ui/card-link';
-import { Shield } from '@/components/ui/lucide-icons';
+import { Info, Shield } from '@/components/ui/lucide-icons';
 import { StatusCard } from '@/components/ui/status-card';
 import { Type } from '@/constants/typography';
 import type { StatusTone } from '@/constants/status-colors';
@@ -20,7 +20,10 @@ const LEVEL_TONE: Record<HealthRiskLevel, StatusTone> = {
 
 type SyntheticHealthRiskCardProps = {
   risk: SyntheticHealthRisk;
-  /** Opens Eco tips, where the Reduce shedding card is. Omit to hide the link. */
+  /**
+   * Scan results pass this: the card stays short and its button opens Eco tips. Without it (on Eco
+   * tips, the detail page) the card shows "Why it matters" open instead.
+   */
   onReduceShedding?: () => void;
 };
 
@@ -49,13 +52,13 @@ export function SyntheticHealthRiskCard({ risk, onReduceShedding }: SyntheticHea
         {risk.reason}
       </Text>
 
-      <View style={styles.matters}>
-        <WhyItMatters />
-      </View>
-
       {onReduceShedding ? (
-        <CardLink label="See ways to reduce shedding" onPress={onReduceShedding} />
-      ) : null}
+        <CardLink icon={Info} label="Why it matters & how to reduce it" onPress={onReduceShedding} />
+      ) : (
+        <View style={styles.matters}>
+          <WhyItMatters fiber={risk.fibers[0]} defaultOpen />
+        </View>
+      )}
     </StatusCard>
   );
 }

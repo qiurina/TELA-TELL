@@ -5,7 +5,7 @@ import { resolveSources, type Source } from '@/data/fabrics/source-registry';
  * Short background on fast fashion for the About screen, with the claims behind it for a sources
  * sheet. It is general information about clothing, not about a scanned garment, which is why it
  * lives on the About screen and not next to a scan's eco tips. (Secondhand and reuse evidence
- * is on the Sustainable choices sheet; see `SUSTAINABLE_CHOICES_CLAIMS`.)
+ * is in Eco tips, "Why reuse helps"; see `SUSTAINABLE_CHOICES_CLAIMS`.)
  *
  * Rules for editing:
  * - Every sentence in `FAST_FASHION_TEXT` must be backed by a claim below with a source in

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -24,20 +25,12 @@ import {
 import { markIntroSeen } from '@/features/onboarding/lib/intro-state';
 
 function SlidePage({ slide, width }: { slide: OnboardingSlide; width: number }) {
-  const Icon = slide.icon;
-
   return (
     <ScrollView
       style={{ width }}
       contentContainerStyle={styles.pageContent}
       showsVerticalScrollIndicator={false}>
-      <LinearGradient
-        colors={[BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.heroBadge}>
-        <Icon size={44} color={BrandColors.white} strokeWidth={2} />
-      </LinearGradient>
+      <Image source={slide.image} style={styles.heroImage} contentFit="contain" accessible={false} />
 
       <Text style={styles.title}>{slide.title}</Text>
       {slide.body ? <Text style={styles.body}>{slide.body}</Text> : null}
@@ -185,12 +178,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 14,
   },
-  heroBadge: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
+  heroImage: {
+    width: 220,
+    height: 180,
     marginBottom: 8,
   },
   title: {

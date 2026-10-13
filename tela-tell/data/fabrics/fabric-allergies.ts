@@ -19,9 +19,10 @@ import type { FabricComposition } from '@/data/scans/mock-data';
  */
 
 /**
- * Shown under every sensitivity reminder. Textile reactions are mostly caused by dyes and
- * finishing chemicals (DermNet NZ, see the header above), which a photo cannot detect, and the
- * suggested alternatives are practical ideas, not verified for any one person.
+ * Shown under every sensitivity reminder. Allergic reactions to clothing are most often caused by
+ * formaldehyde finishing resins and dyes, rarely by the fibers themselves (DermNet, reference 25;
+ * Reich & Warshaw 2010, reference 26), which a photo cannot detect. The suggested alternatives are
+ * practical ideas, not verified for any one person.
  */
 export const SENSITIVITY_CAVEAT =
   'A photo cannot confirm fiber content or detect dyes and finishes, which commonly cause clothing-related allergic reactions. Check the label; suggested alternatives are not guaranteed suitable for you.';

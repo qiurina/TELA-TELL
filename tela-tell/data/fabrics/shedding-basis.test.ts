@@ -122,7 +122,15 @@ describe('shedding sources in the registry', () => {
     });
     // The WHO 2022 report (health risk advisory) was added after them, as reference 24.
     expect(getSourceNumber('who-2022-microplastics')).toBe(24);
-    expect(SOURCE_LIST).toHaveLength(24);
+    // DermNet and Reich & Warshaw (sensitivity caveat) were added after it, as 25 and 26.
+    expect(getSourceNumber('dermnet-textile-dermatitis')).toBe(25);
+    expect(getSourceNumber('reich-warshaw-2010')).toBe(26);
+    // EEA 2022 (health risk advisory, "Where it goes") was added after them, as 27.
+    expect(getSourceNumber('eea-2022-textiles')).toBe(27);
+    // BfR 2019 and BfR 2025 (health risk advisory) followed, as 28 and 29.
+    expect(getSourceNumber('bfr-2019-microplastics-faq')).toBe(28);
+    expect(getSourceNumber('bfr-2025-microplastics')).toBe(29);
+    expect(SOURCE_LIST).toHaveLength(29);
   });
 
   it('gives each new source a DOI link, a plain summary, and its own limits', () => {

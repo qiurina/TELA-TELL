@@ -3,6 +3,8 @@ import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { InfoButton } from '@/components/ui/info-button';
+import { InfoSheet } from '@/components/ui/info-sheet';
 import { ChevronRight, Search, Shield } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
@@ -146,7 +148,9 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
   const category = FABRIC_REGISTRY.find((item) => item.name === fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
   const riskLevel = getFiberHealthRiskLevel(fabric);
-  const riskLabel = getFiberHealthRiskLabel(fabric);
+  // High / Moderate are the app's estimates for the four synthetic fibers (see the (i) below the
+  // filters); "Not synthetic" is a fiber group, not an estimate.
+  const riskLabel = riskLevel === 'low' ? getFiberHealthRiskLabel(fabric) : `Est. ${getFiberHealthRiskLabel(fabric)}`;
   const riskStyle = RISK_CHIP_COLORS[riskLevel];
 
   const handlePress = () => {
@@ -191,7 +195,7 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
               styles.metaPill,
               { backgroundColor: riskStyle.background, borderColor: riskStyle.border },
             ]}
-            accessibilityLabel={`Microplastic shedding tendency: ${riskLabel}`}>
+            accessibilityLabel={`Estimated microplastic shedding: ${riskLabel}`}>
             <Shield size={9} color={riskStyle.text} strokeWidth={2.5} />
             <Text numberOfLines={1} style={[styles.metaPillText, { color: riskStyle.text }]}>
               {riskLabel}
@@ -212,6 +216,7 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
 export function FabricCatalog() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [pillInfoOpen, setPillInfoOpen] = useState(false);
 
   const grouped = useMemo(
     () =>
@@ -232,6 +237,17 @@ export function FabricCatalog() {
     <View style={styles.root}>
       <FabricSearchBar value={searchQuery} onChangeText={setSearchQuery} />
       <CategoryFilterBar selected={selectedCategory} onSelect={setSelectedCategory} />
+      <InfoSheet
+        visible={pillInfoOpen}
+        title="About the shedding pills"
+        message="Shedding pills are the app's estimates for synthetic fibers, not a ranking established by research. Not synthetic means the fiber is not plastic-based; the scan cannot confirm a garment's blends, coatings or finishes."
+        icon={Shield}
+        onClose={() => setPillInfoOpen(false)}
+      />
+      <View style={styles.pillNoteRow}>
+        <Text style={styles.pillNote}>Shedding pills are the app&apos;s estimates</Text>
+        <InfoButton onPress={() => setPillInfoOpen(true)} accessibilityLabel="About the shedding pills" />
+      </View>
 
       {grouped.length > 0 ? (
         grouped.map(({ category, fabrics }) => (
@@ -274,6 +290,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: BrandColors.text,
     padding: 0,
+  },
+  pillNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pillNote: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: BrandColors.textMuted,
   },
   filterRow: {
     flexDirection: 'row',

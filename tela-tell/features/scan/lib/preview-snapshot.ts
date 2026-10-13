@@ -119,12 +119,15 @@ export async function captureGuideSnapshots(
   view: Size,
   guide: ViewRect,
   count: number,
+  /** Called with the 1-based shot number as each snapshot starts, so the screen can count them. */
+  onShot?: (shot: number) => void,
 ): Promise<SnapshotBurst> {
   const shots: SnapshotShot[] = [];
   const croppedImages: Image[] = [];
   let error: string | null = null;
 
   for (let shot = 0; shot < count; shot += 1) {
+    onShot?.(shot + 1);
     const startedAt = Date.now();
     try {
       const snapshot = await camera.takeSnapshot();

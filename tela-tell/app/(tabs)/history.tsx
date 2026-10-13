@@ -238,7 +238,7 @@ export default function HistoryScreen() {
               <Text style={[styles.statValue, { color: ALERT_RED }]}>{stats.mislabeled}</Text>
             </View>
             <Text style={styles.statLabel} numberOfLines={1}>
-              Mismatch
+              Label flags
             </Text>
           </View>
         </View>

@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Camera,
@@ -61,13 +61,18 @@ export function FloatingCaptureBar({
         onPress={onTakePhoto}
         disabled={isAnalyzing}
         accessibilityRole="button"
-        accessibilityLabel={hasPreview ? 'Retake photo' : 'Take photo'}>
+        accessibilityLabel={hasPreview ? 'Retake photo' : 'Take photo'}
+        accessibilityState={{ disabled: Boolean(isAnalyzing), busy: Boolean(isAnalyzing) }}>
         <LinearGradient
           colors={[...primaryGradient]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.shutterInner, primaryButtonShadow()]}>
-          <Camera size={26} color={BrandColors.white} strokeWidth={2.25} />
+          {isAnalyzing ? (
+            <ActivityIndicator color={BrandColors.white} />
+          ) : (
+            <Camera size={26} color={BrandColors.white} strokeWidth={2.25} />
+          )}
         </LinearGradient>
       </Pressable>
 

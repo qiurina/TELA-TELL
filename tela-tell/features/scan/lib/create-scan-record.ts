@@ -5,12 +5,15 @@ import { formatScanDisplayTime, formatScannedAtDate } from '@/features/scan/lib/
 import { buildScanProfile } from '@/features/scan/lib/build-scan-profile';
 import { classifyFabric, type ClassificationResult } from '@/features/scan/lib/ml/model';
 import { buildCaptureMeta, type CaptureInput } from '@/features/scan/lib/scan-capture-meta';
+import type { AnalysisProgressListener } from '@/features/scan/lib/analysis-progress';
 
 export type CreateScanRecordInput = {
   sellerLabel?: string | null;
   imageUris?: string[] | null;
   /** How the photos were taken; saved with the scan. */
   capture: CaptureInput;
+  /** Called as the model loads and reads each photo, for the loading modal. */
+  onProgress?: AnalysisProgressListener;
 };
 
 function createScanId(): string {
@@ -56,9 +59,12 @@ function buildResultFromClassification(classification: ClassificationResult): Sc
   };
 }
 
-async function classifyFromImages(imageUris: string[]): Promise<ClassificationResult> {
+async function classifyFromImages(
+  imageUris: string[],
+  onProgress?: AnalysisProgressListener,
+): Promise<ClassificationResult> {
   try {
-    return await classifyFabric(imageUris);
+    return await classifyFabric(imageUris, onProgress);
   } catch (error) {
     console.error('[TELA-TELL] classifyFabric failed:', error);
     throw new Error('Could not analyze this photo. Please try again.');
@@ -74,7 +80,7 @@ export async function createScanRecord(input: CreateScanRecordInput): Promise<Sc
     throw new Error('No photo to analyze.');
   }
 
-  const classification = await classifyFromImages(imageUris);
+  const classification = await classifyFromImages(imageUris, input.onProgress);
   const base = buildResultFromClassification(classification);
 
   return {

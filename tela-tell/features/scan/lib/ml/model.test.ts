@@ -93,6 +93,17 @@ describe('classifyFabric', () => {
     ]);
   });
 
+  it('reports each stage as it starts: the model load, then every photo in order', async () => {
+    const onProgress = jest.fn();
+    await classifyFabric(['a.jpg', 'b.jpg', 'c.jpg'], onProgress);
+    expect(onProgress.mock.calls.map(([progress]) => progress)).toEqual([
+      { stage: 'loading_model' },
+      { stage: 'reading_photo', photo: 1, photos: 3 },
+      { stage: 'reading_photo', photo: 2, photos: 3 },
+      { stage: 'reading_photo', photo: 3, photos: 3 },
+    ]);
+  });
+
   it('refuses an empty capture', async () => {
     await expect(classifyFabric([])).rejects.toThrow(/No captured images/);
   });

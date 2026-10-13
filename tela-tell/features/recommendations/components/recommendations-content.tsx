@@ -36,7 +36,7 @@ export function RecommendationsContent({
         showSensitivity={false}
       />
       {fiber ? (
-        <EcoGuideSection guide={ECO_GUIDE[fiber]} isSynthetic={getFabricCategory(fiber) === 'Synthetic'} />
+        <EcoGuideSection fiber={fiber} guide={ECO_GUIDE[fiber]} isSynthetic={getFabricCategory(fiber) === 'Synthetic'} />
       ) : null}
     </View>
   );

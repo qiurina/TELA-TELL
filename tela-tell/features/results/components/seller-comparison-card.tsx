@@ -50,7 +50,7 @@ export function SellerComparisonCard({
     return (
       <StatusCard icon={Tag} tone="neutral" title="Compare stated label">
         <Text style={Type.body}>Add what the seller claimed to compare it with the prediction.</Text>
-        {onAddLabel ? <CardLink label="Add stated label" onPress={onAddLabel} /> : null}
+        {onAddLabel ? <CardLink icon={Tag} label="Add stated label" onPress={onAddLabel} /> : null}
       </StatusCard>
     );
   }

@@ -2,7 +2,6 @@ import type { StatusTone } from '@/constants/status-colors';
 import { getFabricCategory, resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 import { getPredictedSyntheticFibers } from '@/data/fabrics/synthetic-health-risk';
 import { CLEAR_SHARE_MIN_PERCENT, type CompositionInput } from '@/data/scans/scan-confidence';
-import type { EcoClaim } from '@/data/scans/mock-data';
 
 /**
  * The "Health risk advisory" on Scan results and Eco tips (the app title's "Health Risk
@@ -24,17 +23,62 @@ export const SHEDDING_ESTIMATE_TITLE = 'Estimated fiber shedding';
 /** Card title for every other fiber: no level, only what the predicted fiber is. */
 export const FIBER_SHEDDING_TITLE = 'Fiber shedding';
 
-/**
- * Why shedding matters for health. WHO (2022), executive summary pp. viii-x: microplastics are
- * found in air, water and food; the data are "of only very limited use for assessing the risk";
- * "measures should be taken to mitigate exposure". The review covered studies to December 2021.
- */
-export const WHY_IT_MATTERS: EcoClaim = {
-  kind: 'fact',
-  aspect: 'Why it matters',
-  text: 'People can encounter tiny plastic particles through air, food and water. WHO’s 2022 review, covering studies through December 2021, found that the available evidence was too limited to assess human health risks reliably and recommended reducing exposure. This app cannot estimate your exposure or health risk.',
-  sourceIds: ['who-2022-microplastics'],
+export const WHY_IT_MATTERS_TITLE = 'Why it matters';
+
+export type WhyItMattersLine = {
+  /** Which row this is, so the screen can give each its icon. */
+  key: 'where' | 'people' | 'known' | 'limit';
+  label: string;
+  text: string;
+  sourceIds: string[];
 };
+
+/**
+ * Why a synthetic fiber's shedding matters, for the scanned fiber, in three short lines:
+ *  - Where it goes: BfR (2019) — wearing and washing synthetic textiles releases microfibers into
+ *    the air and drains; EEA (2022) — washing-machine effluent carries microfibres out.
+ *  - For people: EEA (2022) — textiles release microplastics into the air; BfR (2025) — microplastics
+ *    mainly enter the body by inhalation or ingestion; WHO (2022), executive summary pp. viii–x —
+ *    the data are "of only very limited use for assessing the risk"; "measures should be taken to
+ *    mitigate exposure". The review covered studies to December 2021.
+ *  No skin claim: BfR's statement on skin covers rinse-off cosmetics only, not clothing.
+ *  - A limit of the scan itself (no source needed).
+ * It never says the garment harms health: neither source makes a finding about wearing clothes.
+ */
+export function getWhyItMatters(fiber: string): WhyItMattersLine[] {
+  const name = fiber.toLowerCase();
+  // Spandex is almost always a small part of a blend (e.g. cotton with a few percent spandex), so
+  // it is "clothes with spandex", never "spandex clothes" as if the garment were all spandex.
+  const isBlendFiber = name === 'spandex';
+  const wearOrWash = isBlendFiber ? 'clothes with spandex, the tiny plastic fibers they shed' : `${name}, the tiny plastic fibers it sheds`;
+  const shedFrom = isBlendFiber ? 'clothes with spandex' : `${name} clothes`;
+  return [
+    {
+      key: 'where',
+      label: 'Where it goes',
+      text: `When you wear or wash ${wearOrWash} can go into the air and out with the wash water.`,
+      sourceIds: ['bfr-2019-microplastics-faq', 'eea-2022-textiles'],
+    },
+    {
+      key: 'people',
+      label: 'How they reach people',
+      text: `Fibers shed from ${shedFrom} can get into the air. Microplastics mainly enter the body by being breathed in or swallowed.`,
+      sourceIds: ['eea-2022-textiles', 'bfr-2025-microplastics'],
+    },
+    {
+      key: 'known',
+      label: 'What’s known',
+      text: 'Health effects are still uncertain (WHO, 2022), but reducing exposure is recommended.',
+      sourceIds: ['who-2022-microplastics'],
+    },
+    {
+      key: 'limit',
+      label: 'What this scan can’t tell',
+      text: 'It can’t tell how much this garment sheds or estimate your own exposure.',
+      sourceIds: [],
+    },
+  ];
+}
 
 /** Added to the (i) sheet so the advisory is never read as a medical result. */
 export const NOT_MEDICAL_NOTE =

@@ -2,6 +2,7 @@ import type { FabricComposition } from '@/data/scans/mock-data';
 import { MODEL_LABELS } from '@/features/scan/lib/ml/constants';
 import { imageToModelInput } from '@/features/scan/lib/ml/preprocess-raw';
 import { scoresToCompositions } from '@/features/scan/lib/ml/scores';
+import type { AnalysisProgressListener } from '@/features/scan/lib/analysis-progress';
 
 export type ClassificationResult = {
   dominantFabric: string;
@@ -92,16 +93,21 @@ function averageScores(scoreSets: Float32Array[]): Float32Array {
  * Averaging over multiple shots reduces the per-shot noise (framing/focus/lighting
  * micro-variation) that otherwise flips the top-1 result between repeat scans.
  */
-export async function classifyFabric(imageUris: string[]): Promise<ClassificationResult> {
+export async function classifyFabric(
+  imageUris: string[],
+  onProgress?: AnalysisProgressListener,
+): Promise<ClassificationResult> {
   if (imageUris.length === 0) {
     throw new ModelUnavailableError('No captured images to classify.');
   }
 
   const startedAt = nowMs();
+  onProgress?.({ stage: 'loading_model' });
   const model = await loadModel();
   const scoreSets: Float32Array[] = [];
   let inferenceMs = 0;
-  for (const uri of imageUris) {
+  for (const [index, uri] of imageUris.entries()) {
+    onProgress?.({ stage: 'reading_photo', photo: index + 1, photos: imageUris.length });
     const input = await imageToModelInput(uri);
     const runStartedAt = nowMs();
     const outputs = model.runSync([input.buffer as ArrayBuffer]);

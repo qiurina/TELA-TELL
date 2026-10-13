@@ -1,17 +1,16 @@
 import {
   SUSTAINABLE_CHOICES_CLAIMS,
   SUSTAINABLE_CHOICES_KEEP_IN_MIND,
-  SUSTAINABLE_CHOICES_TEXT,
-  SUSTAINABLE_CHOICES_TITLE,
+  WHY_REUSE_HELPS_TITLE,
 } from '@/data/fabrics/sustainable-choices';
 import { findUnknownSourceIds, getSource, getSourceNumber } from '@/data/fabrics/source-registry';
 
-describe('Sustainable choices card (replaces the retired sustainability score)', () => {
-  it('has a plain title and makes no claim about the scanned garment or fiber', () => {
-    expect(SUSTAINABLE_CHOICES_TITLE).toBe('Sustainable choices');
-    expect(SUSTAINABLE_CHOICES_TEXT).toMatch(/reusing clothes and wearing them longer/i);
-    expect(SUSTAINABLE_CHOICES_TEXT).toMatch(/Fiber type alone does not tell you a garment.s overall impact/);
-    expect(SUSTAINABLE_CHOICES_TEXT).not.toMatch(/\d|score|rating|estimate|higher|lower|middle|greener|better/i);
+describe('Why reuse helps (Eco tips, replaces the retired sustainability score)', () => {
+  it('has a plain title and no score, rating or comparison in its points', () => {
+    expect(WHY_REUSE_HELPS_TITLE).toBe('Why reuse helps');
+    for (const claim of SUSTAINABLE_CHOICES_CLAIMS) {
+      expect(claim.text).not.toMatch(/\d|score|rating|greener/i);
+    }
   });
 
   it('says on the sheet that these are general studies, not about the scanned garment', () => {

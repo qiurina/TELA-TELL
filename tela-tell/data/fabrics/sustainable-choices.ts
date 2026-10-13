@@ -1,20 +1,13 @@
 import type { EcoClaim } from '@/data/scans/mock-data';
 
 /**
- * The "Sustainable choices" card on Scan results. It replaces the retired sustainability score
+ * "Why reuse helps", shown in Eco tips' "Reuse it" card under the fiber's own reuse idea
+ * (eco-guide.ts). Scan results' short Sustainability card links there. It replaces the retired sustainability score
  * (archived in docs/sustainability-score-archive.md). It makes no claim about the scanned garment:
- * it points to reuse and wearing clothes longer, the two things its sources support, and its link
- * opens the sheet that explains both.
+ * it states what its sources support about reselling, donating and wearing clothes longer.
  */
 
-export const SUSTAINABLE_CHOICES_TITLE = 'Sustainable choices';
-
-export const SUSTAINABLE_CHOICES_TEXT =
-  'Reusing clothes and wearing them longer can help the environment. Fiber type alone does not tell you a garment’s overall impact.';
-
-export const SUSTAINABLE_CHOICES_ACTION = 'About sustainable choices';
-
-export const SUSTAINABLE_CHOICES_SHEET_TITLE = 'About sustainable choices';
+export const WHY_REUSE_HELPS_TITLE = 'Why reuse helps';
 
 /** The (i) sheet: one sentence per point, each with its source. */
 export const SUSTAINABLE_CHOICES_CLAIMS: EcoClaim[] = [

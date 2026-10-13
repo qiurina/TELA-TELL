@@ -1,6 +1,8 @@
 import {
   ECO_GUIDE,
+  ALTERNATIVE_OPTIONS,
   getExtraReduceTips,
+  getReduceSteps,
   GUIDE_SOURCES,
   getGuideSources,
   type GuideSourceId,
@@ -40,6 +42,32 @@ describe('Microplastics & Sustainable Choices Guide data', () => {
     expect(getExtraReduceTips(true)).toHaveLength(3);
     expect(getExtraReduceTips(false).join(' ')).not.toMatch(/synthetic/i);
     expect(getExtraReduceTips(true).join(' ')).toMatch(/textile take-back/);
+  });
+
+  it('turns the tips into a checklist that never repeats a step the fiber tip already covers', () => {
+    const polyester = getReduceSteps(ECO_GUIDE.Polyester, true);
+    expect(polyester).toEqual([
+      'Wash less, cold and gently',
+      'Use a microfiber filter if available',
+      'Air dry when suitable; avoid unnecessary rubbing',
+      'Heavily fraying? Prefer textile take-back over making it a cleaning rag',
+    ]);
+    expect(polyester.filter((step) => /filter/i.test(step))).toHaveLength(1);
+    // Natural fibers get the filter and air-dry steps but never the synthetic take-back step.
+    const cotton = getReduceSteps(ECO_GUIDE.Cotton, false);
+    expect(cotton.some((step) => /filter/.test(step))).toBe(true);
+    expect(cotton.some((step) => /take-back/.test(step))).toBe(false);
+  });
+
+  it('has short alternative chips for every fiber, each naming a fabric from the guide alternative', () => {
+    for (const fabric of SUPPORTED_FABRICS) {
+      const options = ALTERNATIVE_OPTIONS[fabric];
+      expect(options.length).toBeGreaterThan(0);
+      for (const option of options) {
+        const fabricName = option.split(' · ')[0].toLowerCase();
+        expect(ECO_GUIDE[fabric].alternative.name.toLowerCase()).toContain(fabricName.split(',')[0]);
+      }
+    }
   });
 
   it('never says a natural or regenerated fiber sheds plastic microfibers', () => {

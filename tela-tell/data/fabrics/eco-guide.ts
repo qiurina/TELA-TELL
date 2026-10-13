@@ -59,6 +59,61 @@ export function getExtraReduceTips(isSynthetic: boolean): readonly string[] {
     : ECO_GUIDE_EXTRA_REDUCE_TIPS.all;
 }
 
+/**
+ * The guide's everyday tips as short checklist steps, in the same order as
+ * ECO_GUIDE_EXTRA_REDUCE_TIPS (which keeps the guide's exact wording). `topic` is a word that, when
+ * the fiber's own tip already contains it, means the step would repeat that tip.
+ */
+const SHORT_EXTRA_STEPS: { topic: string; text: string; syntheticOnly: boolean }[] = [
+  { topic: 'filter', text: 'Use a well-maintained microfiber filter; put trapped lint in the trash', syntheticOnly: false },
+  { topic: 'air dry', text: 'Air dry when suitable; avoid unnecessary rubbing', syntheticOnly: false },
+  {
+    topic: 'take-back',
+    text: 'Heavily fraying? Prefer textile take-back over making it a cleaning rag',
+    syntheticOnly: true,
+  },
+];
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * Eco tips' "Reduce shedding" checklist: the fiber's own tip, split at each ";" into steps, then
+ * the guide's everyday steps, skipping any that the fiber's tip already covers (for example
+ * polyester's tip already says to use a filter).
+ */
+export function getReduceSteps(guide: FiberEcoGuide, isSynthetic: boolean): string[] {
+  const ownSteps = guide.reduceShedding
+    .split(';')
+    .map((part) => capitalize(part.trim().replace(/\.$/, '')))
+    .filter(Boolean);
+  const ownText = guide.reduceShedding.toLowerCase();
+  const extras = SHORT_EXTRA_STEPS.filter(
+    (step) => (isSynthetic || !step.syntheticOnly) && !ownText.includes(step.topic),
+  ).map((step) => step.text);
+  return [...ownSteps, ...extras];
+}
+
+/**
+ * The better-fit alternative as short chips ("fabric · use"). The guide's full wording stays in
+ * `alternative.name` and `alternative.reason`.
+ */
+export const ALTERNATIVE_OPTIONS: Record<SupportedFabric, string[]> = {
+  Cotton: ['Linen'],
+  Wool: ['Recycled wool'],
+  Silk: ['Responsibly sourced lyocell'],
+  Linen: ['Recycled cotton'],
+  Polyester: ['Linen · everyday wear', 'Wool · fleece'],
+  Nylon: ['Cotton canvas · bags', 'Abaca · bags'],
+  Acrylic: ['Wool', 'Cotton knit · if avoiding animal fibers'],
+  Spandex: ['Rib-knit cotton · low-stretch needs'],
+  Rayon: ['Traceable, closed-loop lyocell'],
+  Leather: ['Cotton canvas · bags'],
+  Suede: ['Brushed 100% cotton'],
+  Abaca: ['Linen · softer clothing'],
+};
+
 export const ECO_GUIDE: Record<SupportedFabric, FiberEcoGuide> = {
   Cotton: {
     classification: 'Natural plant fiber',

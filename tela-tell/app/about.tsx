@@ -20,6 +20,7 @@ import {
   FAST_FASHION_TITLE,
 } from '@/data/fabrics/fast-fashion-background';
 import { GUIDE_SOURCES } from '@/data/fabrics/eco-guide';
+import { FIBER_PROFILE_SOURCES } from '@/data/fabrics/fiber-profile-sources';
 import { SOURCE_LIST } from '@/data/fabrics/source-registry';
 
 const heroGradient = [BrandColors.gradientStart, BrandColors.primary, BrandColors.primaryDark] as const;
@@ -147,8 +148,9 @@ export default function AboutScreen() {
         </Text>
         <Text style={[styles.cardBody, styles.sourcesFootnote]}>
           Eco tips come from the Microplastics &amp; Sustainable Choices Guide; its sources (S01 to
-          S21) are listed at the end of this page. Other fiber information draws on additional sources, such as The Woolmark Company, PhilFIDA and DermNet NZ, which this
-          app&apos;s engineering documentation lists. The app no longer scores sustainability,
+          S21) are listed below. Fabric profile facts come from the
+          sources listed under &quot;Fabric profile sources&quot; at the end of this page, such as The
+          Woolmark Company and PhilFIDA. The app no longer scores sustainability,
           because no published method compares all 12 fibers fairly.
         </Text>
       </View>
@@ -185,6 +187,33 @@ export default function AboutScreen() {
               hitSlop={6}
               accessibilityRole="link"
               accessibilityLabel={`Open source ${source.id}: ${source.title}`}>
+              <Text style={styles.guideSourceLink}>Open original source (needs internet)</Text>
+            </Pressable>
+          </View>
+        ))}
+      </View>
+
+      <View style={[styles.card, faintCardShadow(), styles.sourcesCard]}>
+        <Text style={styles.cardTitle}>Fabric profile sources</Text>
+        <Text style={styles.cardBody}>
+          The fiber descriptions, photo clues and care steps in each Fabric profile come from these
+          sources. Each was checked on the date shown. Opening a source needs internet.
+        </Text>
+        {Object.values(FIBER_PROFILE_SOURCES).map((source, index) => (
+          <View key={source.url + source.title} style={styles.guideSource}>
+            <Text style={styles.guideSourceText}>
+              <Text style={styles.guideSourceId}>P{index + 1} </Text>
+              {source.title}. {source.publisher}. Checked {source.checkedOn}.
+            </Text>
+            <Pressable
+              onPress={() => {
+                Linking.openURL(source.url).catch(() => {
+                  // No browser or no connection: the citation above stays readable.
+                });
+              }}
+              hitSlop={6}
+              accessibilityRole="link"
+              accessibilityLabel={`Open source P${index + 1}: ${source.title}`}>
               <Text style={styles.guideSourceLink}>Open original source (needs internet)</Text>
             </Pressable>
           </View>

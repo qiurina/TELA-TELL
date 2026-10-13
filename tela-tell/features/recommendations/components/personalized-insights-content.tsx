@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import type { FC, ReactNode } from 'react';
-import { useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -12,6 +12,8 @@ import {
   type IconProps,
 } from '@/components/ui/lucide-icons';
 import { Calendar } from 'lucide-react-native';
+import { InfoButton } from '@/components/ui/info-button';
+import { InfoSheet } from '@/components/ui/info-sheet';
 import { DRESSING_CONTEXT_ICONS } from '@/features/profile/dressing-context-icons';
 import { AllergyAlertCard } from '@/features/results/components/allergy-alert-card';
 import {
@@ -59,10 +61,23 @@ const STATUS_ICON: Record<DressingContextFitStatus, { icon: FC<IconProps> }> = {
 const WEATHER_TINT = { background: '#DCEFFB', icon: '#0C6E9E' };
 const OCCASION_TINT = { background: '#F3E6FB', icon: '#7A2FB0' };
 
-function SectionBlock({ title, children }: { title: string; children: ReactNode }) {
+function SectionBlock({
+  title,
+  children,
+  onInfoPress,
+}: {
+  title: string;
+  children: ReactNode;
+  onInfoPress?: () => void;
+}) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>{title}</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionLabel}>{title}</Text>
+        {onInfoPress ? (
+          <InfoButton onPress={onInfoPress} accessibilityLabel={`About ${title.toLowerCase()}`} />
+        ) : null}
+      </View>
       {children}
     </View>
   );
@@ -216,6 +231,7 @@ export function PersonalizedInsightsContent({
   dominantFabric,
   detectedCompositions,
 }: PersonalizedInsightsContentProps) {
+  const [fitInfoOpen, setFitInfoOpen] = useState(false);
   const preferences = useSyncExternalStore(
     subscribeUserPreferences,
     getUserPreferencesSnapshot,
@@ -262,7 +278,15 @@ export function PersonalizedInsightsContent({
       ) : null}
 
       {showFit ? (
-        <SectionBlock title="WEATHER & OCCASION">
+        <SectionBlock title="WEATHER & OCCASION" onInfoPress={() => setFitInfoOpen(true)}>
+          {/* Not cited in the app: weather reasons apply general fiber properties, and some occasion
+              reasons are fashion convention (see occasion-weather.ts), so the (i) says what this is. */}
+          <InfoSheet
+            visible={fitInfoOpen}
+            title="About weather & occasion"
+            message="Practical guidance based on general fiber properties, not a test of this garment."
+            onClose={() => setFitInfoOpen(false)}
+          />
           <ContextFitGroups fits={dressingFits} />
         </SectionBlock>
       ) : null}
@@ -276,6 +300,12 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 10,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
   },
   sectionLabel: {
     fontFamily: Fonts.semiBold,
