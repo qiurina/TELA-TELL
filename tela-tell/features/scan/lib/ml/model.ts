@@ -36,20 +36,31 @@ let modelPromise: Promise<TFLiteModel> | null = null;
 async function loadModel(): Promise<TFLiteModel> {
   if (!modelPromise) {
     modelPromise = (async () => {
-      let loadTensorflowModel: (asset: number, delegates: string[]) => Promise<TFLiteModel>;
+      let loadTensorflowModel: (source: { url: string }, delegates: string[]) => Promise<TFLiteModel>;
+      let Asset: { loadAsync(moduleId: number): Promise<{ localUri: string | null }[]> };
       try {
         // Lazy require: keeps jest/web from loading the native module until a scan runs.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         ({ loadTensorflowModel } = require('react-native-fast-tflite'));
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        ({ Asset } = require('expo-asset'));
       } catch {
-        throw new ModelUnavailableError('react-native-fast-tflite is not installed.');
+        throw new ModelUnavailableError('react-native-fast-tflite or expo-asset is not installed.');
       }
 
       try {
+        // In a release APK the bundled model is a raw Android resource, and React Native resolves
+        // it to a bare resource name ("assets_models_fabric_classifier"). fast-tflite's Android
+        // loader only reads URLs (java.net.URL), so passing the asset id worked through Metro's
+        // http:// URL in development but failed in every APK. expo-asset copies the model to a
+        // file:// path first (downloading it from Metro in development), which the loader can read.
         // Metro resolves the bundled .tflite asset id via require; there is no ES import form.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const asset = require('@/assets/models/fabric_classifier.tflite');
-        return await loadTensorflowModel(asset, []);
+        const [asset] = await Asset.loadAsync(require('@/assets/models/fabric_classifier.tflite'));
+        if (!asset?.localUri) {
+          throw new Error('The model file has no local path after loading.');
+        }
+        return await loadTensorflowModel({ url: asset.localUri }, []);
       } catch (error) {
         console.error('[TELA-TELL] loadTensorflowModel failed:', error);
         throw new ModelUnavailableError();

@@ -25,6 +25,12 @@ jest.mock(
 
 jest.mock('@/assets/models/fabric_classifier.tflite', () => 1, { virtual: true });
 
+// expo-asset copies the bundled model to a file:// path; the APK loader can only read URLs.
+let mockLocalUri: string | null = 'file:///data/user/0/com.telatell.app/cache/fabric_classifier.tflite';
+jest.mock('expo-asset', () => ({
+  Asset: { loadAsync: jest.fn(async () => [{ localUri: mockLocalUri }]) },
+}));
+
 describe('classifyFabric', () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -91,3 +97,34 @@ describe('classifyFabric', () => {
     await expect(classifyFabric([])).rejects.toThrow(/No captured images/);
   });
 });
+
+// Fresh copies of the module are needed because the loaded model is cached per module instance.
+/* eslint-disable @typescript-eslint/no-require-imports */
+describe('loading the bundled model', () => {
+  afterEach(() => {
+    mockLocalUri = 'file:///data/user/0/com.telatell.app/cache/fabric_classifier.tflite';
+  });
+
+  it('passes fast-tflite a file:// URL from expo-asset, never the raw asset id', async () => {
+    await jest.isolateModulesAsync(async () => {
+      const { classifyFabric: classify } = require('@/features/scan/lib/ml/model');
+      const tflite = require('react-native-fast-tflite');
+      tflite.loadTensorflowModel.mockClear();
+      await classify(['a.jpg']);
+      expect(tflite.loadTensorflowModel).toHaveBeenCalledWith(
+        { url: 'file:///data/user/0/com.telatell.app/cache/fabric_classifier.tflite' },
+        [],
+      );
+    });
+  });
+
+  it('reports the model as unavailable when expo-asset gives no local path', async () => {
+    mockLocalUri = null;
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    await jest.isolateModulesAsync(async () => {
+      const { classifyFabric: classify, ModelUnavailableError } = require('@/features/scan/lib/ml/model');
+      await expect(classify(['a.jpg'])).rejects.toBeInstanceOf(ModelUnavailableError);
+    });
+  });
+});
+/* eslint-enable @typescript-eslint/no-require-imports */
