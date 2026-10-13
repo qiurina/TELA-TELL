@@ -28,7 +28,6 @@ export function base64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
-/** White balance and CLAHE run at twice the model size and are then area-averaged down (see model-input.ts). */
 export const WORKING_SIZE = IMAGE_SIZE * 2;
 
 export async function imageToInputTensor(uri: string): Promise<Float32Array> {
@@ -49,15 +48,5 @@ export async function imageToInputTensor(uri: string): Promise<Float32Array> {
     throw new Error(`Unexpected working image size ${decoded.width}x${decoded.height}.`);
   }
 
-  // White balance, CLAHE, then the 2:1 area downscale to IMAGE_SIZE, in training order.
-  // Deliberately NOT normalized here. Both ml-training/train.py (MobileNetV2's
-  // preprocess_input, x/127.5 - 1) and train_efficientnet_lite0.py (Rescaling,
-  // (x-127)/128) bake their pixel normalization into the model graph itself, as
-  // the first op on the raw Input layer -- it survives TFLite conversion, so the
-  // exported model already expects raw [0,255] values and normalizes internally.
-  // Normalizing again here would double-apply it and corrupt every prediction.
-  // Feeding raw pixels also keeps this file correct regardless of which of the
-  // three backbones (MobileNetV2 / EfficientNet-Lite0 / MobileNetV3) gets bundled,
-  // since each can bake in its own correct formula without this file changing.
   return preprocessRgbaForModel(decoded.data, decoded.width, decoded.height);
 }

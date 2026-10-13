@@ -1,19 +1,6 @@
 import type { EcoClaim } from '@/data/scans/mock-data';
 import { resolveSources, type Source } from '@/data/fabrics/source-registry';
 
-/**
- * Short background on fast fashion for the About screen, with the claims behind it for a sources
- * sheet. It is general information about clothing, not about a scanned garment, which is why it
- * lives on the About screen and not next to a scan's eco tips. (Secondhand and reuse evidence
- * is in Eco tips, "Why reuse helps"; see `SUSTAINABLE_CHOICES_CLAIMS`.)
- *
- * Rules for editing:
- * - Every sentence in `FAST_FASHION_TEXT` must be backed by a claim below with a source in
- *   `source-registry.ts`, published in the last 10 years.
- * - Do not claim that a fabric or a purchase is eco-friendly, or that any one choice is always
- *   better. The sources support "can", "may" and "usually", with conditions.
- */
-
 export const FAST_FASHION_TITLE = 'Fast fashion';
 
 export const FAST_FASHION_TEXT =
@@ -21,7 +8,6 @@ export const FAST_FASHION_TEXT =
 
 export const FAST_FASHION_BASIS_TITLE = 'About fast fashion';
 
-/** The limits that apply to every point on the sheet. */
 export const FAST_FASHION_KEEP_IN_MIND =
   "These are global estimates, not measurements of your garment, and not specific to the Philippines. How big fast fashion's impact is remains debated. A fabric alone does not make a purchase eco-friendly; how much is bought and how often it is worn also matter.";
 

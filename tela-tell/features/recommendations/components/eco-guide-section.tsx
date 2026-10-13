@@ -22,11 +22,6 @@ import {
   WHY_REUSE_HELPS_TITLE,
 } from '@/data/fabrics/sustainable-choices';
 
-/**
- * Eco tips for one fiber, from the Microplastics & Sustainable Choices Guide: how to reduce
- * shedding, a better-fit alternative and reuse ideas. The fiber's microplastic status is in the
- * Health risk advisory above it; the guide's sources are listed in About.
- */
 export function EcoGuideSection({
   fiber,
   guide,

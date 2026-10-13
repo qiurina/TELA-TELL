@@ -9,7 +9,6 @@ type StatusIconProps = {
   tone: StatusTone;
 };
 
-/** Card icon on a light, tone-tinted rounded square. */
 export function StatusIcon({ icon: Icon, tone }: StatusIconProps) {
   const colors = STATUS_COLORS[tone];
 

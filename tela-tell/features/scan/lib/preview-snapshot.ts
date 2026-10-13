@@ -7,20 +7,10 @@ import { SHARPNESS_ANALYSIS_SIZE, measureRgbaSharpness } from '@/features/scan/l
 
 export type PixelRect = { startX: number; startY: number; endX: number; endY: number };
 
-/** Same JPEG quality the photo crop saves at (SCAN_JPEG_QUALITY in crop-to-guide.ts). */
 const SNAPSHOT_JPEG_QUALITY = 88;
 
-/**
- * Lighting is read as averages over the image (mean brightness, dark and clipped shares, 3x3 block
- * means), so it is measured on a smaller copy than the blur check, which needs fine detail.
- */
 export const LIGHTING_ANALYSIS_SIZE = 240;
 
-/**
- * Maps the guide (view points) onto a snapshot of that view (pixels). A preview snapshot is the
- * view exactly as drawn, so this is a plain scale with no cover offset. Clamped so the native crop
- * cannot throw.
- */
 export function guideToSnapshotRect(view: Size, snapshot: Size, guide: ViewRect): PixelRect {
   const scaleX = snapshot.width / view.width;
   const scaleY = snapshot.height / view.height;
@@ -33,10 +23,6 @@ export function guideToSnapshotRect(view: Size, snapshot: Size, guide: ViewRect)
   return { startX, startY, endX, endY };
 }
 
-/**
- * The pixels of a raw image as tightly packed RGBA, which is what the blur and lighting measures
- * read. Null for any other layout, so the caller can fall back to the file-based check.
- */
 export function rgbaPixels(raw: RawPixelData): Uint8Array | null {
   const expectedBytes = raw.width * raw.height * 4;
   if (raw.pixelFormat !== 'RGBA' || raw.buffer.byteLength !== expectedBytes) {
@@ -51,7 +37,6 @@ function toFileUri(path: string): string {
 
 export type SnapshotShot = { uri: string; width: number; height: number; ms: number };
 
-/** Blur and lighting readings of one shot; null where that shot could not be measured. */
 export type SnapshotMeasurement = {
   sharpness: number | null;
   lighting: LightingReading | null;
@@ -59,20 +44,10 @@ export type SnapshotMeasurement = {
 
 export type SnapshotBurst = {
   shots: SnapshotShot[];
-  /**
-   * One per shot, taken from the snapshot in memory. Null when the pixels came back in a layout the
-   * measures cannot read, in which case the caller measures the saved files instead.
-   */
   measurements: SnapshotMeasurement[] | null;
-  /** Message of the last failed shot, null when every shot succeeded. */
   error: string | null;
 };
 
-/**
- * Reads the blur and lighting measures from a shot's cropped image, at the same sizes the
- * file-based check (checkCapture) uses for blur, and at LIGHTING_ANALYSIS_SIZE for lighting.
- * Returns null if the pixel layout is not RGBA.
- */
 async function measureShot(image: Image): Promise<SnapshotMeasurement | null> {
   const forSharpness = await image.resizeAsync(SHARPNESS_ANALYSIS_SIZE, SHARPNESS_ANALYSIS_SIZE);
   const sharpnessPixels = rgbaPixels(await forSharpness.toRawPixelDataAsync());
@@ -104,22 +79,11 @@ async function measureShot(image: Image): Promise<SnapshotMeasurement | null> {
   return { sharpness, lighting };
 }
 
-/**
- * Takes `count` snapshots of the live preview and saves each one's guide area as a JPEG. The crop
- * is the preview as displayed, so it shows exactly what was inside the guide, in the same
- * orientation. A failed shot is skipped, like a failed photo in the photo burst.
- *
- * All shots are taken first and measured afterwards, so the person holds still only for the
- * snapshots themselves.
- *
- * Android only: VisionCamera's takeSnapshot is not available on iOS.
- */
 export async function captureGuideSnapshots(
   camera: CameraRef,
   view: Size,
   guide: ViewRect,
   count: number,
-  /** Called with the 1-based shot number as each snapshot starts, so the screen can count them. */
   onShot?: (shot: number) => void,
 ): Promise<SnapshotBurst> {
   const shots: SnapshotShot[] = [];

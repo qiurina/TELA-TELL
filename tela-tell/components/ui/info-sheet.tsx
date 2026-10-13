@@ -13,17 +13,13 @@ type InfoSheetProps = {
   visible: boolean;
   title: string;
   onClose: () => void;
-  /** Short labelled blocks ("What it is" / "What it isn't"). */
   sections?: InfoSection[];
-  /** Plain text, for sheets that are not a disclaimer. */
   message?: string;
   icon?: FC<IconProps>;
   tone?: StatusTone;
-  /** Extra content below the text, such as a list of links. */
   children?: ReactNode;
 };
 
-/** Bottom sheet for short explanations: icon + title, labelled lines, one compact button. */
 export function InfoSheet({
   visible,
   title,

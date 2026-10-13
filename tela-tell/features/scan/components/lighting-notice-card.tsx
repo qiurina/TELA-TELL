@@ -6,10 +6,6 @@ import { Fonts } from '@/constants/fonts';
 import { faintCardShadow } from '@/constants/shadows';
 import { LIGHTING_NOTICES, type LightingWarning } from '@/features/scan/lib/ml/lighting';
 
-/**
- * Advisory lighting notices for the photo on the review screen. It never blocks "Analyze Fabric";
- * it renders nothing when there is nothing to say.
- */
 export function LightingNoticeCard({ warnings }: { warnings: LightingWarning[] }) {
   if (warnings.length === 0) {
     return null;

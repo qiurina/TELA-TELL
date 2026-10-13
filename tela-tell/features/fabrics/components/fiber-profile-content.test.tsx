@@ -30,7 +30,6 @@ type TestInstance = {
   findAllByType: (type: unknown) => TestInstance[];
 };
 type TestRenderer = { root: TestInstance; unmount: () => void };
-// jest-expo supplies the matching renderer; keep the same test API as existing component tests.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { act, create } = require('react-test-renderer') as {
   act: (callback: () => void | Promise<void>) => Promise<void>;
@@ -50,8 +49,6 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 0, right: 0 }),
 }));
 
-// The first profile render (Cotton) loads the screen's modules and has exceeded Jest's 5 s default,
-// and then 15 s, in full parallel runs; 30 s keeps this suite from failing on load time alone.
 jest.setTimeout(30000);
 
 let renderer: TestRenderer | undefined;
@@ -63,7 +60,6 @@ function displayedText(): string[] {
 }
 
 function tabs() {
-  // Pressable is memoized; locate its rendered tab props rather than the exported wrapper type.
   return renderer!.root.findAll((item) => item.props.accessibilityRole === 'tab' && typeof item.props.onPress === 'function');
 }
 
@@ -114,7 +110,6 @@ it('switches tabs, keeps evidence out of the screen and leaves operational data 
   await act(async () => { renderer = create(<FiberProfileContent profile={getFiberProfile('Spandex')} />); });
   await selectTab('About');
   expect(displayedText()).toContain(content.about.description.text);
-  // Physical characteristics are no longer shown on the profile.
   for (const property of content.about.properties) {
     expect(displayedText()).not.toContain(property.text);
   }

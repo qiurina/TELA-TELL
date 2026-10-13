@@ -37,7 +37,6 @@ describe('shedding evidence record', () => {
   });
 
   it('puts every figure it shows in the cited sources\' own summaries, with the units those summaries give', () => {
-    // [text the claim must contain, text the cited sources' "says" must also contain]
     const expectations: { source: string; claimHas: string; sourceHas: string }[] = [
       { source: 'de-falco-2019', claimHas: '124 to 308 mg per kg of washed fabric', sourceHas: '124 to 308 mg per kg of washed fabric' },
       { source: 'napper-thompson-2016', claimHas: 'over 700,000 fibers', sourceHas: 'over 700,000 fibers' },
@@ -69,9 +68,7 @@ describe('shedding evidence record', () => {
 
   it('leaves out figures whose unit could not be confirmed from the abstract', () => {
     const text = allText();
-    // De Falco 2019 gives 640,000 to 1,500,000 fibers with no unit.
     expect(text).not.toMatch(/640,000|1,500,000|640 000/);
-    // Carney Almroth 2018 gives counts in a method-specific unit.
     expect(text).not.toMatch(/7360|7,360/);
     expect(text).not.toMatch(/per wash cycle/);
   });
@@ -80,7 +77,6 @@ describe('shedding evidence record', () => {
     const text = allText().toLowerCase();
     expect(text).not.toMatch(/blends (always|usually|generally) /);
     expect(text).not.toMatch(/\bsafe\b|harmless|no risk|health risk|causes? (harm|disease)/);
-    // The blend limit states that studies differ and that this app does not model blends.
     const blends = SHEDDING_BASIS_CLAIMS.find((claim) => claim.aspect === 'Blends');
     expect(blends?.text).toMatch(/differ/);
     expect(blends?.text).toMatch(/does not model blends/);
@@ -103,8 +99,6 @@ describe('shedding evidence record', () => {
 
 describe('shedding sources in the registry', () => {
   it('keeps the sources in their original order after the retired eco-alternative sources were removed', () => {
-    // The 18 sources cited only by the retired eco-alternative cards were removed, so the list
-    // starts at persson-2026 and every later source moved up by the same amount, in order.
     expect(getSourceNumber('persson-2026')).toBe(1);
     expect(getSourceNumber('sandin-peters-2018')).toBe(2);
     expect(getSourceNumber('azevedo-2025-elastane')).toBe(3);
@@ -120,14 +114,10 @@ describe('shedding sources in the registry', () => {
     ['zambrano-2019', 'zambrano-2020', 'fernandes-2024', 'lara-2025', 'cotton-2020', 'gundogdu-2026'].forEach((id, index) => {
       expect(getSourceNumber(id)).toBe(18 + index);
     });
-    // The WHO 2022 report (health risk advisory) was added after them, as reference 24.
     expect(getSourceNumber('who-2022-microplastics')).toBe(24);
-    // DermNet and Reich & Warshaw (sensitivity caveat) were added after it, as 25 and 26.
     expect(getSourceNumber('dermnet-textile-dermatitis')).toBe(25);
     expect(getSourceNumber('reich-warshaw-2010')).toBe(26);
-    // EEA 2022 (health risk advisory, "Where it goes") was added after them, as 27.
     expect(getSourceNumber('eea-2022-textiles')).toBe(27);
-    // BfR 2019 and BfR 2025 (health risk advisory) followed, as 28 and 29.
     expect(getSourceNumber('bfr-2019-microplastics-faq')).toBe(28);
     expect(getSourceNumber('bfr-2025-microplastics')).toBe(29);
     expect(SOURCE_LIST).toHaveLength(29);
@@ -139,7 +129,6 @@ describe('shedding sources in the registry', () => {
       expect(source.url).toMatch(/^https:\/\/doi\.org\/10\./);
       expect(source.says.length).toBeGreaterThan(0);
       expect(source.usedFor).toMatch(/Shedding estimate wording/);
-      // Honest about what was read: abstract only, except the two papers read in full on PubMed Central.
       expect(source.caveats.join(' ')).toMatch(
         ['vassilenko-2021', 'carney-almroth-2018', 'karkkainen-2021', 'de-falco-2019'].includes(id)
           ? /The full text was read on PubMed Central/
@@ -152,7 +141,6 @@ describe('shedding sources in the registry', () => {
     const source = getSource('de-falco-2020')!;
     expect(source.caveats.join(' ')).toMatch(/Only polyester garments/);
     expect(source.caveats.join(' ')).toMatch(/nothing about nylon, acrylic or spandex/);
-    // And no shedding-level claim cites it as a ranking.
     const claim = SHEDDING_BASIS_CLAIMS.find((item) => (item.sourceIds ?? []).includes('de-falco-2020'));
     expect(claim?.kind).toBe('tradeoff');
     expect(claim?.text).toMatch(/Only polyester was compared/);

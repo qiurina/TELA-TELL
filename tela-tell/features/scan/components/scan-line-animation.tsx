@@ -17,7 +17,6 @@ type ScanLineAnimationProps = {
 
 const CYCLE_MS = 1500;
 
-/** Horizontal glowing scan bar that sweeps top → bottom while analyzing. */
 export function ScanLineAnimation({ active }: ScanLineAnimationProps) {
   const progress = useSharedValue(0);
   const [height, setHeight] = useState(0);

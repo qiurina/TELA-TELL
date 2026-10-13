@@ -18,19 +18,11 @@ type HealthAdvisorySectionProps = {
   dominantFabric: string;
   compositions: FabricComposition[];
   isUnsure: boolean;
-  /** The rated shedding level, for the four synthetic fibers; null otherwise. */
   healthRisk: SyntheticHealthRisk | null;
-  /** Opens Eco tips. Omit on Eco tips itself. */
   onReduceShedding?: () => void;
-  /** The sensitivity alert is shown on Scan results only. */
   showSensitivity?: boolean;
 };
 
-/**
- * Scan results' "Health risk advisory": the shedding card for every fiber the app can name (the
- * app's estimated level for synthetics, a fiber status for the rest), and a sensitivity reminder
- * when the scan's predictions include a fiber the person marked. Nothing for an Unsure scan.
- */
 export function HealthAdvisorySection({
   dominantFabric,
   compositions,

@@ -1,7 +1,3 @@
-/**
- * Test-only: exposes a better-sqlite3 database through the subset of the expo-sqlite async API
- * that the app's db/ modules use, so the real SQL can be exercised in Jest. Not imported by app code.
- */
 import type BetterSqlite3 from 'better-sqlite3';
 
 type BindValue = string | number | null;

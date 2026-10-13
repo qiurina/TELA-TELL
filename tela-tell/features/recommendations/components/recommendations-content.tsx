@@ -13,10 +13,6 @@ type RecommendationsContentProps = {
   detectedCompositions?: FabricComposition[];
 };
 
-/**
- * Eco tips for a scan: the rated shedding card for the four synthetics, then the Microplastics & Sustainable Choices Guide for the predicted fiber. Neither
- * is shown for an Unsure scan, which names no reliable fiber.
- */
 export function RecommendationsContent({
   dominantFabric,
   detectedCompositions,

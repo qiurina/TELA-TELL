@@ -37,9 +37,6 @@ const reading = (overrides: Partial<LightingReading> = {}): LightingReading => (
 });
 
 describe('measureRgbaLighting', () => {
-  // Expected values come from the NumPy measure in ml-training/scripts/evaluation/
-  // lighting_calibration.py on the same synthetic images; that is what the thresholds were
-  // studied with, so the two must agree.
   it('matches the NumPy measure used in the study (square image)', () => {
     const rgba = makeRgba(96, 96, (x, y) => [(x * 7 + y * 13) % 256, ((x * 3) ^ (y * 5)) % 256, (x * y) % 256]);
     const result = measureRgbaLighting(rgba, 96, 96);
@@ -136,7 +133,6 @@ describe('assessLighting', () => {
   });
 
   it('judges a burst by the average of its measured photos and ignores unmeasured ones', () => {
-    // Average brightness 40 (not below 30), even though one photo alone is darker.
     expect(assessLighting([reading({ meanLuma: 20 }), reading({ meanLuma: 60 })]).warnings).toEqual([]);
     expect(assessLighting([reading({ meanLuma: 20 }), null, reading({ meanLuma: 30 })]).warnings).toEqual([
       'very_dark',

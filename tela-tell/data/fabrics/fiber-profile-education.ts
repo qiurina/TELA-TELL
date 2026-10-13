@@ -1,14 +1,12 @@
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
 import type { FiberProfileSourceId } from '@/data/fabrics/fiber-profile-sources';
 
-/** Educational copy only. Never substitute these passages for operational FiberProfile fields. */
 export type ProfileStatement = {
   text: string;
   verification: {
     status: 'supported' | 'qualified' | 'observation' | 'guidance';
     scope: 'fiber' | 'fabric' | 'material' | 'identification' | 'finished-product';
     sourceIds: FiberProfileSourceId[];
-    /** Explains qualifications and distinguishes descriptive clues from validated tests. */
     note?: string;
   };
 };

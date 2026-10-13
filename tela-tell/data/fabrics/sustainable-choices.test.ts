@@ -35,7 +35,6 @@ describe('Why reuse helps (Eco tips, replaces the retired sustainability score)'
     const text = claims.map((claim) => claim.text).join(' ');
     expect(text).toMatch(/one foundation.s estimate/);
     expect(text).toMatch(/emissions from making clothes/);
-    // The source's 44% figure is kept in the registry, not shown, so the sheet does not alarm.
     expect(`${text} ${SUSTAINABLE_CHOICES_KEEP_IN_MIND}`).not.toMatch(/\d+\s*%/);
   });
 });

@@ -15,10 +15,6 @@ const ROW_ICON: Record<WhyItMattersLine['key'], FC<IconProps>> = {
   limit: Info,
 };
 
-/**
- * The health link under a synthetic fiber's shedding estimate (BfR, EEA, WHO), shown on Eco tips,
- * open by default there because Eco tips is the detail page.
- */
 export function WhyItMatters({ fiber, defaultOpen = false }: { fiber: string; defaultOpen?: boolean }) {
   return (
     <View style={styles.block}>

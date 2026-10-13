@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { NotFoundFallback } from '@/components/ui/not-found-fallback';
 
-
 import { showAlert } from '@/components/ui/alert-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CompositionCard } from '@/features/results/components/composition-card';
@@ -37,8 +36,6 @@ export default function ResultsScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isActionBusy, setIsActionBusy] = useState(false);
   const { scanId: resolvedScanId, result, isLoading, reload } = useScanResult(scanId);
-  // Always this scan's own saved photo. (A module-level "last capture" used to take priority here,
-  // which showed the most recent scan's photo on every older scan opened afterwards.)
   const capturedPhotoUri = result?.imageUri ?? null;
 
   useFocusEffect(
@@ -154,9 +151,6 @@ export default function ResultsScreen() {
     });
   };
 
-  // An unsure scan names no fiber, so nothing derived from "the" fiber (reference photo, synthetic
-  // badge, shedding estimate, fiber details, sustainable-choices card) is shown for it, and neither
-  // is the stated-label comparison, which has no reliable fiber to compare against.
   const reliability = assessScanReliability(result.compositions);
   const isUnsure = !reliability.reliable;
   const topFiber = isUnsure ? null : resolveFabricAlias(result.dominantFabric);
@@ -169,8 +163,6 @@ export default function ResultsScreen() {
     ? null
     : getSyntheticHealthRisk(result.dominantFabric, result.compositions ?? []);
 
-  // Names the fiber and only ever says what the model predicted; null (no badge) for an Unsure
-  // scan or when no synthetic prediction has a clear share.
   const fiberBadge = getFiberBadge(result.dominantFabric, result.compositions, isUnsure);
 
   const headline = isUnsure

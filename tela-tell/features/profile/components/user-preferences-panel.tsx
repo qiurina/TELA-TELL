@@ -154,7 +154,6 @@ type UserPreferencesPanelProps = {
   disabled?: boolean;
   embedded?: boolean;
   onChange?: () => void;
-  /** Which preference groups to render. Defaults to full panel (modal). */
   scope?:
     | 'full'
     | 'personalization'
@@ -162,7 +161,6 @@ type UserPreferencesPanelProps = {
     | 'preferred'
     | 'weather'
     | 'occasion';
-  /** Hide the "changes saved automatically" hint (e.g. when a modal shows its own footer). */
   hideAutoSaveHint?: boolean;
 };
 
@@ -192,7 +190,6 @@ export function UserPreferencesPanel({
   const [pendingMove, setPendingMove] = useState<PendingFabricMove | null>(null);
   const hasEditedRef = useRef(false);
 
-  // Load from SQLite once when opening this screen — never overwrite after the user edits.
   useEffect(() => {
     let active = true;
     hasEditedRef.current = false;

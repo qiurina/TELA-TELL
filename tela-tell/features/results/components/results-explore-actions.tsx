@@ -42,10 +42,6 @@ type ResultsExploreActionsProps = {
   onEcoTips: () => void;
   onPersonalizedInsights: () => void;
   onScanAgain: () => void;
-  /**
-   * False for an "Unsure" scan: Profile, Eco tips and Insights all describe one named fiber, so
-   * they are withheld rather than presented for a fiber the scan could not identify.
-   */
   showFiberDetails?: boolean;
 };
 

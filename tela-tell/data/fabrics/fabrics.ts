@@ -1,18 +1,4 @@
-/**
- * Twelve supported fiber / material types.
- *
- * The Synthetic/Semi-synthetic split follows ISO 2076 ("Textiles — Man-made fibres —
- * Generic names"), the international standard defining man-made fibre categories and
- * distinguishing them from naturally-occurring fibrous materials — the same standard
- * that underlies the FTC's Textile Fiber Products Identification Act categories already
- * cited in scan-confidence.ts. Rayon (regenerated cellulose) is "Semi-synthetic" because
- * ISO 2076 classifies regenerated/man-made cellulosic fibres distinctly from fully
- * synthetic (petroleum-polymer) ones like polyester or nylon. Abaca's "Philippine native"
- * categorization reflects its status as an indigenous Philippine plant fiber (Musa
- * textilis), documented by PhilFIDA (see fiber-profiles.ts's Abaca entry for the full
- * citation).
- */
-
+// Synthetic vs semi-synthetic follows ISO 2076.
 export type FabricCategory =
   | 'Natural'
   | 'Synthetic'
@@ -58,14 +44,12 @@ export const SUPPORTED_FABRICS = [
 
 export type SupportedFabric = (typeof SUPPORTED_FABRICS)[number];
 
-/** Model / label aliases mapped to canonical app fiber names. */
 export const FABRIC_ALIASES: Record<string, SupportedFabric> = {
   spandex: 'Spandex',
   elastane: 'Spandex',
   lycra: 'Spandex',
   suede: 'Suede',
   leather: 'Leather',
-  // Names that appear on care tags for fibers the model knows under another name.
   viscose: 'Rayon',
   lyocell: 'Rayon',
   tencel: 'Rayon',
@@ -75,10 +59,6 @@ export const FABRIC_ALIASES: Record<string, SupportedFabric> = {
   abaka: 'Abaca',
 };
 
-/**
- * Fibers that show up on tags but that the model cannot recognize. A label naming only these
- * cannot be checked, and must not be reported as "matching" the scan.
- */
 const UNSUPPORTED_FIBER_TERMS = [
   'cashmere',
   'mohair',
@@ -96,7 +76,6 @@ const UNSUPPORTED_FIBER_TERMS = [
   'microfibre',
 ] as const;
 
-/** "Faux leather", "PU leather", "pleather" ... are plastic, not the animal-hide fibers. */
 const IMITATION_LEATHER_PATTERN =
   /\b(?:faux|synthetic|vegan|artificial|pu|pvc)\s+(?:leather|suede)\b|\bleatherette\b|\bpleather\b/g;
 
@@ -105,7 +84,6 @@ function stripImitationLeather(normalized: string): { text: string; imitations: 
   return { text: normalized.replace(IMITATION_LEATHER_PATTERN, ' '), imitations };
 }
 
-/** Fiber names in a label that TELA-TELL cannot check (see UNSUPPORTED_FIBER_TERMS). */
 export function findUnsupportedFibers(text: string): string[] {
   const { text: withoutImitations, imitations } = stripImitationLeather(text.trim().toLowerCase());
   const found = [...new Set(imitations)];
@@ -132,7 +110,6 @@ export function resolveFabricAlias(text: string): SupportedFabric | null {
   return all[0] ?? null;
 }
 
-/** Every supported fiber named in a seller tag or scan string (order preserved). */
 export function resolveAllFabricAliases(text: string): SupportedFabric[] {
   const normalized = stripImitationLeather(text.trim().toLowerCase()).text.trim();
   if (!normalized) {
@@ -143,7 +120,6 @@ export function resolveAllFabricAliases(text: string): SupportedFabric[] {
 
   for (const fabric of SUPPORTED_FABRICS) {
     const needle = fabric.toLowerCase();
-    // Word-ish match so "cotton" does not need to be alone, but avoid tiny false hits.
     if (normalized.includes(needle) && !found.includes(fabric)) {
       found.push(fabric);
     }

@@ -279,8 +279,6 @@ export function PersonalizedInsightsContent({
 
       {showFit ? (
         <SectionBlock title="WEATHER & OCCASION" onInfoPress={() => setFitInfoOpen(true)}>
-          {/* Not cited in the app: weather reasons apply general fiber properties, and some occasion
-              reasons are fashion convention (see occasion-weather.ts), so the (i) says what this is. */}
           <InfoSheet
             visible={fitInfoOpen}
             title="About weather & occasion"

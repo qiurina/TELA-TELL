@@ -30,7 +30,6 @@ describe('shedding information for all 12 classified fibers', () => {
     for (const fabric of ['Cotton', 'Wool', 'Silk', 'Linen', 'Rayon', 'Leather', 'Suede', 'Abaca'] as const) {
       expect(info(fabric).value).toBe('Not rated');
     }
-    // Same levels as the rating logic used for the scan card.
     for (const fabric of ['Polyester', 'Acrylic', 'Nylon', 'Spandex'] as const) {
       expect(info(fabric).value).toBe(getFiberHealthRiskLabel(fabric));
       expect(getFiberHealthRiskLevel(fabric)).toBe(info(fabric).value.toLowerCase());
@@ -81,12 +80,9 @@ describe('what each fiber says matches what was tested', () => {
   it('cotton and wool shed fibers too, and the fibers are not called microplastics', () => {
     const cotton = info('Cotton').text;
     expect(cotton).toMatch(/^Cotton fibers are cellulose-based, not plastic\./);
-    // The comparison with polyester is limited to the fabrics and conditions tested, and is not a ranking.
     expect(cotton).toMatch(/in some of the fabrics and conditions tested, as much or more by weight than polyester\. That is not a ranking/);
     expect(cotton).not.toMatch(/in several tests|than all|always|generally/);
-    // Fiber weight is not plastic pollution or environmental impact.
     expect(cotton).toMatch(/fiber weight alone does not show plastic pollution or environmental impact/);
-    // A garment can contain blends, coatings or finishes, so released fibers are not necessarily cotton.
     expect(cotton).toMatch(/blends, coatings or finishes, so not every fiber it releases is necessarily cotton/);
     const wool = info('Wool').text;
     expect(wool).toMatch(/^Wool is a natural protein fiber, not plastic, and it can shed fibers\./);
@@ -107,7 +103,6 @@ describe('what each fiber says matches what was tested', () => {
     const text = info('Rayon').text;
     expect(text).toMatch(/cellulose-based fiber made from plant material and chemically processed/);
     expect(text).toMatch(/In accelerated lab washing of knitted fabrics, rayon and cotton released more fiber by weight than polyester/);
-    // The biodegradation figures are tied to the lab tests, and the authors' caution is kept.
     expect(text).toMatch(/In lab biodegradation tests, rayon and cotton yarns broke down by about 50% in seawater and over 70% in lake water and sludge while polyester did not appreciably degrade/);
     expect(text).toMatch(/shows potential under the tested conditions, not what happens in every environment/);
     expect(text).toMatch(/which is not a ranking and does not show plastic pollution/);
@@ -125,7 +120,6 @@ describe('what each fiber says matches what was tested', () => {
     for (const fabric of ['Leather', 'Suede'] as const) {
       expect(info(fabric).text).toMatch(/We did not find evidence on fibers or microplastics released by real \w+ in our current references/);
       expect(info(fabric).text).toMatch(/Some imitation \w+ contain synthetic polymers, and the app cannot confirm whether a scanned material is genuine or imitation/);
-      // Not all imitations are called plastic.
       expect(info(fabric).text).not.toMatch(/Imitation .* is plastic|all imitation|imitation (leather|suede) is plastic/i);
       expect(info(fabric).sourceIds).toEqual([]);
     }

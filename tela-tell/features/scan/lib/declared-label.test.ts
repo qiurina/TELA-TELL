@@ -31,7 +31,6 @@ describe('evaluateDeclaredLabel', () => {
   });
 
   it('does not call a faint hit a clean match, and does not raise a false alarm either', () => {
-    // Polyester is in the top 3 but at 5%: seen, but not confirmed.
     const result = evaluateDeclaredLabel('Cotton', '95% Cotton 5% Polyester', cottonScan);
     expect(result.status).toBe('weak');
     expect(result.weak).toEqual([{ fabric: 'Polyester', percentage: 5 }]);
@@ -85,7 +84,6 @@ describe('evaluateDeclaredLabel', () => {
       expect(result.missing).toEqual(['Silk']);
       expect(result.title).not.toMatch(/mislabel/i);
       expect(result.message).toMatch(/care tag/i);
-      // Same label, clear scan: still a real mismatch.
       expect(evaluateDeclaredLabel('Cotton', '100% Silk', cottonScan).status).toBe('mismatch');
     });
 
@@ -94,7 +92,6 @@ describe('evaluateDeclaredLabel', () => {
       expect(result.status).toBe('unsure');
       expect(result.missing).toEqual([]);
       expect(result.message).toMatch(/either way/);
-      // The same label on a clear scan is still a clean match.
       expect(evaluateDeclaredLabel('Cotton', '100% Cotton', cottonScan).status).toBe('match');
     });
 

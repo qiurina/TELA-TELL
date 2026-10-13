@@ -16,11 +16,6 @@ function startOfWeek(date: Date) {
   return addDays(startOfDay(date), -mondayBased);
 }
 
-/**
- * Converts a History date filter into a half-open [from, to) range of ISO timestamps (local day
- * boundaries) that can be compared against tblScan.createdAt in SQL. Returns null when the
- * filter doesn't restrict by date.
- */
 export function getScanDateRange(
   filter: ScanDateFilter,
   customDate: Date | null,

@@ -1,9 +1,4 @@
-/**
- * Gray World white balance — direct port of ml-training/common/opencv_preprocess.py's
- * white_balance_gray_world(), so on-device inference sees the same color-corrected
- * input the model was trained on. Scales each channel so its mean matches the
- * overall gray mean, correcting lighting color casts.
- */
+// Port of white_balance_gray_world() in opencv_preprocess.py.
 export function applyGrayWorldWhiteBalance(rgba: Uint8Array, width: number, height: number): void {
   const numPixels = width * height;
   let sumR = 0;
@@ -25,8 +20,6 @@ export function applyGrayWorldWhiteBalance(rgba: Uint8Array, width: number, heig
   const scaleG = meanG > 0 ? grayMean / meanG : 1;
   const scaleB = meanB > 0 ? grayMean / meanB : 1;
 
-  // Each channel has only 256 possible values, so the corrected value of each is worked out once
-  // (the same multiplication and truncation as per pixel) and then looked up for every pixel.
   const lutR = channelLut(scaleR);
   const lutG = channelLut(scaleG);
   const lutB = channelLut(scaleB);
@@ -45,7 +38,6 @@ function channelLut(scale: number): Uint8Array {
   return lut;
 }
 
-/** Matches numpy's np.clip(...).astype(uint8), which truncates rather than rounds. */
 function clampTrunc(value: number): number {
   if (value <= 0) return 0;
   if (value >= 255) return 255;

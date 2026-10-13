@@ -25,7 +25,6 @@ export type FabricBarStyle = {
   gradient: readonly string[];
 };
 
-/** Per-fabric bar gradients — one entry per supported study fiber */
 export const FabricBarStyles: Record<string, FabricBarStyle> = {
   Cotton: { gradient: ['#FF6B9D', '#FF8F6B', '#FFB347'], track: '#FCE8F0' },
   Wool: { gradient: ['#FB7185', '#F472B6', '#A78BFA'], track: '#FCE8F0' },

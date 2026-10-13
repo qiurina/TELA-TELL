@@ -16,7 +16,6 @@ type AlertState = {
 
 let setAlertState: ((state: AlertState) => void) | null = null;
 
-/** Drop-in replacement for `Alert.alert(title, message)` that renders our centered dialog instead of the OS alert. */
 export function showAlert(title: string, message?: string, variant: AlertVariant = 'error') {
   setAlertState?.({ title, message, variant });
 }

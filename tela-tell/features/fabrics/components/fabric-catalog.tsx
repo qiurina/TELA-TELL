@@ -148,8 +148,6 @@ function FabricCard({ fabric }: { fabric: SupportedFabric }) {
   const category = FABRIC_REGISTRY.find((item) => item.name === fabric)?.category;
   const categoryStyle = category ? FABRIC_CATEGORY_COLORS[category] : null;
   const riskLevel = getFiberHealthRiskLevel(fabric);
-  // High / Moderate are the app's estimates for the four synthetic fibers (see the (i) below the
-  // filters); "Not synthetic" is a fiber group, not an estimate.
   const riskLabel = riskLevel === 'low' ? getFiberHealthRiskLabel(fabric) : `Est. ${getFiberHealthRiskLabel(fabric)}`;
   const riskStyle = RISK_CHIP_COLORS[riskLevel];
 

@@ -2,26 +2,11 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { isActiveScanImage } from '@/features/scan/lib/scan-image-storage';
 
-/**
- * How much space scan photos take, and clean-up of leftover temporary files.
- *
- * Only scan photos are counted: they are the part that grows with every scan. The scan database is
- * small, and the app itself is shown in the phone's own storage settings.
- */
-
 const SCAN_IMAGE_DIR = FileSystem.documentDirectory ? `${FileSystem.documentDirectory}scan-images/` : null;
 
-/**
- * Cache folders the photo picker, image manipulator, camera and document picker write into, plus
- * the backup files Export writes (they embed every photo, so they can be large). Android's native
- * camera and snapshot libraries also write JPEGs directly into the cache root.
- */
 const TEMP_CACHE_FOLDERS = ['ImagePicker', 'ImageManipulator', 'Camera', 'DocumentPicker'] as const;
 const ROOT_TEMP_FILE_PATTERN = /^(?:tela-tell-export-\d+\.json|(?:nitro_image_|VisionCamera_)\d+\.jpg)$/;
 
-/**
- * Recent files are left alone. Active scan photos are also protected regardless of their age.
- */
 export const TEMP_FILE_MIN_AGE_MS = 60 * 60 * 1000;
 
 export type ScanPhotoStorage = { bytes: number; photos: number };
@@ -46,7 +31,6 @@ async function listFiles(dir: string): Promise<FileEntry[]> {
   return entries;
 }
 
-/** Size of the saved scan photos, or null where there is no file system (web). */
 export async function getScanPhotoStorage(): Promise<ScanPhotoStorage | null> {
   if (!SCAN_IMAGE_DIR) {
     return null;
@@ -58,7 +42,6 @@ export async function getScanPhotoStorage(): Promise<ScanPhotoStorage | null> {
   };
 }
 
-/** Total size of the given files; missing files count as 0. */
 export async function getFilesSize(uris: string[]): Promise<number> {
   let total = 0;
   for (const uri of new Set(uris)) {
@@ -70,11 +53,6 @@ export async function getFilesSize(uris: string[]): Promise<number> {
   return total;
 }
 
-/**
- * Deletes temporary files older than TEMP_FILE_MIN_AGE_MS and returns the bytes freed. Never
- * touches the scan-images folder or the database. Callers pass saved photo paths to protect
- * scans from older versions that kept their photos in the cache.
- */
 export async function clearTemporaryFiles(now = Date.now(), savedPhotoUris: readonly string[] = []): Promise<number> {
   const cache = FileSystem.cacheDirectory;
   if (!cache) {
@@ -106,7 +84,6 @@ export async function clearTemporaryFiles(now = Date.now(), savedPhotoUris: read
     if (savedPhotos.has(file.uri) || isActiveScanImage(file.uri) || !Number.isFinite(file.modifiedMs) || file.modifiedMs <= 0 ||
         now - file.modifiedMs < TEMP_FILE_MIN_AGE_MS) continue;
     try {
-      // The file may have been replaced or become active while the cache was being listed.
       const info = await FileSystem.getInfoAsync(file.uri);
       if (!info.exists || info.isDirectory || isActiveScanImage(file.uri)) continue;
       const modifiedMs = (info.modificationTime ?? 0) * 1000;
@@ -121,7 +98,6 @@ export async function clearTemporaryFiles(now = Date.now(), savedPhotoUris: read
   return freed;
 }
 
-/** "0 KB", "820 KB", "13.6 MB", "1.2 GB". */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) {
     return `${Math.round(bytes / 1024)} KB`;

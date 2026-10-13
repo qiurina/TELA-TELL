@@ -1,10 +1,6 @@
 import { labToRgb8u, rgbToLab8u } from '@/features/scan/lib/ml/color/color-space';
 import { downscaleRgbaByTwo } from '@/features/scan/lib/ml/color/resample';
 
-// FROZEN COPY of the colour preprocessing as it was before the speed-up (white-balance.ts and
-// clahe.ts at commit ebf1220), used only by tests to prove the faster code gives byte-for-byte the
-// same model input. Never import this from app code, and never "fix" it: it is the yardstick.
-
 const HIST_BINS = 256;
 
 function clampTrunc(value: number): number {
@@ -137,7 +133,6 @@ export function referenceClaheLuminance(rgba: Uint8Array, width: number, height:
   }
 }
 
-/** preprocessRgbaForModel as it was: white balance, CLAHE, 2:1 downscale, pack to RGB floats. */
 export function referencePreprocess(rgba: Uint8Array, width: number, height: number): Float32Array {
   referenceWhiteBalance(rgba, width, height);
   referenceClaheLuminance(rgba, width, height);

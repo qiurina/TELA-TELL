@@ -10,13 +10,6 @@ import { preprocessRgbaForModel } from '@/features/scan/lib/ml/model-input';
 
 import fixture from '../preprocess-parity.fixture.json';
 
-/**
- * The speed-up of white balance and CLAHE must not change a single value the model receives. These
- * compare the current code with a frozen copy of the code before the speed-up (color-reference.ts)
- * and require exact equality, unlike the training-parity test, which allows small differences.
- */
-
-/** Deterministic pseudo-random bytes (mulberry32), so a failure can be reproduced. */
 function randomBytes(seed: number, length: number): Uint8Array {
   let state = seed >>> 0;
   const out = new Uint8Array(length);
@@ -63,7 +56,6 @@ function fromFixture(base64: string): Uint8Array {
   return out;
 }
 
-/** Index of the first difference, or -1 when the two are identical. */
 function firstDifference(a: ArrayLike<number>, b: ArrayLike<number>): number {
   if (a.length !== b.length) return 0;
   for (let i = 0; i < a.length; i++) {
@@ -113,7 +105,6 @@ describe('white balance + CLAHE speed-up gives identical model input', () => {
   }
 
   it('stays identical when photos are processed one after another, as in a burst', () => {
-    // Same images again, in a different order, to catch any state carried between calls.
     for (const testCase of [...syntheticCases].reverse().concat(fixtureCases)) {
       const expected = referencePreprocess(testCase.image(), testCase.width, testCase.height);
       const actual = preprocessRgbaForModel(testCase.image(), testCase.width, testCase.height);

@@ -3,27 +3,7 @@ import { resolveAllFabricAliases, resolveFabricAlias, type SupportedFabric } fro
 import { getSignificantFibers, TRACE_DETECTION_MIN_PERCENT } from '@/data/scans/scan-confidence';
 import type { FabricComposition } from '@/data/scans/mock-data';
 
-/**
- * General basis: DermNet NZ ("Textile contact dermatitis") and Reich & Warshaw (2010,
- * Dermatitis) — the same research cited in comfort-profile.ts — found that most real
- * textile allergic reactions trace to dyes and finishing chemicals, not the base fiber;
- * a true allergy to an untreated fiber itself is rare. That supports the general
- * "natural, undyed-leaning fibers tend to be lower-risk" direction used below, but NOT
- * a claim that any specific fiber is "hypoallergenic" — a scan can't see dyes/finishes,
- * so no such guarantee is made anywhere in this file.
- *
- * The SPECIFIC swap-this-for-that recommendations (which named alternative to suggest
- * per fiber) are hand-authored practical guidance, not independently verified against
- * that research — same category as eco-alternatives.ts's suggestions. The Tencel/lyocell
- * "moisture-wicking comfort" note is a manufacturer-style description, not verified here.
- */
-
-/**
- * Shown under every sensitivity reminder. Allergic reactions to clothing are most often caused by
- * formaldehyde finishing resins and dyes, rarely by the fibers themselves (DermNet, reference 25;
- * Reich & Warshaw 2010, reference 26), which a photo cannot detect. The suggested alternatives are
- * practical ideas, not verified for any one person.
- */
+// Basis: DermNet [25], Reich & Warshaw 2010 [26].
 export const SENSITIVITY_CAVEAT =
   'A photo cannot confirm fiber content or detect dyes and finishes, which commonly cause clothing-related allergic reactions. Check the label; suggested alternatives are not guaranteed suitable for you.';
 
@@ -34,10 +14,6 @@ function listNames(names: string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-/**
- * The reminder text. It names the matching predictions only; prediction percentages are the
- * model's confidence, not fiber content, so no percentage is shown.
- */
 export function buildSensitivityMessage(matches: SupportedFabric[], topFiber: SupportedFabric | null): string {
   const others = matches.filter((fiber) => fiber !== topFiber);
   const plural = others.length > 1;
@@ -148,8 +124,6 @@ function resolveScanFibers(
   dominantFabric: string,
   compositions: FabricComposition[],
 ): { fabric: SupportedFabric; percentage?: number }[] {
-  // A user's declared allergen shouldn't be hidden by a blend-display cutoff — use the noise
-  // floor so a real trace detection still surfaces a conflict.
   const significant = getSignificantFibers(compositions, TRACE_DETECTION_MIN_PERCENT);
   const resolved: { fabric: SupportedFabric; percentage?: number }[] = [];
 

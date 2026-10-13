@@ -1,9 +1,5 @@
 /**
  * @jest-environment node
- *
- * Runs the real paginated scan queries (db/scans.ts) against an in-memory SQLite database built
- * from the app's real schema, so LIMIT/OFFSET, search, date-range, favorites, trash and the
- * header stats are exercised as actual SQL.
  */
 import BetterSqlite3 from 'better-sqlite3';
 
@@ -95,7 +91,6 @@ function insertScan(scan: SeedScan) {
 
 const idOf = (index: number) => `scan_${String(index).padStart(2, '0')}`;
 
-/** 25 active scans, scan_00 (oldest) .. scan_24 (newest). Odd ones are a Polyester/Spandex blend. */
 function seedTwentyFiveScans() {
   for (let i = 0; i < 25; i += 1) {
     const isBlend = i % 2 === 1;
@@ -240,7 +235,6 @@ describe('getScansPage search and date range', () => {
       search: 'spandex',
       dateRange: { from: minutesAfterBase(0), to: minutesAfterBase(10) },
     });
-    // Odd scans 1,3,5,7,9 fall in range -> 5 results on a single page.
     expect(result.total).toBe(5);
     expect(result.page).toBe(1);
     expect(result.totalPages).toBe(1);
@@ -296,8 +290,6 @@ describe('favorites, trash and stats', () => {
   });
 
   it('counts total and mislabeled scans, ignoring deleted ones, and no longer counts "sustainable" ones', async () => {
-    // Rows seeded with old stored ratings stand in for scans saved before the score was retired.
-    // Cotton 100% stated as Silk is a mismatch.
     insertScan({ id: 'a', createdAt: minutesAfterBase(0), rating: 'green' });
     insertScan({ id: 'b', createdAt: minutesAfterBase(1), rating: 'yellow', sellerLabel: '100% Silk', mislabelDetected: true });
     insertScan({ id: 'c', createdAt: minutesAfterBase(2), rating: 'red', sellerLabel: '100% Silk', mislabelDetected: true });
@@ -314,18 +306,14 @@ describe('favorites, trash and stats', () => {
   });
 
   it('counts label flags the way the History cards show them, not from the flag stored at save time', async () => {
-    // Stored as flagged under older rules, but the label matches the scan today: no flag on the card.
     insertScan({ id: 'stale-flag-1', createdAt: minutesAfterBase(0), sellerLabel: '100% Cotton', mislabelDetected: true });
     insertScan({ id: 'stale-flag-2', createdAt: minutesAfterBase(1), sellerLabel: 'Cotton', mislabelDetected: true });
-    // Stored as not flagged, but the label does not match the scan: the card flags it.
     insertScan({ id: 'missed-flag', createdAt: minutesAfterBase(2), sellerLabel: '100% Silk', mislabelDetected: false });
-    // No readable scores to re-check against: the card falls back to the stored flag, and so does the count.
     insertScan({ id: 'no-scores', createdAt: minutesAfterBase(3), resultJson: null, mislabelDetected: true });
 
     const { items } = await getScansPage({ page: 1 });
     const flaggedOnCards = items.filter((item) => item.mislabeling).map((item) => item.id).sort();
     expect(flaggedOnCards).toEqual(['missed-flag', 'no-scores']);
-    // The stored flags alone would give 3.
     expect(await getScanStats()).toMatchObject({ total: 4, mislabeled: 2 });
   });
 
@@ -543,7 +531,6 @@ describe('unsure scans and capture details', () => {
       .get('from-old-backup') as { rating: string; resultJson: string };
     expect(row.rating).toBe(LEGACY_SUSTAINABILITY_PLACEHOLDER.rating);
     expect(row.resultJson).not.toMatch(/sustainability|Higher score/);
-    // The rest of the old scan is restored as it was.
     const restored = await getScanById('from-old-backup');
     expect(restored?.dominantFabric).toBe('Cotton');
     expect(restored?.capture).toEqual(CAPTURE);
@@ -607,7 +594,6 @@ describe('unsure scans and capture details', () => {
       812.4,
       null,
     ]);
-    // The text a person shares from Export My Data carries them too.
     expect(JSON.parse(JSON.stringify(exported[0].scan)).capture.sharpnessPerPhoto).toEqual([95.3, 812.4, null]);
   });
 
@@ -643,9 +629,7 @@ describe('unsure scans and capture details', () => {
 
   it('shows how each scan was captured in the History summary, and null for older scans', async () => {
     await saveScan(buildResult('new-scan', SURE_COMPOSITIONS));
-    // An older scan: its saved JSON has no capture details at all.
     insertScan({ id: 'older-scan', fabric: 'Cotton', compositions: SURE_COMPOSITIONS, createdAt: minutesAfterBase(1) });
-    // A damaged value is not mistaken for a capture type, even one every object inherits.
     insertScan({
       id: 'odd-scan',
       createdAt: minutesAfterBase(2),
@@ -658,7 +642,7 @@ describe('unsure scans and capture details', () => {
     expect(items.find((item) => item.id === 'odd-scan')?.captureType).toBeNull();
   });
 
-  describe('tester fields (Research mode)', () => {
+  describe('tester fields', () => {
     it('saves the notes with the scan and reads them back from the database', async () => {
       await saveScan(buildResult('tester-1', SURE_COMPOSITIONS));
 
@@ -739,7 +723,6 @@ describe('unsure scans and capture details', () => {
     await saveScan(buildResult('unsure-label', UNSURE_COMPOSITIONS));
     await saveScan(buildResult('sure-label', SURE_COMPOSITIONS));
 
-    // Silk is not among either scan's top 3, so a clear scan calls this a mismatch.
     await updateScanSellerLabel('unsure-label', '100% Silk');
     await updateScanSellerLabel('sure-label', '100% Silk');
 

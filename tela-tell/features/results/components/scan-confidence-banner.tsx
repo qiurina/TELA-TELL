@@ -15,9 +15,7 @@ import { faintCardShadow } from '@/constants/shadows';
 type ScanConfidenceBannerProps = {
   confidence: number;
   dominantFabric: string;
-  /** dominant fabric is shown on the photo preview, banner shows notes only. */
   compact?: boolean;
-  /** When the scan was judged unreliable, the banner explains "Unsure" instead. */
   reliability?: ScanReliability;
 };
 

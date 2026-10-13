@@ -53,7 +53,6 @@ describe('Microplastics & Sustainable Choices Guide data', () => {
       'Heavily fraying? Prefer textile take-back over making it a cleaning rag',
     ]);
     expect(polyester.filter((step) => /filter/i.test(step))).toHaveLength(1);
-    // Natural fibers get the filter and air-dry steps but never the synthetic take-back step.
     const cotton = getReduceSteps(ECO_GUIDE.Cotton, false);
     expect(cotton.some((step) => /filter/.test(step))).toBe(true);
     expect(cotton.some((step) => /take-back/.test(step))).toBe(false);

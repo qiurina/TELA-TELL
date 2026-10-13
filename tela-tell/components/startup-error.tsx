@@ -7,7 +7,6 @@ type StartupErrorProps = {
   onRetry: () => void;
 };
 
-/** System typography works here even if the bundled fonts could not load. */
 export function StartupError({ retrying, onRetry }: StartupErrorProps) {
   const insets = useSafeAreaInsets();
   return (

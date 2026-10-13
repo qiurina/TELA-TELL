@@ -29,7 +29,6 @@ export class ExportUnavailableError extends Error {
   }
 }
 
-/** The scans, favorites and preferences for the export, plus where each scan's photo is stored. */
 export async function buildExportPayload(): Promise<{
   body: ExportBody;
   photoPaths: Record<string, string>;
@@ -55,7 +54,6 @@ export async function buildExportPayload(): Promise<{
   };
 }
 
-/** A scan's saved photo as base64, or null if the file is gone (Android may clear caches). */
 async function readPhotoBase64(path: string): Promise<string | null> {
   try {
     const file = new File(path);
@@ -65,11 +63,6 @@ async function readPhotoBase64(path: string): Promise<string | null> {
   }
 }
 
-/**
- * Writes the export, including each scan's saved photo, and opens the share sheet. The file is
- * written piece by piece so photos are read one at a time; it is larger than a data-only export
- * (roughly the combined size of the photos, plus a third for base64).
- */
 export async function exportUserData(): Promise<void> {
   const isAvailable = await Sharing.isAvailableAsync();
   if (!isAvailable) {
@@ -98,11 +91,6 @@ export async function exportUserData(): Promise<void> {
   });
 }
 
-/**
- * Opens the document picker for any file type (not just ones reporting a JSON MIME type,
- * since some email/cloud providers don't report that reliably), then validates the actual
- * content via parseExportPayload. Returns null if the user cancels the picker.
- */
 export async function pickAndParseExportFile(): Promise<ExportPayload | null> {
   const result = await DocumentPicker.getDocumentAsync({ type: '*/*' });
   if (result.canceled) {
@@ -118,11 +106,6 @@ export async function pickAndParseExportFile(): Promise<ExportPayload | null> {
   return parseExportPayload(text);
 }
 
-/**
- * Validate the entire batch before writing anything. Each scan and its favorite status are saved
- * together. A storage failure reports the completed count; retries safely replace the same ids.
- * Imported photos use new paths so a failed save cannot overwrite an existing scan's photo.
- */
 export async function importScans(
   scans: ScanResult[],
   favoriteScanIds: string[],

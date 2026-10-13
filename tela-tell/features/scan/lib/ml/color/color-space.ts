@@ -1,18 +1,9 @@
-/**
- * sRGB <-> CIELAB conversion using OpenCV's 8-bit LAB convention (L in [0,255]
- * scaled from L* in [0,100]; a,b in [0,255] offset from CIE's +-127), D65 white
- * point. Needed so CLAHE can run on the same luminance channel OpenCV's
- * normalize_contrast() operates on in ml-training/common/opencv_preprocess.py.
- */
-
-const EPS = 0.008856; // (6/29)^3
+const EPS = 0.008856;
 const KAPPA = 903.3;
 const XN = 0.950456;
 const YN = 1.0;
 const ZN = 1.088754;
 
-// 8-bit input only, so a 256-entry table replaces ~3 Math.pow calls per pixel (the working image
-// is 448x448, and a scan processes a burst of three).
 const SRGB_TO_LINEAR = Float64Array.from({ length: 256 }, (_, c) => {
   const v = c / 255;
   return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
@@ -80,18 +71,12 @@ export function labToRgb8u(l: number, a: number, b: number): [number, number, nu
 
   return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
 }
-// Speed-optimized forms of rgbToLab8u and labToRgb8u for the per-pixel loops in clahe.ts. Same
-// expressions in the same order, so every result is identical (color-space-packed.test.ts compares
-// all 16.7 million inputs). They differ only in mechanics: one call per pixel instead of about ten,
-// the three outputs packed into one integer (r << 16 | g << 8 | b) instead of a new array, and
-// parts that depend on a single 8-bit input precomputed per value with the same arithmetic.
 
 const SIXTEEN_116 = 16 / 116;
 const INV_GAMMA = 1 / 2.4;
 const KAPPA_EPS = KAPPA * EPS;
 
 const tableOf = (f: (value: number) => number) => Float64Array.from({ length: 256 }, (_, v) => f(v));
-// rgbToLab8u's matrix terms, e.g. X_R[r] = 0.412453 * R.
 const X_R = tableOf((v) => 0.412453 * SRGB_TO_LINEAR[v]);
 const X_G = tableOf((v) => 0.35758 * SRGB_TO_LINEAR[v]);
 const X_B = tableOf((v) => 0.180423 * SRGB_TO_LINEAR[v]);
@@ -101,7 +86,6 @@ const Y_B = tableOf((v) => 0.072169 * SRGB_TO_LINEAR[v]);
 const Z_R = tableOf((v) => 0.019334 * SRGB_TO_LINEAR[v]);
 const Z_G = tableOf((v) => 0.119193 * SRGB_TO_LINEAR[v]);
 const Z_B = tableOf((v) => 0.950227 * SRGB_TO_LINEAR[v]);
-// labToRgb8u's terms that depend on L, a or b alone.
 const FY_OF_L = tableOf((l) => ((l * 100) / 255 + 16) / 116);
 const Y_OF_L = tableOf((l) => {
   const lStar = (l * 100) / 255;
@@ -111,7 +95,6 @@ const Y_OF_L = tableOf((l) => {
 const A_OVER_500 = tableOf((a) => (a - 128) / 500);
 const B_OVER_200 = tableOf((b) => (b - 128) / 200);
 
-/** rgbToLab8u(r, g, b) as one packed integer: l << 16 | a << 8 | b. */
 export function rgbToLabPacked(r: number, g: number, b: number): number {
   const X = X_R[r] + X_G[g] + X_B[b];
   const Y = Y_R[r] + Y_G[g] + Y_B[b];
@@ -138,7 +121,6 @@ export function rgbToLabPacked(r: number, g: number, b: number): number {
   return (l8 << 16) | (a8 << 8) | b8;
 }
 
-/** labToRgb8u(l, a, b) as one packed integer: r << 16 | g << 8 | b. */
 export function labToRgbPacked(l: number, a: number, b: number): number {
   const fy = FY_OF_L[l];
   const fx = fy + A_OVER_500[a];

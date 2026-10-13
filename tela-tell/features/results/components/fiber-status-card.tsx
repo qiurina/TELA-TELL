@@ -13,7 +13,6 @@ import {
   type FiberStatusAdvisory,
 } from '@/data/fabrics/health-advisory';
 
-/** The advisory for a non-synthetic fiber: a status pill, never a shedding level. */
 export function FiberStatusCard({ advisory }: { advisory: FiberStatusAdvisory }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const note = otherSyntheticNote(advisory.otherSynthetics);

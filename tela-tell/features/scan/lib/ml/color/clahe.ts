@@ -1,14 +1,5 @@
 import { labToRgbPacked, rgbToLabPacked } from '@/features/scan/lib/ml/color/color-space';
 
-/**
- * CLAHE on the LAB luminance channel, matching ml-training/common/opencv_preprocess.py's
- * normalize_contrast() (cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))).
- * Real CLAHE, not naive per-tile equalization: tile histograms with clip +
- * redistribute, then bilinear interpolation between the 4 nearest tile LUTs per
- * pixel — the interpolation is what avoids visible tile-boundary artifacts.
- * O(pixels) throughout: one histogram pass, a fixed tiles*256 clip/LUT step, one
- * interpolation pass.
- */
 export type ClaheOptions = {
   clipLimit?: number;
   tilesX?: number;
@@ -17,7 +8,6 @@ export type ClaheOptions = {
 
 const HIST_BINS = 256;
 
-/** CLAHE on a single 8-bit channel (OpenCV `clahe.apply`). Exported so it can be tested alone. */
 export function claheChannel(
   L: ArrayLike<number>,
   width: number,
@@ -28,7 +18,6 @@ export function claheChannel(
   const tileW = Math.ceil(width / tilesX);
   const tileH = Math.ceil(height / tilesY);
 
-  // A pixel's tile column depends only on x, so it is worked out once per column.
   const tileXOf = new Int32Array(width);
   for (let x = 0; x < width; x++) {
     tileXOf[x] = Math.min((x / tileW) | 0, tilesX - 1);
@@ -53,7 +42,6 @@ export function claheChannel(
       const actualTileH = Math.min(tileH, height - ty * tileH);
       const tilePixels = actualTileW * actualTileH;
 
-      // OpenCV truncates (static_cast<int>) here rather than rounding.
       const clipAbs = Math.max(1, Math.trunc((clipLimit * tilePixels) / HIST_BINS));
 
       let clipped = 0;
@@ -89,12 +77,6 @@ export function claheChannel(
   }
 
   const newL = new Uint8ClampedArray(numPixels);
-  // Interpolation indices follow OpenCV's CLAHE_Impl::Interpolation_Body: the weight comes from the
-  // unclamped floor, and only then are both tile indices clamped. Clamping first (as an earlier
-  // version did) blends tile 0 with tile 1 across the first half-tile of the image, where OpenCV
-  // uses tile 0 alone.
-  // The horizontal tile indices and weights depend only on x, so they are computed once per column
-  // (same expressions as per pixel, so the same values) and reused on every row.
   const tx0Of = new Int32Array(width);
   const tx1Of = new Int32Array(width);
   const wxOf = new Float64Array(width);
@@ -138,6 +120,7 @@ export function claheChannel(
   return newL;
 }
 
+// Port of normalize_contrast() in opencv_preprocess.py.
 export function applyClaheLuminance(
   rgba: Uint8Array,
   width: number,
@@ -149,8 +132,6 @@ export function applyClaheLuminance(
   const A = new Uint8ClampedArray(numPixels);
   const B = new Uint8ClampedArray(numPixels);
 
-  // The packed conversions give exactly rgbToLab8u / labToRgb8u's results (checked on every input
-  // in color-space-packed.test.ts) with one call per pixel and no per-pixel array.
   for (let p = 0, i = 0; p < numPixels; p++, i += 4) {
     const lab = rgbToLabPacked(rgba[i], rgba[i + 1], rgba[i + 2]);
     L[p] = lab >>> 16;

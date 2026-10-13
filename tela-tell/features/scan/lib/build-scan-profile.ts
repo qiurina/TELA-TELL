@@ -11,12 +11,6 @@ import type { SupportedFabric } from '@/data/fabrics/fabrics';
 import { getFiberProfile, type FiberProfile } from '@/data/fabrics/fiber-profiles';
 import { OCCASION_CONTEXT_OPTIONS } from '@/data/preferences/occasion-weather';
 
-/**
- * Bump when the profile or recommendation logic here changes. The startup migration re-derives
- * stored scans only when this or the fiber data changes (see db/migrate.native.ts).
- * Version 6 removed the sustainability score: the migration clears it from stored scans.
- * Version 7 stopped storing eco alternatives and reuse tips; Eco tips reads the eco guide live.
- */
 export const SCAN_PROFILE_LOGIC_VERSION = 7;
 
 function getOccasionLabel(id: string): string {
@@ -68,8 +62,6 @@ export function buildScanProfile(
 ): Pick<ScanResult, 'profile' | 'recommendations'> {
   const fiber = getFiberProfile(primaryFiber);
 
-  // Everything comes from the single most likely fiber. The top-3 percentages are the model's
-  // confidence, not a measured blend, so they are not used as mixing weights.
   const recommendations: ScanRecommendations = {
     garmentPurposes: buildGarmentPurposes(fiber),
   };

@@ -1,9 +1,3 @@
-/**
- * Maintenance references for the educational About / Look / Care content only.
- * Kept separate from source-registry.ts, which supplies visible Basis sheets and
- * the About screen bibliography. These references are not rendered by the profile.
- * Checked during the content audit on 2026-10-13; this is not an automatic check.
- */
 type ProfileSource = {
   title: string;
   publisher: string;

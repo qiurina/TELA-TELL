@@ -75,13 +75,6 @@ function findMatchingRec(
   });
 }
 
-/**
- * True if this fiber's own profile (fiber-profiles.ts) already lists this context as one of
- * its best weather/occasion fits. Checked in addition to the per-context "spotlight" bestChoices
- * list above (which only has room for ~3 fibers per context) so a fiber isn't shown as merely
- * "Okay" here while its own Fiber Profile page calls the same context a good fit. The two
- * datasets were reconciled to remove direct contradictions — see docs/profile-screen-audit.md.
- */
 function fiberEndorsesContext(fabric: SupportedFabric, context: DressingContext): boolean {
   const profile = getFiberProfile(fabric);
   return (
@@ -94,12 +87,6 @@ function isBestFit(share: ResolvedShare, context: DressingContext, bestChoices: 
   return Boolean(findMatchingRec(share, bestChoices)) || fiberEndorsesContext(share.fabric, context);
 }
 
-/**
- * How a fiber is named in a fit sentence. The percentages are the model's confidence, not fiber
- * content, and two predictions are not a confirmed blend, so neither is shown: the top fiber is
- * "the most likely fiber" and any other fiber "appears among the predictions". The context
- * ("Sunny", "Office / Work") is the row's title, so the sentence does not repeat it.
- */
 function fiberSubject(share: ResolvedShare, shares: ResolvedShare[]): string {
   return share.fabric === shares[0]?.fabric
     ? `${share.fabric}, the most likely fiber,`

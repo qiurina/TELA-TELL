@@ -23,11 +23,6 @@ function refNumbers(item: ExplainerItem): string {
   return numbers.length > 0 ? ` [${numbers.join(', ')}]` : '';
 }
 
-/**
- * Detailed, offline guide to shedding: why fabrics shed, what affects it, what the studies found,
- * what the estimate means, and the references. The shedding card and its sheet stay short and
- * point here, so the research detail lives in one place.
- */
 export default function WhySyntheticsShedScreen() {
   return (
     <ProfileScreenShell title={SHEDDING_EXPLAINER_TITLE} showBack>

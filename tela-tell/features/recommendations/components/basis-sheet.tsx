@@ -13,20 +13,12 @@ import type { EcoClaim } from '@/data/scans/mock-data';
 type BasisSheetProps = {
   visible: boolean;
   title: string;
-  /** Icon beside the title, like the app's other (i) sheets. */
   icon: FC<IconProps>;
-  /** Short points, each shown as a heading (its `aspect`) and one sentence. */
   claims: EcoClaim[];
-  /** One short paragraph with the limits that apply to every point above. */
   keepInMind: string;
   onClose: () => void;
 };
 
-/**
- * The (i) sheet behind a short note: a few points and one "Keep in mind" box. Like the other cards,
- * it does not list sources; every point keeps its source ids in the data, and the full list is in
- * About → References.
- */
 export function BasisSheet({ visible, title, icon, claims, keepInMind, onClose }: BasisSheetProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -61,7 +53,6 @@ export function BasisSheet({ visible, title, icon, claims, keepInMind, onClose }
             showsVerticalScrollIndicator={false}>
             <View style={styles.points}>
               {claims.map((claim, index) => {
-                // A benefit gets a green check; a plain fact gets a neutral info mark.
                 const isBenefit = claim.kind === 'benefit';
                 const PointIcon = isBenefit ? CircleCheck : Info;
                 return (

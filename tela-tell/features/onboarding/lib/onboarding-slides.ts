@@ -26,7 +26,6 @@ export type OnboardingPoint = {
 
 export type OnboardingSlide = {
   key: string;
-  /** The illustration at the top of the slide (a transparent PNG). */
   image: ImageSourcePropType;
   title: string;
   body?: string;

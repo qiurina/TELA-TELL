@@ -3,26 +3,6 @@ import { getFabricCategory, resolveFabricAlias, type SupportedFabric } from '@/d
 import { getPredictedSyntheticFibers } from '@/data/fabrics/synthetic-health-risk';
 import { CLEAR_SHARE_MIN_PERCENT, type CompositionInput } from '@/data/scans/scan-confidence';
 
-/**
- * The small badge on the scan photo. It always names the fiber, so it can never be read as a
- * comment on the headline fiber, and it only ever says what the model predicted:
- *  - likely:   the headline (top) fiber is itself synthetic.
- *  - possible: a synthetic fiber is a lower prediction with a clear share (>= 15%). A trace share
- *              (a few percent) is model noise and is ignored.
- *  - not_synthetic: the top fiber is not synthetic and no synthetic prediction has a clear share.
- *              It describes only the top fiber; its info sheet says the scan cannot rule out a
- *              synthetic blend, because a single-label scan cannot prove that.
- * There is no badge for an Unsure scan or when the top fiber is not a known fiber.
- *
- * The 15% line is a display heuristic only (it reuses CLEAR_SHARE_MIN_PERCENT). It is not a
- * scientifically validated threshold and not a measure of fiber content: the classifier is
- * single-label, so these percentages are the model's confidence, not how much of each fiber the
- * fabric contains. It only keeps a trace score (a few percent) from putting a badge on the photo.
- *
- * Both synthetic badges use the same amber tone: "synthetic" is information about the predicted
- * fiber, not a warning, and the wording ("Likely" / "Other prediction") carries the difference.
- * The not-synthetic badge is green.
- */
 export type FiberBadge = {
   kind: 'likely' | 'possible' | 'not_synthetic';
   label: string;
@@ -32,7 +12,6 @@ export type FiberBadge = {
   infoMessage: string;
 };
 
-/** More names than this are summarised as "Polyester +1" so the badge stays short on the photo. */
 const MAX_NAMED_FIBERS = 2;
 
 function summarise(fibers: SupportedFabric[]): string {

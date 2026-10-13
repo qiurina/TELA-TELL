@@ -6,7 +6,6 @@ import { BrandColors } from '@/constants/brand';
 import { Fonts } from '@/constants/fonts';
 import { Type } from '@/constants/typography';
 
-/** A tinted "ⓘ Title · Show ⌄" row that opens its content in place. Closed unless `defaultOpen`. */
 export function Disclosure({
   title,
   children,

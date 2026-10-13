@@ -2,7 +2,6 @@ import { guideToSnapshotRect, rgbaPixels } from '@/features/scan/lib/preview-sna
 
 describe('guideToSnapshotRect', () => {
   it('scales the guide from view points to snapshot pixels', () => {
-    // The device from the capture log: a 360x800 view, its guide, and a 2x snapshot.
     const rect = guideToSnapshotRect(
       { width: 360, height: 800 },
       { width: 720, height: 1600 },

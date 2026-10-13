@@ -69,7 +69,6 @@ export default function OnboardingScreen() {
 
   const finish = useCallback(() => {
     markIntroSeen();
-    // Opened from Settings ("Replay tutorial"): go back to it. First launch: enter the app.
     if (router.canGoBack()) {
       router.back();
     } else {

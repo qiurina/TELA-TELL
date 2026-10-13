@@ -3,10 +3,6 @@ import { Platform } from 'react-native';
 import { imageToInputTensor } from '@/features/scan/lib/ml/preprocess';
 import { imageToModelInput } from '@/features/scan/lib/ml/preprocess-raw';
 
-// Which preparation a scan uses: raw pixels on Android, the JPEG method as the fallback and on iOS.
-// The native image library and the JPEG method are replaced; the colour steps run for real on a
-// small synthetic image only where the raw path succeeds.
-
 jest.mock('@/features/scan/lib/ml/preprocess', () => ({
   WORKING_SIZE: 448,
   imageToInputTensor: jest.fn(async () => new Float32Array([1, 2, 3])),
@@ -17,7 +13,6 @@ jest.mock('react-native-nitro-image', () => ({ Images: { loadFromFileAsync: (...
   virtual: true,
 });
 
-/** A fake native image whose resize returns 448x448 pixels in the given layout. */
 function fakeImage(pixelFormat: string) {
   const bytes = new Uint8Array(448 * 448 * 4).fill(128);
   const resized = {

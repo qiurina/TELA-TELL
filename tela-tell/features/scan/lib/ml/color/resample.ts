@@ -1,8 +1,4 @@
-/**
- * Exact 2:1 box downscale of an RGBA buffer. For an exact factor of 2, OpenCV's
- * cv2.resize(..., INTER_AREA) -- the resize ml-training/common/opencv_preprocess.py ends with --
- * is a 2x2 average rounded to nearest, so this reproduces it exactly.
- */
+// Matches cv2.resize(..., INTER_AREA).
 export function downscaleRgbaByTwo(
   rgba: Uint8Array,
   width: number,

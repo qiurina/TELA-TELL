@@ -34,21 +34,13 @@ export type GarmentPurposeItem = {
   note: string;
 };
 
-/**
- * What a sentence on an alternative card is: a material `fact`, what a `certification` requires,
- * evidence of an environmental `benefit`, or a `tradeoff` (a downside or conflicting finding).
- * The authors' decision to suggest the swap is editorial and is not a claim kind.
- */
 export type EcoClaimKind = 'fact' | 'certification' | 'benefit' | 'tradeoff';
 
 export type EcoClaim = {
   kind: EcoClaimKind;
   text: string;
-  /** Ids in `data/fabrics/source-registry.ts`. Required for every kind except plain `fact`s. */
   sourceIds?: string[];
-  /** What is being measured, e.g. "Making the fiber" or "Washing clothes". Shown on the Basis sheet. */
   aspect?: string;
-  /** Shown only on the Basis sheet, not on the card (for caveated, industry-funded evidence). */
   basisOnly?: boolean;
 };
 
@@ -56,72 +48,37 @@ export type ScanRecommendations = {
   garmentPurposes: GarmentPurposeItem[];
 };
 
-/** How the photo reached the app. `system_camera` is the phone's own camera app (the fallback). */
 export type CaptureType = 'live_camera' | 'system_camera' | 'gallery';
 
-/**
- * Outcome of the blur check on the captured photo(s): `passed` (sharp enough), `overridden` (the
- * person chose to use a photo the check flagged as blurry), `unchecked` (the check could not run).
- */
 export type SharpnessCheckStatus = 'passed' | 'overridden' | 'unchecked';
 
-/**
- * Facts about how a scan was taken and run, kept with the scan so results can be compared across
- * capture conditions, model versions and devices later. Stored inside the scan's saved JSON.
- */
 export type ScanCaptureMeta = {
   captureType: CaptureType;
-  /** Legacy self-reported lens answer. Absent when the scan did not ask about a lens. */
   clipOnLens?: boolean;
-  /** Which bundled model produced the scores (see MODEL_VERSION in ml/constants.ts). */
   modelVersion: string;
-  /** How many photos were classified and averaged (1 for single shots, up to 3 for a live burst). */
   burstCount: number;
-  /** Milliseconds spent inside the model itself, summed over the burst. */
   inferenceMs: number;
-  /**
-   * Milliseconds for the whole classification call: preprocessing and the model for every photo,
-   * plus loading the model if this was the first scan since the app started.
-   */
   totalMs: number;
-  /** Sharpness reading of the sharpest photo (the app's Laplacian measure), null if not measured. */
   sharpness: number | null;
-  /**
-   * Each captured photo's own sharpness reading, in capture order (null where a photo could not
-   * be measured). `sharpness` is the highest of these. The photo shown and saved with the scan is
-   * the first one. Absent on scans saved before per-photo readings were recorded.
-   */
   sharpnessPerPhoto?: (number | null)[];
   sharpnessCheck: SharpnessCheckStatus;
-  /**
-   * Brightness, blown-highlight and shading readings for each photo (capture order), and the
-   * advisory notices raised. Absent on scans saved before the lighting check existed.
-   */
   lighting?: {
     perPhoto: (LightingReading | null)[];
     warnings: LightingWarning[];
   };
 };
 
-/** How the fabric is made, as noted by a tester. */
 export type ConstructionKind = 'knit' | 'woven' | 'other' | 'unknown';
 
-/**
- * Optional notes a tester can add to a scan in Research mode (Settings), to give the scan a known
- * answer to be compared with later. Stored in the scan's saved JSON; none of it affects results.
- */
 export type ScanTesterFields = {
-  /** The fiber content as printed on the garment's care label, exactly as written. */
   careLabelComposition?: string;
   construction?: ConstructionKind;
   colour?: string;
-  /** A tester's own identifier for the physical garment, so one garment's scans can be grouped. */
   garmentId?: string;
 };
 
 export type ScanResult = {
   id: string;
-  /** Original scan timestamp, carried through backups; absent in older exports. */
   createdAt?: string;
   dominantFabric: string;
   compositions: FabricComposition[];
@@ -131,9 +88,7 @@ export type ScanResult = {
   sellerLabel?: string;
   imageUri?: string | null;
   garmentCondition?: GarmentCondition;
-  /** Absent on scans saved before capture details were recorded. */
   capture?: ScanCaptureMeta;
-  /** Absent unless a tester filled it in (Research mode). */
   testerFields?: ScanTesterFields;
   mislabeling: {
     detected: boolean;
@@ -159,17 +114,11 @@ export type RecentScanPreview = {
   scannedAt: string;
   scannedAtDate: string;
   mislabeling: boolean;
-  /** Same synthetic / not-synthetic call as the badge on the results photo; null when none. */
   fiberBadgeKind?: FiberBadge['kind'] | null;
-  /** Result of comparing the stated label with the scan; 'none' when no label was entered. */
   labelStatus?: DeclaredLabelStatus;
-  /** The scan could not name one fiber reliably (see assessScanReliability). */
   unsure?: boolean;
-  /** Why the scan is unsure; null when it is not. */
   unsureReason?: UnsureReason | null;
-  /** Top two candidates by confidence, highest first; what an unsure card shows instead of a fiber. */
   closestCandidates?: { material: string; percentage: number }[];
-  /** How the photo was captured; null for scans saved before this was recorded. */
   captureType?: CaptureType | null;
   sellerLabel?: string;
   image: ImageSourcePropType;

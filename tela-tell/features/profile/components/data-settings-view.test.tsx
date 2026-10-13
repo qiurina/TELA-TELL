@@ -113,8 +113,6 @@ async function confirm(title: string) {
   await act(async () => node('ConfirmDialog', title).props.onConfirm!());
 }
 
-// The first render loads the Data screen's modules and has exceeded Jest's 5 s default in full
-// parallel runs; 15 s keeps this suite from failing on load time alone.
 jest.setTimeout(15000);
 
 it('shows a storage failure without inventing zero scan counts or an empty trash', async () => {
@@ -179,7 +177,6 @@ it('keeps the operation guard after the Data screen is closed and opened again',
   await mount();
   await press('Import My Data');
   expect(pickAndParseExportFile).not.toHaveBeenCalled();
-  // The new focus refresh must also wait, since it purges expired trash.
   expect(getDeletedScanCount).toHaveBeenCalledTimes(1);
   await act(async () => { exporting.resolve(); });
   expect(getDeletedScanCount).toHaveBeenCalledTimes(2);

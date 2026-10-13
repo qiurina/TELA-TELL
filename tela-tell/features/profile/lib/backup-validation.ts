@@ -68,7 +68,6 @@ function validateCapture(value: unknown): ScanCaptureMeta {
   return value as ScanCaptureMeta;
 }
 
-/** Validate user-entered/model fields; rebuild derived reference content with the current app data. */
 export function validateBackupScan(value: unknown): ScanResult {
   requireValid(record(value), 'scan');
   requireValid(typeof value.id === 'string' && isSafeScanId(value.id), 'scan id');

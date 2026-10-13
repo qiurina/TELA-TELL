@@ -43,7 +43,6 @@ import { clearLastSellerLabel, getLastSellerLabel } from '@/features/scan/lib/la
 import { consumeFreshScan } from '@/features/scan/lib/scan-fresh';
 import { createScanRecord } from '@/features/scan/lib/create-scan-record';
 
-/** What is known about the photo(s) on screen, saved with the scan. */
 type CaptureInfo = {
   captureType: CaptureType;
   sharpness: number | null;
@@ -52,10 +51,8 @@ type CaptureInfo = {
   lighting: LightingAssessment;
 };
 
-/** A capture the blur check flagged, waiting for the person to choose "Retake" or "Use anyway". */
 type BlurPrompt = {
   uris: string[];
-  /** Which photo of `uris` to show and save if the person uses the capture anyway. */
   previewIndex: number;
   captureType: CaptureType;
   sharpness: number | null;
@@ -107,13 +104,6 @@ export default function ScanScreen() {
     setDetailsExpanded(true);
   };
 
-  /**
-   * Runs the blur check on a fresh capture. A photo flagged as blurry is held back and the person
-   * chooses to retake or use it anyway; a check that cannot run never blocks the scan.
-   *
-   * With `showSharpest`, the sharpest photo of the burst is the one shown and saved (all of them
-   * are still classified); otherwise the first one is, as before.
-   */
   const acceptCapture = async (
     uris: string[],
     captureType: CaptureType,
@@ -122,9 +112,6 @@ export default function ScanScreen() {
       measurements,
     }: { showSharpest?: boolean; measurements?: SnapshotMeasurement[] } = {},
   ) => {
-    // Readings already taken from the snapshots in memory are judged directly; otherwise one pass
-    // over the files gives the blur verdict and the lighting readings. Either way the same
-    // judgeCapture rules decide.
     const { verdict, lighting } =
       measurements && measurements.length === uris.length
         ? judgeCapture(
@@ -200,7 +187,6 @@ export default function ScanScreen() {
         if (!photoUri) throw new Error('No photo to save.');
         await saveCapturedScan(result, photoUri);
 
-        // The stated label belongs to the garment just scanned; the next scan starts without one.
         clearLastSellerLabel();
 
         setIsAnalyzing(false);
@@ -232,8 +218,6 @@ export default function ScanScreen() {
       if (cameraGuideRef.current?.hasLiveCamera()) {
         const liveCapture = await cameraGuideRef.current.captureAndCrop();
         photoUris = liveCapture?.uris ?? null;
-        // Only the Android preview snapshots show their sharpest frame; the iOS photo burst keeps
-        // showing its first photo.
         showSharpest = liveCapture?.method === 'snapshot';
         measurements = liveCapture?.measurements;
       }
@@ -241,7 +225,6 @@ export default function ScanScreen() {
       if (!photoUris || photoUris.length === 0) {
         const singleUri = await captureFromCamera(guideAspect());
         photoUris = singleUri ? [singleUri] : null;
-        // On web the "camera" fallback is the photo library picker.
         captureType = Platform.OS === 'web' ? 'gallery' : 'system_camera';
       }
 
@@ -329,7 +312,6 @@ export default function ScanScreen() {
           keyboardShouldPersistTaps="handled">
           <FabricPhotoPreview imageUri={previewUri} scanCaption="Your scan" />
 
-          {/* Advisory only: the photo can still be analyzed whatever this says. */}
           <LightingNoticeCard warnings={captureInfo?.lighting.warnings ?? []} />
 
           <ScanDetailsPanel

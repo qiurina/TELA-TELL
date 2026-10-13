@@ -1,7 +1,3 @@
-/**
- * Real stages of a fabric analysis, reported as they happen so the loading modal's bar follows the
- * actual work rather than a timer: loading the model, reading each burst photo, then saving.
- */
 export type AnalysisProgress =
   | { stage: 'loading_model' }
   | { stage: 'reading_photo'; photo: number; photos: number }
@@ -9,7 +5,6 @@ export type AnalysisProgress =
 
 export type AnalysisProgressListener = (progress: AnalysisProgress) => void;
 
-/** Share of the bar filled when a stage starts (0-1). Reading the photos takes most of the time. */
 export function analysisProgressFraction(progress: AnalysisProgress | null): number {
   if (!progress) return 0.05;
   switch (progress.stage) {
@@ -22,7 +17,6 @@ export function analysisProgressFraction(progress: AnalysisProgress | null): num
   }
 }
 
-/** The small line under the bar. */
 export function analysisProgressLabel(progress: AnalysisProgress | null): string {
   if (!progress || progress.stage === 'loading_model') return 'Preparing the fiber model…';
   if (progress.stage === 'saving') return 'Saving your scan…';

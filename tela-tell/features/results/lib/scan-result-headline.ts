@@ -6,16 +6,6 @@ export type ScanResultHeadline = {
   subtitle?: string;
 };
 
-/**
- * The classifier picks one most-likely fiber; its other top-3 entries are confidence scores, not
- * a measured blend. So the headline always names the single most likely fiber and its confidence,
- * and never claims a blend (the app cannot measure one).
- */
-/**
- * Headline for a scan that could not name one fiber reliably (see assessScanReliability). It
- * names no fiber as the answer; it lists the closest candidates with their confidence so the
- * person can still see what the model was torn between.
- */
 export function getUnsureHeadline(compositions: CompositionInput[] = []): ScanResultHeadline {
   const closest = [...(compositions ?? [])]
     .sort((a, b) => b.percentage - a.percentage)

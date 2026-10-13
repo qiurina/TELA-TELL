@@ -59,19 +59,15 @@ import {
 type LiveReadiness = 'unknown' | 'good' | 'adjust';
 
 const FILL_FRACTION_THRESHOLD = 0.18;
+// Live hint only; not yet calibrated.
 const BLUR_VARIANCE_THRESHOLD = 60;
 const HINT_DEBOUNCE_READS = 3;
 
-/** How a live capture was taken: preview snapshots (Android) or the photo burst (iOS). */
 export type LiveCaptureMethod = 'snapshot' | 'photo';
 
 export type LiveCapture = {
   uris: string[];
   method: LiveCaptureMethod;
-  /**
-   * Blur and lighting readings already taken from the snapshots in memory, one per uri. Absent for
-   * the photo burst, or when they could not be read; the files are then measured instead.
-   */
   measurements?: SnapshotMeasurement[];
 };
 
@@ -89,7 +85,6 @@ const BURST_SHOT_COUNT = 3;
 type CameraGuideProps = {
   previewUri?: string | null;
   isAnalyzing?: boolean;
-  /** The capture is being checked after the shots were taken (blur and lighting). */
   isProcessing?: boolean;
   guideVisible: boolean;
   onDismissGuide: () => void;
@@ -102,8 +97,6 @@ type CameraGuideProps = {
 function ViewfinderFrame({ readiness, capturing }: { readiness: LiveReadiness; capturing: boolean }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
-  // While the shots are taken the corners turn brand blue and pulse, so the frame itself shows
-  // that a capture is under way.
   useEffect(() => {
     if (!capturing) {
       pulse.setValue(1);
@@ -169,7 +162,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
   }, [window.width, window.height]);
   const photoOutput = usePhotoOutput({ targetResolution: photoTargetResolution });
   const [isCapturing, setIsCapturing] = useState(false);
-  /** The burst shot being taken (1-based), shown as "Hold still · 2 of 3"; null between captures. */
   const [shotNumber, setShotNumber] = useState<number | null>(null);
   const shutterFlash = useRef(new Animated.Value(0)).current;
   const [fillLightOn, setFillLightOn] = useState(false);
@@ -182,9 +174,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
     state: 'unknown',
     count: 0,
   });
-  // TEMP: on-screen readout for calibrating NOISE_FLOOR/FILL_FRACTION_THRESHOLD/
-  // BLUR_VARIANCE_THRESHOLD against real devices. __DEV__-gated, safe to leave in;
-  // remove once those constants are confirmed tuned.
   const [debugSignals, setDebugSignals] = useState<{ variance: number; texturedFraction: number } | null>(
     null,
   );
@@ -332,7 +321,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
         setIsCapturing(true);
         setShotNumber(1);
         if (Platform.OS === 'android') {
-          // Shutter feedback the moment capture starts (the preview itself keeps moving).
           shutterFlash.setValue(0.55);
           Animated.timing(shutterFlash, {
             toValue: 0,
@@ -341,10 +329,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
           }).start();
         }
         try {
-          // Android: crop the guide out of snapshots of the live preview, so the result is exactly
-          // what was inside the guide, the same way up. There is deliberately no photo fallback: a
-          // photo can frame a different area than the preview, so a failed snapshot asks for a
-          // retry instead of returning a capture that does not match the guide.
           if (Platform.OS === 'android') {
             const view = viewSizeRef.current;
             const guide = guideRef.current;
@@ -401,7 +385,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
                 captured.push(cropped);
               }
             } catch {
-              // Skip a failed shot in the burst; still return whatever succeeded.
             }
           }
 
@@ -415,8 +398,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
     [canUseLiveCamera, photoOutput, shutterFlash],
   );
 
-  // Android only says what to do while the snapshots are taken, and stays busy until the checks
-  // finish (instead of falling back to the readiness hint); iOS keeps its original wording.
   const isBusy = isAnalyzing || isCapturing || isProcessing;
   const instructionText = isAnalyzing
     ? 'Analyzing fabric image...'
@@ -438,14 +419,12 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
 
   return (
     <View style={styles.viewfinder} onLayout={handleViewLayout}>
-      {/* Full-bleed live camera, or true-aspect captured preview */}
       {hasPreview && previewUri ? (
         <View
           style={[
             styles.previewWrap,
             { bottom: Math.max(bottomReserve, 0) },
           ]}>
-          {/* Review: show the guide crop edge-to-edge above the sheet */}
           <Image source={{ uri: previewUri }} style={styles.previewImage} contentFit="cover" />
           <ScanLineAnimation active={isAnalyzing} />
         </View>
@@ -472,7 +451,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
               ? 'Allow camera access for a live preview, or upload from gallery.'
               : 'Camera access is turned off for TELA-TELL. Turn it on in your phone settings, or upload from gallery.'}
           </Text>
-          {/* Once Android stops showing the permission prompt, only the system settings can grant it. */}
           <Pressable
             onPress={() => {
               if (canRequestPermission) {
@@ -508,13 +486,11 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
         </View>
       )}
 
-      {/* Brief white flash when a capture starts (Android) */}
       <Animated.View
         pointerEvents="none"
         style={[styles.shutterFlash, { opacity: shutterFlash }]}
       />
 
-      {/* Soft vignette + outside-guide dim — live only, keeps focus on the frame */}
       {!hasPreview ? (
         <View style={styles.vignetteLayer} pointerEvents="none">
           <LinearGradient
@@ -600,7 +576,6 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
         </View>
       </View>
 
-      {/* Centered guide overlay — live capture only; camera stays full-bleed */}
       {guide && !hasPreview ? (
         <View
           style={[

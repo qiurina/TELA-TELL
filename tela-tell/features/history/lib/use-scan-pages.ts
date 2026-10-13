@@ -11,14 +11,6 @@ const EMPTY_PAGE: ScanPage = {
   totalPages: 1,
 };
 
-/**
- * Loads one page of scans at a time and re-fetches whenever the screen gains focus.
- *
- * `fetchPage` must be memoized (useCallback) on whatever filters it closes over, and `resetKey`
- * must change whenever those filters change -- that sends the list back to page 1. Responses that
- * arrive after a newer request was started are ignored, so fast typing or paging can't show
- * stale results.
- */
 export function useScanPages(fetchPage: (page: number) => Promise<ScanPage>, resetKey: string) {
   const [data, setData] = useState<ScanPage>(EMPTY_PAGE);
   const [pageState, setPageState] = useState({ key: resetKey, page: 1 });
@@ -39,7 +31,6 @@ export function useScanPages(fetchPage: (page: number) => Promise<ScanPage>, res
           return;
         }
         setData(result);
-        // The query clamps the page (e.g. the last item on the last page was just deleted).
         if (result.page !== targetPage) {
           setPageState({ key: resetKey, page: result.page });
         }

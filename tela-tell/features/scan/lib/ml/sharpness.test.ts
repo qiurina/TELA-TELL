@@ -24,7 +24,6 @@ function makeRgba(
   return rgba;
 }
 
-/** Repeated 3x3 box blur: a crude stand-in for defocus. */
 function boxBlur(rgba: Uint8Array, width: number, height: number, passes: number): Uint8Array {
   let current = rgba;
   for (let pass = 0; pass < passes; pass += 1) {
@@ -53,9 +52,6 @@ function boxBlur(rgba: Uint8Array, width: number, height: number, passes: number
 }
 
 describe('measureRgbaSharpness', () => {
-  // Expected values come from the NumPy port in ml-training/scripts/evaluation/
-  // sharpness_calibration.py (sharpness_signals), run on the same synthetic images. That port is
-  // what the thresholds were studied with, so these two must agree.
   it('matches the NumPy port used to study the thresholds (square image)', () => {
     const rgba = makeRgba(96, 96, (x, y) => [(x * 7 + y * 13) % 256, ((x * 3) ^ (y * 5)) % 256, (x * y) % 256]);
     expect(measureRgbaSharpness(rgba, 96, 96)).toBeCloseTo(3326.9951677917097, 6);
@@ -72,8 +68,6 @@ describe('measureRgbaSharpness', () => {
   });
 
   it('reads lower for a blurred copy of the same image', () => {
-    // Pixel-level pseudo-random texture. (A regular pattern would alias against the metric's
-    // 48x48 sampling grid and read as flat.)
     const sharp = makeRgba(96, 96, (x, y) => {
       const v = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 24;
       return [v, v, v];
@@ -121,12 +115,10 @@ describe('judgeSharpness', () => {
     const verdict = judgeSharpness(input);
     expect(verdict.readings).toEqual([812.4, null, 95.2]);
     expect(verdict.sharpest).toBe(812.4);
-    // A copy, so later changes to the input cannot alter what was judged.
     expect(verdict.readings).not.toBe(input);
   });
 
   it('does not change the verdict because per-photo readings are kept', () => {
-    // One sharp frame still lets the burst pass; all-low still flags it.
     expect(judgeSharpness([20, 30, 5000]).blurry).toBe(false);
     expect(judgeSharpness([20, 30, 99.9]).blurry).toBe(true);
   });

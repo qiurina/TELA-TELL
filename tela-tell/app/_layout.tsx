@@ -40,7 +40,6 @@ if (typeof Appearance.setColorScheme === 'function') {
 const SPLASH_MIN_MS = 2500;
 const FADE_MS = 400;
 
-/** Force light cards — OS dark mode otherwise paints React Navigation cards black mid-transition. */
 const AppNavigationTheme: Theme = {
   ...DefaultTheme,
   colors: {
@@ -72,7 +71,6 @@ export default function RootLayout() {
     Poppins_600SemiBold,
     Poppins_700Bold,
   });
-  // React Native uses system fonts for unregistered families. A font error must not block entry.
   const fontsReady = fontsLoaded || fontError !== null;
   const startupSettled = startupStatus !== 'loading';
 
@@ -115,15 +113,12 @@ export default function RootLayout() {
     return () => animation.stop();
   }, [fontsReady, splashMinTimeElapsed, startupSettled, showSplashOverlay, splashOpacity]);
 
-  // Shown once the splash has faded so the dialog isn't covered by it. Failed steps are only
-  // logged; the user sees a plain message with no technical detail.
   useEffect(() => {
     if (migrationWarning && startupStatus === 'ready' && !showSplashOverlay) {
       showAlert(migrationWarning.title, migrationWarning.message, 'info');
     }
   }, [migrationWarning, startupStatus, showSplashOverlay]);
 
-  // Screens read SQLite on mount; a fatal failure must keep them behind the recovery screen.
   useEffect(() => {
     let active = true;
     void migrateDatabase({ retry: startupAttempt > 0 })

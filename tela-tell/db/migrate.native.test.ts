@@ -1,19 +1,5 @@
 /**
  * @jest-environment node
- *
- * Regression test for the accounts-removal migration (removeLegacyAccounts /
- * adoptLegacyPreferences). Runs the REAL migration code against a real in-memory
- * SQLite database (better-sqlite3) seeded to look like a pre-2026-10-06 install, so
- * the assertions exercise the actual SQL and FK-cascade behavior, not a hand-simulated
- * mock of it.
- *
- * Regression covered: the legacy account's profile row was almost always already at
- * profile_ID = DEVICE_PROFILE_ID (this was a single-account app, profile_ID is
- * AUTOINCREMENT starting at 1). The migration's final cleanup DELETE used to run
- * unconditionally and would delete that exact row -- cascading away the user's
- * skinTone/sensitive-fiber/preferred-fiber/dressing-context data -- because the
- * "copy legacy data onto the device profile" branch only runs when the device
- * profile looked empty, which it doesn't when the legacy row *is* the device profile.
  */
 import BetterSqlite3 from 'better-sqlite3';
 
@@ -21,7 +7,6 @@ import { migrationWarningFor, type MigrationReport } from '@/db/migration-report
 
 type BetterSqliteDb = InstanceType<typeof BetterSqlite3>;
 
-/** What AsyncStorage returns for the stored scan-profile fingerprint, and what was written to it. */
 let mockStoredFingerprint: string | null = null;
 const mockSetItemCalls: [string, string][] = [];
 
@@ -50,10 +35,8 @@ type Adapter = {
   withTransactionAsync: (fn: () => Promise<void>) => Promise<void>;
 };
 
-/** When set, any SQL statement matching it throws, to simulate one migration step failing. */
 let mockFailOn: RegExp | null = null;
 
-/** When set, `SELECT sqlite_version()` reports this instead of the real SQLite version. */
 let mockSqliteVersion: string | null = null;
 
 function mockMaybeFail(sql: string) {
@@ -82,10 +65,6 @@ function mockWrapBetterSqliteDatabase(db: BetterSqliteDb): Adapter {
     getAllAsync: async (sql, params = []) => {
       return db.prepare(sql).all(...(params as (string | number | null)[])) as never;
     },
-    // better-sqlite3 transactions must be synchronous, but every migration step here
-    // only issues further db.prepare(...).run(...) calls synchronously under the hood
-    // (our async wrappers just add a microtask), so running the async fn to completion
-    // before committing is equivalent for this single-threaded in-memory test database.
     withTransactionAsync: async (fn) => {
       db.exec('BEGIN');
       try {
@@ -109,7 +88,6 @@ jest.mock('@/db/client', () => ({
 const LEGACY_USER_ID = 'legacy-user-123';
 const DEVICE_PROFILE_ID = 1;
 
-/** Creates the pre-refactor schema: tblDeviceProfile still has a user_id column. */
 function createLegacySchema(db: BetterSqliteDb) {
   db.exec(`
     PRAGMA foreign_keys = ON;
@@ -149,7 +127,6 @@ function createLegacySchema(db: BetterSqliteDb) {
   `);
 }
 
-/** Inserts a legacy account's profile (user_id set) plus one of each preference at profileId. */
 function insertLegacyAccountProfile(db: BetterSqliteDb, profileId: number) {
   db.prepare(
     `INSERT INTO tblDeviceProfile (profile_ID, user_id, skinTone, skinUndertone, colorSeason, updatedAt)
@@ -161,16 +138,11 @@ function insertLegacyAccountProfile(db: BetterSqliteDb, profileId: number) {
   db.prepare('INSERT INTO tblDressingContext (profile_ID, contextCode) VALUES (?, ?)').run(profileId, 'work');
 }
 
-/** The realistic upgrade scenario the bug depended on: the single legacy account's
- * profile + preferences already live at profile_ID = 1. */
 function seedLegacySingleAccountDatabase(db: BetterSqliteDb) {
   createLegacySchema(db);
   insertLegacyAccountProfile(db, DEVICE_PROFILE_ID);
 }
 
-/** require (not import) so it re-resolves against a fresh module registry -- a static
- * import would keep reusing the first run's cached migrationPromise/module state. Calling
- * this again after a previous run genuinely re-runs the whole migration on the same DB. */
 async function runFreshMigration(): Promise<MigrationReport> {
   jest.resetModules();
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -223,7 +195,6 @@ describe('migrateDatabase — accounts-removal migration', () => {
       .all(DEVICE_PROFILE_ID);
     expect(context).toEqual([{ contextCode: 'work' }]);
 
-    // Exactly one profile row should remain -- no duplicate/orphaned profile left behind either.
     const allProfiles = mockDb.prepare('SELECT profile_ID FROM tblDeviceProfile').all();
     expect(allProfiles).toEqual([{ profile_ID: DEVICE_PROFILE_ID }]);
   });
@@ -294,7 +265,6 @@ describe('migrateDatabase — accounts-removal migration', () => {
   });
 });
 
-/** A tblScan from before createdAt / isFavorite / deletedAt existed, with one saved scan. */
 function createOldScanTable(db: BetterSqliteDb) {
   db.exec(`
     CREATE TABLE tblScan (
@@ -322,12 +292,6 @@ function createOldScanTable(db: BetterSqliteDb) {
   ).run();
 }
 
-/**
- * Jest can't run the two steps that load code with a dynamic import() (resyncScanSustainability and
- * purgeExpiredDeletedScans): Node throws "dynamic import callback ... --experimental-vm-modules".
- * They always fail here for that environment-only reason, so assertions about reported issues
- * ignore exactly those failures and look at everything else. They are not exercised by this file.
- */
 function realIssues(report: MigrationReport) {
   return report.issues.filter((issue) => !issue.reason.includes('dynamic import callback'));
 }
@@ -365,8 +329,6 @@ describe('migrateDatabase — failure reporting', () => {
     expect(realIssues(report)[0].reason).toContain('simulated failure');
     expect(indexExists('idx_scan_createdAt')).toBe(false);
 
-    // removeLegacyAccounts comes after the failed step and does not depend on it: it still ran
-    // and kept the user's preferences.
     expect(columnNames('tblDeviceProfile')).not.toContain('user_id');
     expect(tableExists('tblUser')).toBe(false);
     expect(mockDb.prepare('SELECT skinTone FROM tblDeviceProfile WHERE profile_ID = 1').get()).toEqual({
@@ -388,14 +350,11 @@ describe('migrateDatabase — failure reporting', () => {
     const skipped = report.issues.find((issue) => issue.step === 'idx_scan_createdAt');
     expect(skipped?.reason).toContain('ensureScanColumn:createdAt');
 
-    // The skipped steps really did not run...
     expect(columnNames('tblScan')).not.toContain('createdAt');
     expect(indexExists('idx_scan_createdAt')).toBe(false);
-    // ...while independent steps (the other two columns) did.
     expect(columnNames('tblScan')).toEqual(expect.arrayContaining(['isFavorite', 'deletedAt']));
     expect(mockDb.prepare('SELECT COUNT(*) AS n FROM tblScan').get()).toEqual({ n: 1 });
 
-    // Nothing is retried within the session; the next launch simply runs every step again.
     mockFailOn = null;
     const nextLaunch = await runFreshMigration();
     expect(realIssues(nextLaunch)).toEqual([]);
@@ -427,7 +386,6 @@ describe('migrateDatabase — failure reporting', () => {
       ['ensureProfileColumn:colorSeason', 'failed'],
       ['removeLegacyAccounts', 'skipped'],
     ]);
-    // The destructive cleanup was held back, so the legacy row is untouched.
     expect(columnNames('tblDeviceProfile')).toContain('user_id');
     expect(mockDb.prepare('SELECT skinTone FROM tblDeviceProfile WHERE profile_ID = 1').get()).toEqual({
       skinTone: 'Warm',
@@ -460,16 +418,9 @@ describe('migrateDatabase — failure reporting', () => {
     expect(await migrateDatabase()).toBe(failed);
     const recovered = await migrateDatabase({ retry: true });
     expect(realIssues(recovered)).toEqual([]);
-    // That a retry after a clean run returns the cached run is checked under
-    // "steps that use dynamic import()": without --experimental-vm-modules no run is ever clean here.
   });
 });
 
-/**
- * resyncScanSustainability and purgeExpiredDeletedScans load their code with a dynamic import(),
- * which Node only allows inside Jest when it runs with --experimental-vm-modules (the `npm test`
- * script does this). Without the flag these tests are skipped, not failed.
- */
 const dynamicImportSupported = `${process.env.NODE_OPTIONS ?? ''} ${process.execArgv.join(' ')}`.includes(
   '--experimental-vm-modules',
 );
@@ -581,7 +532,7 @@ describeWithDynamicImport('migrateDatabase — steps that use dynamic import()',
   });
 
   it('resyncScanSustainability clears old scores on every row, drops the stored score object, keeps everything else, and saves the fingerprint', async () => {
-    await runFreshMigration(); // creates the tables
+    await runFreshMigration();
     mockSetItemCalls.length = 0;
     insertScanRow('scan_stale');
     insertScanRow('scan_corrupt', { resultJson: 'not json' });
@@ -592,21 +543,18 @@ describeWithDynamicImport('migrateDatabase — steps that use dynamic import()',
 
     expect(report.issues).toEqual([]);
 
-    // The legacy columns hold the neutral placeholders on every row, readable or not.
     for (const id of ['scan_stale', 'scan_corrupt', 'scan_empty']) {
       const row = scanRow(id);
       expect([row.rating, row.label, row.score]).toEqual(['unrated', 'Not rated', 0]);
     }
 
-    // The saved JSON no longer carries a score, and nothing else in it was lost.
     const stored = JSON.parse(scanRow('scan_stale').resultJson as string);
     expect('sustainability' in stored).toBe(false);
     expect(JSON.stringify(stored)).not.toMatch(/Sustainable|9\.9/);
-    expect(stored.garmentCondition).toBe('Good'); // user/scan-time fields are carried over
+    expect(stored.garmentCondition).toBe('Good');
     expect(stored.compositions).toEqual(STALE_SCAN.compositions);
     expect(stored.confidence).toBe(STALE_SCAN.confidence);
 
-    // Every unrelated column is untouched.
     const after = scanRow('scan_stale');
     expect({ ...after, resultJson: null, rating: null, label: null, score: null }).toEqual({
       ...before,
@@ -616,7 +564,6 @@ describeWithDynamicImport('migrateDatabase — steps that use dynamic import()',
       score: null,
     });
 
-    // An unreadable or empty saved JSON is left exactly as it was.
     expect(scanRow('scan_corrupt').resultJson).toBe('not json');
     expect(scanRow('scan_empty').resultJson).toBeNull();
     expect(mockSetItemCalls).toHaveLength(1);
@@ -628,7 +575,6 @@ describeWithDynamicImport('migrateDatabase — steps that use dynamic import()',
     await runFreshMigration();
     const afterFirst = scanRow('scan_stale');
 
-    // Forget the fingerprint so the step runs again on the already-migrated row.
     mockStoredFingerprint = null;
     mockSetItemCalls.length = 0;
     const report = await runFreshMigration();
@@ -648,7 +594,6 @@ describeWithDynamicImport('migrateDatabase — steps that use dynamic import()',
     const report = await runFreshMigration();
 
     expect(report.issues).toEqual([]);
-    // Production never hits this: the fingerprint changes with the fiber data and the logic version.
     expect(scanLabel('scan_stale')).toBe('Sustainable');
     expect(mockSetItemCalls).toHaveLength(0);
   });
@@ -680,9 +625,7 @@ describeWithDynamicImport('migrateDatabase — steps that use dynamic import()',
       ['resyncScanSustainability', 'failed'],
     ]);
     expect(scanExists('scan_expired')).toBe(false);
-    // The resync failed before saving its fingerprint, so the next launch will try it again.
     expect(mockSetItemCalls).toHaveLength(0);
-    // The whole step is one transaction: the failure rolled back, so no row is half-migrated.
     expect(scanLabel('scan_stale')).toBe('Sustainable');
     expect(JSON.parse(scanRow('scan_stale').resultJson as string).sustainability).toBeDefined();
   });
@@ -733,7 +676,6 @@ describe('migrateDatabase — SQLite version check for DROP COLUMN', () => {
     expect(issues[0].reason).toContain('3.34.1');
     expect(issues[0].reason).toContain('DROP COLUMN');
 
-    // Nothing was half-done: the legacy column and the user's data are exactly as they were.
     expect(columnNames('tblDeviceProfile')).toContain('user_id');
     expect(
       mockDb.prepare('SELECT skinTone, colorSeason FROM tblDeviceProfile WHERE profile_ID = 1').get(),
@@ -742,7 +684,7 @@ describe('migrateDatabase — SQLite version check for DROP COLUMN', () => {
   });
 
   it('also stops dropping the unused syncStatus column, and the next launch on a new SQLite finishes it', async () => {
-    await runFreshMigration(); // creates tables
+    await runFreshMigration();
     mockDb.exec("ALTER TABLE tblScan ADD COLUMN syncStatus TEXT NOT NULL DEFAULT 'local'");
     mockSqliteVersion = '3.30.0';
 

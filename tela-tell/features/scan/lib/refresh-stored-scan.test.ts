@@ -1,7 +1,5 @@
 import { refreshStoredScan } from '@/features/scan/lib/refresh-stored-scan';
 
-// A scan saved by an older build: a stored sustainability score, alternatives stored with their
-// old text, plus user-entered and scan-time fields that a refresh must never touch.
 const OLD_SCAN = {
   id: 'scan-1',
   dominantFabric: 'Cotton',
@@ -36,7 +34,6 @@ describe('refreshStoredScan', () => {
     expect(next.someFutureField).toEqual({ keep: 'me' });
 
     expect(next.profile).not.toEqual(OLD_SCAN.profile);
-    // The old score never comes back: the key is gone, not carried over or rebuilt.
     expect('sustainability' in next).toBe(false);
     expect(JSON.stringify(next)).not.toMatch(/sustainab|Sustainable|9\.9/);
   });
@@ -77,7 +74,6 @@ describe('refreshStoredScan', () => {
     const next = refreshStoredScan({ id: 'x', dominantFabric: 'Cotton' } as never);
     expect(next.id).toBe('x');
     expect('sustainability' in next).toBe(false);
-    // The migration wraps each row in try/catch, so a scan it cannot rebuild is left as saved.
     expect(() => refreshStoredScan({ id: 'y', dominantFabric: 'Mystery blend' } as never)).toThrow();
   });
 });

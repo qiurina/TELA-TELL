@@ -5,7 +5,6 @@ import { ChevronRight, type IconProps } from '@/components/ui/lucide-icons';
 import { BrandColors } from '@/constants/brand';
 import { Type } from '@/constants/typography';
 
-/** The action at the bottom of a status card: a soft, full-width button. */
 export function CardLink({
   label,
   onPress,

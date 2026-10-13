@@ -29,7 +29,6 @@ describe('captureTypeLabel', () => {
     expect(captureTypeLabel(null)).toBe(NOT_RECORDED);
     expect(captureTypeLabel(undefined)).toBe(NOT_RECORDED);
     expect(captureTypeLabel('drone')).toBe(NOT_RECORDED);
-    // Names every object inherits must not be mistaken for a capture type.
     expect(captureTypeLabel('toString')).toBe(NOT_RECORDED);
     expect(captureTypeLabel('constructor')).toBe(NOT_RECORDED);
     expect(NOT_RECORDED).toBe('Not recorded');

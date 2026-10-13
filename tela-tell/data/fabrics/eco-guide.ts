@@ -1,18 +1,11 @@
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
 
-/**
- * Eco tips content from "TELA-TELL | Microplastics & Sustainable Choices Guide" (12 materials).
- * Wording is copied from the guide as written; source IDs (S01-S21) refer to GUIDE_SOURCES below,
- * the guide's own offline bibliography. It is a separate list from source-registry.ts.
- */
-
 export type GuideSourceId =
   | 'S01' | 'S02' | 'S03' | 'S04' | 'S05' | 'S06' | 'S07' | 'S08' | 'S09' | 'S10' | 'S11'
   | 'S12' | 'S13' | 'S14' | 'S15' | 'S16' | 'S17' | 'S18' | 'S19' | 'S20' | 'S21';
 
 export type GuideSource = {
   id: GuideSourceId;
-  /** Author or organization and year, as printed in the guide. */
   citation: string;
   title: string;
   url: string;
@@ -27,22 +20,12 @@ export type FiberEcoGuide = {
   sourceIds: GuideSourceId[];
 };
 
-/**
- * The guide's "How to read this guide" and "Use note", shortened into plain words for thrift
- * (ukay-ukay) shoppers. Same points: a photo guess, not a measurement; natural fibers shed but are
- * not plastic; shedding depends on the fabric; health effects are unclear.
- */
 export const ECO_GUIDE_HOW_TO_READ =
   "The scan guesses the fabric from a photo. It can't tell the exact fiber mix, any coating, how much it sheds, or any health risk.";
 
 export const ECO_GUIDE_USE_NOTE =
   "All fabrics shed tiny fibers, but natural ones like cotton aren't plastic. How much a piece sheds depends on how it's made and used. Health effects from wearing clothes are still unclear.";
 
-/**
- * The guide's everyday advice, shown under each fiber's own "How to reduce shedding" tip. Two of
- * its five lines ("Wash only when needed; follow the label." and "For synthetics, use shorter,
- * cooler, gentler cycles.") are left out because every fiber's own tip already covers washing.
- */
 export const ECO_GUIDE_EXTRA_REDUCE_TIPS = {
   all: [
     'Consider a properly maintained washing-machine microfiber filter; dispose of trapped lint in household trash.',
@@ -59,11 +42,6 @@ export function getExtraReduceTips(isSynthetic: boolean): readonly string[] {
     : ECO_GUIDE_EXTRA_REDUCE_TIPS.all;
 }
 
-/**
- * The guide's everyday tips as short checklist steps, in the same order as
- * ECO_GUIDE_EXTRA_REDUCE_TIPS (which keeps the guide's exact wording). `topic` is a word that, when
- * the fiber's own tip already contains it, means the step would repeat that tip.
- */
 const SHORT_EXTRA_STEPS: { topic: string; text: string; syntheticOnly: boolean }[] = [
   { topic: 'filter', text: 'Use a well-maintained microfiber filter; put trapped lint in the trash', syntheticOnly: false },
   { topic: 'air dry', text: 'Air dry when suitable; avoid unnecessary rubbing', syntheticOnly: false },
@@ -78,11 +56,6 @@ function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/**
- * Eco tips' "Reduce shedding" checklist: the fiber's own tip, split at each ";" into steps, then
- * the guide's everyday steps, skipping any that the fiber's tip already covers (for example
- * polyester's tip already says to use a filter).
- */
 export function getReduceSteps(guide: FiberEcoGuide, isSynthetic: boolean): string[] {
   const ownSteps = guide.reduceShedding
     .split(';')
@@ -95,10 +68,6 @@ export function getReduceSteps(guide: FiberEcoGuide, isSynthetic: boolean): stri
   return [...ownSteps, ...extras];
 }
 
-/**
- * The better-fit alternative as short chips ("fabric · use"). The guide's full wording stays in
- * `alternative.name` and `alternative.reason`.
- */
 export const ALTERNATIVE_OPTIONS: Record<SupportedFabric, string[]> = {
   Cotton: ['Linen'],
   Wool: ['Recycled wool'],

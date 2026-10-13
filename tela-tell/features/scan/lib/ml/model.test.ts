@@ -1,11 +1,7 @@
 import { classifyFabric } from '@/features/scan/lib/ml/model';
 
-// The native TFLite module and the preprocessing (which needs the image libraries) are replaced,
-// so this checks only what classifyFabric itself does: averaging a burst, ranking, and reporting
-// how many photos were used and how long the work took.
 const mockScores = new Float32Array([0.8, 0.05, 0.03, 0.02, 0.02, 0.02, 0.02, 0.01, 0.01, 0.01, 0.005, 0.005]);
 
-// Each test can swap how the fake model answers; by default it returns mockScores in fresh memory.
 const freshScores = () => [new Float32Array(mockScores).buffer];
 let mockRunSync: () => ArrayBuffer[] = freshScores;
 
@@ -25,7 +21,6 @@ jest.mock(
 
 jest.mock('@/assets/models/fabric_classifier.tflite', () => 1, { virtual: true });
 
-// expo-asset copies the bundled model to a file:// path; the APK loader can only read URLs.
 let mockLocalUri: string | null = 'file:///data/user/0/com.telatell.app/cache/fabric_classifier.tflite';
 jest.mock('expo-asset', () => ({
   Asset: { loadAsync: jest.fn(async () => [{ localUri: mockLocalUri }]) },
@@ -38,7 +33,6 @@ describe('classifyFabric', () => {
   });
 
   it('reports the burst size, the model time summed over the burst, and the whole-call time', async () => {
-    // Every reading of the clock advances by 10 ms: start, then a start/end pair per photo, then end.
     let now = 0;
     jest.spyOn(performance, 'now').mockImplementation(() => {
       now += 10;
@@ -63,8 +57,6 @@ describe('classifyFabric', () => {
   });
 
   it('averages every photo even though the model reuses its output memory between runs', async () => {
-    // react-native-fast-tflite allocates one output buffer per output tensor and overwrites it on
-    // every run (HybridTfliteModel.cpp, getOutputBufferForTensor). Labels: 0 = Cotton, 4 = Polyester.
     const reused = new ArrayBuffer(12 * 4);
     const perPhoto = [
       { cotton: 0.9, polyester: 0.1 },
@@ -83,8 +75,6 @@ describe('classifyFabric', () => {
 
     const result = await classifyFabric(['a.jpg', 'b.jpg', 'c.jpg']);
 
-    // The average of the three photos (Cotton 63%, Polyester 37%), not the last photo alone
-    // (Polyester 90%, Cotton 10%).
     expect(run).toBe(3);
     expect(result.dominantFabric).toBe('Cotton');
     expect(result.compositions).toEqual([
@@ -109,7 +99,6 @@ describe('classifyFabric', () => {
   });
 });
 
-// Fresh copies of the module are needed because the loaded model is cached per module instance.
 /* eslint-disable @typescript-eslint/no-require-imports */
 describe('loading the bundled model', () => {
   afterEach(() => {

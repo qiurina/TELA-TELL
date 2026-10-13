@@ -41,16 +41,13 @@ import {
 import { clearLastSellerLabel } from '@/features/scan/lib/last-seller-label';
 
 type DataSummary = {
-  /** null where there is no file system (web). */
   photoStorage: ScanPhotoStorage | null;
   scans: number;
   deleted: number;
-  /** Photo bytes of active scans and of scans in Recently deleted. */
   scanBytes: number;
   deletedBytes: number;
 };
 
-// Keep operations exclusive even if the Data screen is closed and opened again mid-operation.
 const dataOperationLock = {
   current: false,
   done: Promise.resolve(),
@@ -68,7 +65,6 @@ function endDataOperation() {
 }
 
 async function loadSummary(): Promise<DataSummary> {
-  // The deleted count runs first: it also removes scans past the 30 days, so the sizes below agree.
   const deleted = await getDeletedScanCount();
   const [photoStorage, stats, uris] = await Promise.all([
     getScanPhotoStorage(),
@@ -89,9 +85,7 @@ function plural(count: number, word: string): string {
   return `${count} ${count === 1 ? word : `${word}s`}`;
 }
 
-/** Settings > Data: what is stored on this device, backup, clean-up and reset. */
 export function DataSettingsView() {
-  // undefined while measuring.
   const [summary, setSummary] = useState<DataSummary | undefined>(undefined);
   const [summaryError, setSummaryError] = useState(false);
   const summaryRequest = useRef(0);
@@ -117,7 +111,6 @@ export function DataSettingsView() {
     return () => { mounted.current = false; };
   }, []);
 
-  /** Reloads the summary and returns it, so a result message can say how much is used now. */
   const refreshSummary = useCallback(async (): Promise<DataSummary | null> => {
     const request = ++summaryRequest.current;
     try {
@@ -139,7 +132,6 @@ export function DataSettingsView() {
       void (async () => {
         while (backupBusy.current) await backupBusy.done;
         if (!active) return;
-        // Measuring also purges expired trash, so it must not overlap a backup operation.
         beginDataOperation();
         try { await refreshSummary(); } finally { endDataOperation(); }
       })();

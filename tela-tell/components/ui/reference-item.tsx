@@ -6,11 +6,9 @@ import { sourceLabel, type Source } from '@/data/fabrics/source-registry';
 
 function openReference(url: string) {
   Linking.openURL(url).catch(() => {
-    // No browser or no connection: the citation text above the link is still readable offline.
   });
 }
 
-/** One numbered reference: citation, what it is used for, and a link (needs internet to open). */
 export function ReferenceItem({ source, number }: { source: Source; number: number }) {
   return (
     <View style={styles.referenceItem}>

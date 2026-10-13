@@ -115,7 +115,6 @@ describe('getFiberBadge', () => {
     expect(wool).toMatchObject({ kind: 'not_synthetic', label: 'Likely not synthetic: Wool', tone: 'good' });
     expect(wool?.infoMessage).toMatch(/can't rule out synthetic fibers blended in/);
 
-    // Rayon, leather and abaca are not in the Synthetic group, so they get the same badge.
     expect(getFiberBadge('Rayon', [{ material: 'Rayon', percentage: 90 }], false)?.kind).toBe('not_synthetic');
     expect(getFiberBadge('Leather', [{ material: 'Leather', percentage: 90 }], false)?.kind).toBe('not_synthetic');
   });

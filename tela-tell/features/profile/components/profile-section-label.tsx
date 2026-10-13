@@ -6,7 +6,6 @@ import { Fonts } from '@/constants/fonts';
 
 type ProfileSectionLabelProps = {
   title: string;
-  /** Shows an (i) button after the label. */
   onInfoPress?: () => void;
   infoAccessibilityLabel?: string;
 };

@@ -8,7 +8,6 @@ import type { MigrationReport } from '@/db/migration-report';
 import { hydrateUserPreferences } from '@/features/profile/lib/user-preferences';
 import { showAlert } from '@/components/ui/alert-dialog';
 
-// jest-expo already supplies the matching renderer; only the API used here needs typing.
 type TestInstance = {
   props: { onRetry?: () => void; retrying?: boolean };
   findByType: (type: string) => TestInstance;

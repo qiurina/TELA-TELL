@@ -10,8 +10,6 @@ import {
 import { SUPPORTED_FABRICS } from '@/data/fabrics/fabrics';
 import { SOURCE_LIST, findUnknownSourceIds, getClaimSources, getSourceNumber } from '@/data/fabrics/source-registry';
 
-// Sources for this note must be from the last 10 years. Fixed at the 2026 review date so the test
-// does not start failing on its own as the calendar moves.
 const OLDEST_ALLOWED_YEAR = 2016;
 
 const claimText = FAST_FASHION_CLAIMS.map((claim) => claim.text).join(' ');

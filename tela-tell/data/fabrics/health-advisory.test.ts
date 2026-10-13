@@ -10,9 +10,6 @@ import {
 } from '@/data/fabrics/health-advisory';
 import { findUnknownSourceIds, getSource, getSourceNumber } from '@/data/fabrics/source-registry';
 
-// These tests check that the app says what the data files intend. They do not, by themselves,
-// verify the scientific claims; those are recorded with their sources in source-registry.ts.
-
 describe('health risk advisory', () => {
   it('backs "Why it matters" with BfR 2019 (28), EEA 2022 (27), BfR 2025 (29) and WHO 2022 (24)', () => {
     const lines = getWhyItMatters('Polyester');
@@ -45,7 +42,6 @@ describe('health risk advisory', () => {
     expect(known.label).toBe('What’s known');
     expect(known.text).toBe('Health effects are still uncertain (WHO, 2022), but reducing exposure is recommended.');
     expect(limit.text).toMatch(/can’t tell how much this garment sheds or estimate your own exposure/);
-    // Neither source makes a finding about wearing clothes, so the advisory must not claim one.
     const all = getWhyItMatters('Polyester').map((line) => line.text).join(' ');
     expect(all).not.toMatch(/skin|cause|toxic|dangerous|cancer|so far|harms?/i);
   });
@@ -73,7 +69,6 @@ describe('health risk advisory', () => {
       expect(advisory).not.toBeNull();
       expect(advisory!.pillLabel).not.toMatch(/not plastic|low|moderate|high/i);
       expect(advisory!.text).not.toMatch(/\b(low|moderate|high)\b|safe|no risk|healthy|100%/i);
-      // Describes the predicted fiber; never confirms the garment's content.
       expect(advisory!.text).toMatch(/cannot (identify|confirm)/);
     }
   });

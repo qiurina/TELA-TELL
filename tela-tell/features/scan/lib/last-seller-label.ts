@@ -41,6 +41,5 @@ async function persistDraft(value: string | null) {
       await AsyncStorage.removeItem(STORAGE_KEY);
     }
   } catch {
-    // Offline draft persistence is best-effort.
   }
 }

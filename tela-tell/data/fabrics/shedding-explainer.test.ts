@@ -53,7 +53,6 @@ describe('shedding explainer page', () => {
     expect(found).toMatch(/In the tested cotton fabrics with spandex, all released tiny fibers during washing, and those with more spandex released more/);
     expect(found).toMatch(/Stretch fabrics usually contain about 2-10% spandex, and more in compression wear and shapewear\. That is a general range, not a measurement of your garment/);
     expect(found).toMatch(/Studies of fabrics that mix fibers disagree because they used different materials and methods/);
-    // The cooler, shorter wash tip's limit is stated, and drying is not tied to heat.
     expect(found).toMatch(/changed the temperature and the wash time together, so they cannot say which one made the difference/);
     expect(found).toMatch(/A separate study found that hotter water increased release from knitted fabrics/);
     expect(found).toMatch(/Some of the fibers released were spandex/);
@@ -83,7 +82,6 @@ describe('shedding explainer page', () => {
         }
       }
     }
-    // The estimate section is limits and definitions, not research claims.
     for (const item of section('What the estimate means').items) {
       expect(item.sourceIds).toBeUndefined();
     }

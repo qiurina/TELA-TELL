@@ -1,6 +1,5 @@
 export type ScoredLabel = { material: string; percentage: number };
 
-/** The model's output does not fit the app's label list, so its predictions cannot be trusted. */
 export class ModelOutputMismatchError extends Error {
   constructor(message: string) {
     super(message);
@@ -8,14 +7,6 @@ export class ModelOutputMismatchError extends Error {
   }
 }
 
-/**
- * Turns the model's softmax output into labelled percentages, highest first.
- *
- * Outputs are matched to labels by position, so a model with a different class count or order than
- * the app's label list would silently mislabel every scan (a Rayon photo shown as "Leather").
- * This refuses to guess: it throws unless the output count equals the label count and the values
- * look like a softmax distribution.
- */
 export function scoresToCompositions(
   scores: ArrayLike<number>,
   labels: readonly string[],

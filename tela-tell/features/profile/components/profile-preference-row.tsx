@@ -14,7 +14,6 @@ type ProfilePreferenceRowProps = {
   showChevron?: boolean;
   isLast?: boolean;
   titleColor?: string;
-  /** Replaces the chevron, e.g. a Switch for an on/off setting. */
   trailing?: ReactNode;
 };
 

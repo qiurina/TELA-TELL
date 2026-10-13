@@ -10,22 +10,6 @@ import {
   TRACE_DETECTION_MIN_PERCENT,
 } from '@/data/scans/scan-confidence';
 
-/**
- * Compares the label the seller or care tag declared with what the scan found.
- *
- * The classifier is single-label: its top-3 are confidence scores, not a measured blend. So the
- * check is deliberately graded instead of a yes/no:
- *  - match:    every declared fiber is the scan's top match or has a clear share (>= 15%)
- *  - weak:     every declared fiber was seen, but at least one only faintly (2% to 15%)
- *  - mismatch: a declared fiber is not in the scan's top 3 at all (under 2%)
- *  - unsure:   the scan itself was unsure (see assessScanReliability), so it can neither call the
- *              label wrong nor confirm it. Takes the place of match, weak and mismatch.
- *  - unreadable: nothing the label says can be checked (unknown names, imitation leather, ...)
- *  - none:     no label was entered
- * Only `mismatch` raises the "label may not match" warning, so trace fibers (e.g. 5% spandex) never
- * cause a false alarm, a faint hit is never reported as a clean match either, and a scan that
- * could not tell what the fabric is never accuses a label of being wrong.
- */
 export type DeclaredLabelStatus = 'none' | 'unreadable' | 'match' | 'weak' | 'mismatch' | 'unsure';
 
 export type DeclaredLabelCheck = {
@@ -33,11 +17,8 @@ export type DeclaredLabelCheck = {
   title: string;
   message: string;
   declared: SupportedFabric[];
-  /** Declared fibers the scan did not find in its top 3. */
   missing: SupportedFabric[];
-  /** Declared fibers the scan found only faintly. */
   weak: { fabric: SupportedFabric; percentage: number }[];
-  /** Fibers named on the label that the model cannot recognize. */
   unsupported: string[];
 };
 
@@ -113,9 +94,6 @@ export function evaluateDeclaredLabel(
       : '';
   const base = { declared, missing, weak, unsupported };
 
-  // A scan that could not name one fiber has nothing solid to compare the label with: it must not
-  // call the label wrong, and it must not confirm it either (the card would then say "Label
-  // matches" next to "Scan found: Unsure").
   if (!assessScanReliability(compositions).reliable) {
     const detail =
       missing.length > 0

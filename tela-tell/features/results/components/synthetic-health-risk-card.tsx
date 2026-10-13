@@ -20,10 +20,6 @@ const LEVEL_TONE: Record<HealthRiskLevel, StatusTone> = {
 
 type SyntheticHealthRiskCardProps = {
   risk: SyntheticHealthRisk;
-  /**
-   * Scan results pass this: the card stays short and its button opens Eco tips. Without it (on Eco
-   * tips, the detail page) the card shows "Why it matters" open instead.
-   */
   onReduceShedding?: () => void;
 };
 

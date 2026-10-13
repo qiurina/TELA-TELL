@@ -1,20 +1,5 @@
 import type { EcoClaim } from '@/data/scans/mock-data';
 
-/**
- * Evidence record for the "Shedding tendency" card: what published laundry studies found, with
- * their units and limits. It is NOT shown in the app (the numbers and source cards were too much
- * for a shopping screen). The app's wording in `shedding-why.ts` and `shedding-explainer.ts` is
- * plain language for these findings, and tests check each line is backed by a claim here. The
- * studies themselves are listed under References on the About screen.
- *
- * Every figure here was checked against the study's abstract, except where the registry says the full text was read (Vassilenko 2021, Lant 2020, Azevedo 2025, Carney Almroth 2018, Karkkainen 2021 and De Falco 2019, on PubMed Central); see
- * docs/shedding-evidence-2026-10-10.md. Figures whose unit could not be confirmed are left out
- * (for example the 640,000 to 1,500,000 fiber count in De Falco et al. 2019).
- *
- * This is separate from the 2% confidence floor in scan-confidence.ts, which is an engineering
- * limit on the model's confidence and is not based on any of these studies. It is also separate
- * from the High / Moderate levels themselves (FIBER_RISK_LEVELS), which this record does not change.
- */
 export const SHEDDING_BASIS_CLAIMS: EcoClaim[] = [
   {
     kind: 'fact',

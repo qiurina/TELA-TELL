@@ -102,7 +102,6 @@ describe('shedding (i) sheet', () => {
     expect(keep.body).toBe(
       "Shedding depends on the fabric, how it is made, its condition, and how it is washed. Natural fibers can shed too.\n\nHigh, Moderate, and Low are the app's estimates based on selected studies, not an established scientific ranking. Not a medical assessment: health effects of microplastics are still being studied.",
     );
-    // 480 (was 460) leaves room for the one-line health note added with the health risk advisory.
     expect(`${means.body}${keep.body}`.length).toBeLessThan(480);
   });
 

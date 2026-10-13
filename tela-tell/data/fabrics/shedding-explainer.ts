@@ -1,13 +1,5 @@
-/**
- * "Why synthetics shed": a short, offline explainer reachable from About. Plain wording only, with
- * no figures and no study list; the studies are under References on the About screen and their
- * numbers are recorded in `shedding-basis.ts`. Each statement below matches a verified claim there
- * (construction, wear and washing matter; polyester, acrylic, nylon and elastane fabrics shed in
- * lab studies; blend studies disagree). The page is about shedding only and makes no health claim.
- */
 export const SHEDDING_EXPLAINER_TITLE = 'Why synthetics shed';
 
-/** One short paragraph, with the references that support it. Empty `sourceIds` = a statement of limits. */
 export type ExplainerItem = { text: string; sourceIds?: string[] };
 
 export type ExplainerSection = {
@@ -109,7 +101,6 @@ export const SHEDDING_EXPLAINER_SECTIONS: ExplainerSection[] = [
 
 export const SHEDDING_REFERENCES_HEADING = 'References';
 
-/** The registry sources behind the shedding wording, in the order the References section lists them. */
 export const SHEDDING_REFERENCE_IDS: string[] = [
   'napper-thompson-2016',
   'de-falco-2019',
@@ -129,7 +120,6 @@ export const SHEDDING_REFERENCE_IDS: string[] = [
   'lara-2025',
   'cotton-2020',
   'gundogdu-2026',
-  // Clothing-care guidance for the practical-suggestion tips. Not research.
   'earthday-fashion-guide-2021',
   'earthday-care-toolkit',
   'emf-new-textiles-economy-2017',

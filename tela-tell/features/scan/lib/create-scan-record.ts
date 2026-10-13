@@ -10,9 +10,7 @@ import type { AnalysisProgressListener } from '@/features/scan/lib/analysis-prog
 export type CreateScanRecordInput = {
   sellerLabel?: string | null;
   imageUris?: string[] | null;
-  /** How the photos were taken; saved with the scan. */
   capture: CaptureInput;
-  /** Called as the model loads and reads each photo, for the loading modal. */
   onProgress?: AnalysisProgressListener;
 };
 
@@ -20,11 +18,6 @@ function createScanId(): string {
   return `scan_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/**
- * The shape stored with a scan. `detected` is true only for a real mismatch (see
- * evaluateDeclaredLabel); the results screen re-evaluates the label live, so edits to the stated
- * label or to the matching rules apply to old scans without touching the database.
- */
 export function buildMislabeling(
   dominantFabric: string,
   sellerLabel: string | null,

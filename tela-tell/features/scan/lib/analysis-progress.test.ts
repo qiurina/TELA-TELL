@@ -13,7 +13,6 @@ describe('analysis progress', () => {
     for (let i = 1; i < fractions.length; i += 1) {
       expect(fractions[i]).toBeGreaterThan(fractions[i - 1]);
     }
-    // The bar never reads as full before the results open.
     expect(fractions[fractions.length - 1]).toBeLessThan(1);
   });
 

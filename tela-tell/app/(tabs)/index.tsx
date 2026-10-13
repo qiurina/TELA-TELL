@@ -18,8 +18,6 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const [recentScans, setRecentScans] = useState<RecentScanPreview[]>([]);
-  // Starts true so the empty message never flashes before the first load finishes. Later focuses
-  // keep showing the previous list while it refreshes.
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(

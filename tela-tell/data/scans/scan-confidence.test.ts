@@ -30,7 +30,6 @@ describe('assessScanReliability', () => {
     ]);
     expect(result.reliable).toBe(false);
     expect(result.reason).toBe('low_confidence');
-    // The compositions are not required to arrive sorted.
     expect(result.topPercent).toBe(UNSURE_MIN_CONFIDENCE_PERCENT - 1);
   });
 
@@ -43,8 +42,6 @@ describe('assessScanReliability', () => {
   });
 
   it('is unsure when the top two fibers are too close, even above the floor', () => {
-    // With the shipped thresholds a close call cannot happen above the 60% floor (see the note in
-    // scan-confidence.ts), so this exercises the margin check with a lower floor.
     const lowFloor = { ...DEFAULT_UNSURE_THRESHOLDS, minConfidencePercent: 30 };
     const result = assessScanReliability(
       [
@@ -58,7 +55,6 @@ describe('assessScanReliability', () => {
   });
 
   it('with the shipped thresholds, the margin check alone never fires above the floor', () => {
-    // The worst case at the floor: top at the minimum, runner-up taking everything else.
     const worst = assessScanReliability([
       { material: 'Cotton', percentage: UNSURE_MIN_CONFIDENCE_PERCENT },
       { material: 'Rayon', percentage: 100 - UNSURE_MIN_CONFIDENCE_PERCENT },

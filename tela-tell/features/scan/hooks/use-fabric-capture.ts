@@ -70,7 +70,6 @@ export function useFabricCapture() {
     return cropToAspect(uri, aspect);
   };
 
-  /** Picks from gallery and center-crops to the scan guide aspect. */
   const captureFromGallery = async (aspect: number = GUIDE_ASPECT): Promise<string | null> => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 

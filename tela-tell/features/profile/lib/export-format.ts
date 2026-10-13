@@ -10,11 +10,6 @@ import {
 
 export { ImportInvalidFileError, isSafeScanId };
 
-/**
- * The file written by Export My Data. `photos` maps a scan id to that scan's saved photo as a
- * base64 JPEG. It is optional: files exported before photos were included simply lack it, and
- * older versions of the app that read a newer file ignore it.
- */
 export type ExportPayload = {
   exportedAt?: string;
   scans: ScanResult[];
@@ -31,11 +26,6 @@ function isBase64(value: unknown): value is string {
   return typeof value === 'string' && value.length % 4 === 0 && BASE64.test(value);
 }
 
-/**
- * Writes the export as JSON in pieces, so photos can be read and written one at a time instead of
- * the whole (possibly very large) file being built in memory. The output is exactly one valid
- * JSON document. `readPhoto` returns a photo's base64 JPEG, or null if it is missing.
- */
 export async function writeExportJson(
   body: ExportBody,
   photoScanIds: string[],
@@ -43,7 +33,6 @@ export async function writeExportJson(
   write: (chunk: string) => void | Promise<void>,
 ): Promise<{ photosWritten: number }> {
   const head = JSON.stringify(body);
-  // Reopen the closing brace so a "photos" member can be added after the existing ones.
   await write(head === '{}' ? '{"photos":{' : `${head.slice(0, -1)},"photos":{`);
 
   let photosWritten = 0;
@@ -55,7 +44,6 @@ export async function writeExportJson(
     if (!isBase64(base64)) {
       continue;
     }
-    // Base64 holds no characters that JSON would need to escape, so it is written as it is.
     await write(`${photosWritten > 0 ? ',' : ''}${JSON.stringify(scanId)}:"${base64}"`);
     photosWritten += 1;
   }
@@ -64,7 +52,6 @@ export async function writeExportJson(
   return { photosWritten };
 }
 
-/** Reject malformed photos rather than silently reporting a complete restore without them. */
 function cleanPhotos(photos: unknown): Record<string, string> | undefined {
   if (photos === undefined) return undefined;
   if (!photos || typeof photos !== 'object' || Array.isArray(photos)) {
@@ -90,7 +77,6 @@ export function parseExportPayload(text: string): ExportPayload {
   return validateExportPayload(parsed);
 }
 
-/** Also used by the import API, without duplicating the photo data into a JSON string. */
 export function validateExportPayload(parsed: unknown): ExportPayload {
   if (
     !parsed ||
@@ -126,12 +112,10 @@ export function validateExportPayload(parsed: unknown): ExportPayload {
   };
 }
 
-/** UTF-8 bytes of a string, with a fallback for runtimes that have no TextEncoder. */
 export function encodeUtf8(text: string): Uint8Array {
   if (typeof TextEncoder !== 'undefined') {
     return new TextEncoder().encode(text);
   }
-  // Non-ASCII characters become %XX sequences, which are decoded back to bytes one by one.
   const escaped = /^[\x00-\x7f]*$/.test(text) ? text : unescape(encodeURIComponent(text));
   const bytes = new Uint8Array(escaped.length);
   for (let i = 0; i < escaped.length; i += 1) {

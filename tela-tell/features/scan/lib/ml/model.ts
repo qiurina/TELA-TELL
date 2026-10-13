@@ -8,11 +8,8 @@ export type ClassificationResult = {
   dominantFabric: string;
   compositions: FabricComposition[];
   confidence: number;
-  /** Photos classified and averaged. */
   burstCount: number;
-  /** Milliseconds inside the model's run call, summed over the burst. */
   inferenceMs: number;
-  /** Milliseconds for the whole call (preprocessing + model for every photo + any model load). */
   totalMs: number;
 };
 
@@ -33,14 +30,12 @@ type TFLiteModel = { runSync(inputs: ArrayBuffer[]): ArrayBuffer[] };
 
 let modelPromise: Promise<TFLiteModel> | null = null;
 
-
 async function loadModel(): Promise<TFLiteModel> {
   if (!modelPromise) {
     modelPromise = (async () => {
       let loadTensorflowModel: (source: { url: string }, delegates: string[]) => Promise<TFLiteModel>;
       let Asset: { loadAsync(moduleId: number): Promise<{ localUri: string | null }[]> };
       try {
-        // Lazy require: keeps jest/web from loading the native module until a scan runs.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         ({ loadTensorflowModel } = require('react-native-fast-tflite'));
         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -50,12 +45,7 @@ async function loadModel(): Promise<TFLiteModel> {
       }
 
       try {
-        // In a release APK the bundled model is a raw Android resource, and React Native resolves
-        // it to a bare resource name ("assets_models_fabric_classifier"). fast-tflite's Android
-        // loader only reads URLs (java.net.URL), so passing the asset id worked through Metro's
-        // http:// URL in development but failed in every APK. expo-asset copies the model to a
-        // file:// path first (downloading it from Metro in development), which the loader can read.
-        // Metro resolves the bundled .tflite asset id via require; there is no ES import form.
+        // Release APKs need a file:// path; fast-tflite cannot read bundled asset ids.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const [asset] = await Asset.loadAsync(require('@/assets/models/fabric_classifier.tflite'));
         if (!asset?.localUri) {
@@ -88,11 +78,6 @@ function averageScores(scoreSets: Float32Array[]): Float32Array {
   return averaged;
 }
 
-/**
- * Classifies a burst of photos of the same fabric and averages their scores.
- * Averaging over multiple shots reduces the per-shot noise (framing/focus/lighting
- * micro-variation) that otherwise flips the top-1 result between repeat scans.
- */
 export async function classifyFabric(
   imageUris: string[],
   onProgress?: AnalysisProgressListener,
@@ -112,8 +97,7 @@ export async function classifyFabric(
     const runStartedAt = nowMs();
     const outputs = model.runSync([input.buffer as ArrayBuffer]);
     inferenceMs += nowMs() - runStartedAt;
-    // Copy the scores: react-native-fast-tflite returns the same output buffer on every run and
-    // overwrites it, so keeping a view would leave every photo holding the last photo's scores.
+    // Copy: fast-tflite reuses its output buffer on every run.
     scoreSets.push(new Float32Array(outputs[0]).slice());
   }
 
@@ -123,8 +107,6 @@ export async function classifyFabric(
     throw new ModelUnavailableError('Model produced invalid output.');
   }
 
-  // Throws if the model's output count or shape does not fit MODEL_LABELS (see scores.ts), so a
-  // wrongly sized model fails loudly instead of mislabelling every scan.
   const compositions = scoresToCompositions(scores, MODEL_LABELS).slice(0, 3);
   const top = compositions[0];
   if (!top) {

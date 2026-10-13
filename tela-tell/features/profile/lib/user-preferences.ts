@@ -2,7 +2,6 @@ import type { DressingContext } from '@/data/preferences/occasion-weather';
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
 import { getPreferences, savePreferences } from '@/db/preferences';
 
-// Retained for stored preferences and backups from versions with color personalization.
 export type SkinTone =
   | 'Fair'
   | 'Light'
@@ -163,14 +162,12 @@ export function clearUserPreferences(): void {
   notifyPreferencesListeners();
 }
 
-
 let pendingPreferencesSave: Promise<void> = Promise.resolve();
 
 async function waitForPreferencesSave(): Promise<void> {
   try {
     await pendingPreferencesSave;
   } catch {
-    // Prior save errors should not block hydrate/load.
   }
 }
 
@@ -180,7 +177,6 @@ export async function hydrateUserPreferences(options?: {
   await waitForPreferencesSave();
   const loaded = normalizePreferences(await getPreferences());
   if (options?.apply !== false) {
-    // Hidden legacy values are still data and must survive an empty storage read.
     const localHasData = Boolean(
       hasActiveUserPreferences() || preferences.skinTone || preferences.skinUndertone || preferences.colorSeason,
     );
@@ -218,7 +214,6 @@ export function persistUserPreferences(next?: UserPreferences): Promise<void> {
   return pendingPreferencesSave;
 }
 
-/** Publish imported preferences only after the transaction succeeds, leaving current settings on failure. */
 export async function importUserPreferences(next: UserPreferences): Promise<void> {
   const normalized = normalizePreferences(next);
   await persistUserPreferences(normalized);

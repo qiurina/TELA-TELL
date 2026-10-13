@@ -9,16 +9,13 @@ const claim = (aspect: string, kind?: string) =>
 
 describe('shedding care tips', () => {
   it('keeps a verified source for each wash tip, with the limits recorded in the evidence record and on the About page', () => {
-    // Cooler, shorter cycle: Lant 2020 (15 C / 30 min vs 40 C / 85 min, 30% less), limit stated.
     expect(claim('Wash cycle', 'fact')?.text).toMatch(/15 °C for 30 minutes.*30% fewer.*40 °C cycle of 85 minutes/);
     expect(claim('Wash cycle', 'tradeoff')?.text).toMatch(/does not show the effect of temperature alone/);
     const aboutText = SHEDDING_EXPLAINER_SECTIONS.flatMap((section) => section.items.map((item) => item.text)).join(' ');
     expect(aboutText).toMatch(/changed the temperature and the wash time together/);
-    // Fuller loads and less water for the load: Lant 2020 and Kelly 2019.
     expect(claim('Wash water volume')?.sourceIds).toEqual(['kelly-2019']);
     expect(claim('Wash load size')?.sourceIds).toEqual(['lant-2020']);
     expect(claim('Wash load size')?.text).toMatch(/3\.5 to 6\.0 kg.*1\.0 to 3\.5 kg/);
-    // Tumble drying releases fibers: Karkkainen 2021 (drying only; no heat comparison).
     const drying = claim('Washing and drying');
     expect(drying?.sourceIds).toEqual(['karkkainen-2021']);
     expect(drying?.text).not.toMatch(/heat|temperature/i);

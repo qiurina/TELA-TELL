@@ -5,22 +5,6 @@ import {
   rgbToLabPacked,
 } from '@/features/scan/lib/ml/color/color-space';
 
-/**
- * The packed conversions replace rgbToLab8u / labToRgb8u in the CLAHE loops for speed, so they must
- * agree on every possible input.
- *
- * Normal runs check a fixed sample (about 2 s): edge values, the grey axis, full sweeps of each
- * channel, 300,000 fixed pseudo-random inputs, and complete blocks where the formulas switch
- * branches: every RGB colour with all channels in 0-31 (rgbToLab's dark branch), and every LAB input
- * with L in 0-15 (labToRgb's dark-output branch). A random sample alone is not enough there: a
- * deliberate 0.01% change to the dark-output branch altered only 22 of the 16.7M outputs, all with
- * L 3-15, and 300,000 random inputs would catch that only about one run in three.
- *
- * The full proof checks all 16,777,216 inputs per direction (about 40 s). Run it after any change to
- * color-space.ts:
- *   PowerShell:  $env:FULL_COLOR_TEST='1'; npx jest color-space-packed; Remove-Item Env:FULL_COLOR_TEST
- *   bash:        FULL_COLOR_TEST=1 npx jest color-space-packed
- */
 const FULL = process.env.FULL_COLOR_TEST === '1';
 
 type Triple = [number, number, number];
@@ -45,7 +29,6 @@ function firstMismatchExhaustive(packed: Convert, original: Original): string | 
   return null;
 }
 
-/** The fixed sample used by normal runs; the same inputs every time, so failures reproduce. */
 function sampleInputs(): Triple[] {
   const inputs: Triple[] = [];
   const edges = [0, 1, 2, 127, 128, 254, 255];
@@ -66,7 +49,6 @@ function sampleInputs(): Triple[] {
   return inputs;
 }
 
-/** Every input whose first value is below `firstBelow` and the other two below `restBelow`. */
 function firstMismatchInBlock(
   packed: Convert,
   original: Original,
@@ -98,7 +80,6 @@ describe('packed colour conversions match the originals', () => {
       const inputs = sampleInputs();
       expect(inputs.length).toBe(343 + 256 * 28 + 300_000);
       const distinct = new Set(inputs.map(([x, y, z]) => (x << 16) | (y << 8) | z));
-      // The pseudo-random part spreads over the whole cube rather than repeating a few colours.
       expect(distinct.size).toBeGreaterThan(250_000);
     });
 
@@ -119,7 +100,6 @@ describe('packed colour conversions match the originals', () => {
     });
   });
 
-  // Exhaustive over 16.7M inputs per direction; only with FULL_COLOR_TEST=1.
   const exhaustive = FULL ? describe : describe.skip;
   const EXHAUSTIVE_TIMEOUT_MS = 120_000;
   exhaustive('every input (FULL_COLOR_TEST=1)', () => {

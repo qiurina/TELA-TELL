@@ -56,7 +56,6 @@ export default function HistoryScreen() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [selectionMode, setSelectionMode] = useState(false);
-  // id -> isFavorite, so the Favorite/Unfavorite action still works for selections made on other pages.
   const [selected, setSelected] = useState<Map<string, boolean>>(new Map());
   const [busy, setBusy] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

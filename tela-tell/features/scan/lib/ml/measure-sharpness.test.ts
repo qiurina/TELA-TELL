@@ -6,8 +6,6 @@ import {
   checkCaptureSharpness,
 } from '@/features/scan/lib/ml/measure-sharpness';
 
-// The image libraries' native resize is replaced: each "photo" is a small in-memory JPEG chosen by
-// its uri. What is checked is how checkCapture combines the two checks, not the phone's resizing.
 const mockPhotos = new Map<string, string | null>();
 
 jest.mock('expo-image-manipulator', () => ({
@@ -35,7 +33,6 @@ function makeJpeg(size: number, pixel: (x: number, y: number) => [number, number
   return Buffer.from(jpeg.encode({ data, width: size, height: size }, 95).data).toString('base64');
 }
 
-// Fine pixel-level texture: sharp. A flat image: no detail at all.
 const texture = (x: number, y: number): [number, number, number] => {
   const v = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 24;
   return [v, v, v];
@@ -55,7 +52,6 @@ describe('checkCapture', () => {
       const blurOnly = await checkCaptureSharpness(uris);
       expect(both.verdict).toEqual(blurOnly);
     }
-    // And the verdicts themselves are what the cutoff of 100 says.
     expect((await checkCapture(['flat-gray'])).verdict.blurry).toBe(true);
     expect((await checkCapture(['sharp-bright'])).verdict.blurry).toBe(false);
     expect(BLUR_REJECT_VARIANCE).toBe(100);
@@ -73,7 +69,6 @@ describe('checkCapture', () => {
     expect(lighting.perPhoto[0]?.meanLuma).toBeLessThan(15);
     expect(lighting.perPhoto[1]?.clippedShare).toBeGreaterThan(0.95);
     expect(lighting.perPhoto[2]?.meanLuma).toBeGreaterThan(120);
-    // Sharpness readings agree with measuring the same decoded pixels directly.
     const direct = measureRgbaSharpness(
       jpeg.decode(Buffer.from(mockPhotos.get('mid')!, 'base64'), { useTArray: true }).data,
       96,

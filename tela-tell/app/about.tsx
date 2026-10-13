@@ -181,7 +181,6 @@ export default function AboutScreen() {
             <Pressable
               onPress={() => {
                 Linking.openURL(source.url).catch(() => {
-                  // No browser or no connection: the citation above stays readable.
                 });
               }}
               hitSlop={6}
@@ -208,7 +207,6 @@ export default function AboutScreen() {
             <Pressable
               onPress={() => {
                 Linking.openURL(source.url).catch(() => {
-                  // No browser or no connection: the citation above stays readable.
                 });
               }}
               hitSlop={6}

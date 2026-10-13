@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import { InfoButton } from '@/components/ui/info-button';
 import { Type } from '@/constants/typography';
 
-/** The small caps label above a group of cards, with an optional (i). */
 export function SectionLabel({
   title,
   onInfoPress,

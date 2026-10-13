@@ -14,19 +14,12 @@ type StatusCardProps = {
   icon: FC<IconProps>;
   tone: StatusTone;
   title: string;
-  /** Short verdict shown as a pastel pill, e.g. "High" or "Possible mislabel". Omit for information-only cards. */
   pillLabel?: string;
-  /** Omit when the card sits under a section label that already has its own (i). */
   onInfoPress?: () => void;
   infoAccessibilityLabel?: string;
   children?: ReactNode;
 };
 
-/**
- * Shared frame for the Results status cards (shedding tendency, label check):
- * white, 1px blue-gray border, soft shadow -- the same for every state. Only the icon, the pastel
- * pill and any score take the status color.
- */
 export function StatusCard({
   icon,
   tone,

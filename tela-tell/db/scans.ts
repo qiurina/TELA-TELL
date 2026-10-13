@@ -51,9 +51,6 @@ const ACTIVE_SCAN_FILTER = `(deletedAt IS NULL OR deletedAt = '')`;
 const DELETED_SCAN_FILTER = `(deletedAt IS NOT NULL AND deletedAt != '')`;
 const SCAN_LIST_ORDER = `ORDER BY createdAt DESC, scannedAtDate DESC, scan_ID DESC`;
 const DELETED_SCAN_LIST_ORDER = `ORDER BY deletedAt DESC, scan_ID DESC`;
-// List rows only need the compositions and seller label out of resultJson, so SQLite extracts
-// just those instead of shipping the whole result blob to JS. json_valid guards against one
-// malformed row making json_extract throw and failing the entire list query.
 const SCAN_LIST_COLUMNS = `scan_ID, dominantFabric, confidence, scannedAt, scannedAtDate, createdAt,
                 sellerLabel, imageUri,
                 mislabelDetected, isFavorite, deletedAt,
@@ -62,19 +59,15 @@ const SCAN_LIST_COLUMNS = `scan_ID, dominantFabric, confidence, scannedAt, scann
                 CASE WHEN json_valid(resultJson) THEN json_extract(resultJson, '$.capture.captureType') END AS resultCaptureType`;
 
 export type ScanListQuery = {
-  /** 1-based; clamped into the valid range. */
   page?: number;
   pageSize?: number;
-  /** Matches the dominant fabric, seller label, or any fiber in the composition. */
   search?: string;
-  /** Half-open range on createdAt as ISO strings: from <= createdAt < to. */
   dateRange?: { from: string; to: string } | null;
 };
 
 export type ScanPage = {
   items: RecentScanPreview[];
   total: number;
-  /** The page actually returned (after clamping). */
   page: number;
   pageSize: number;
   totalPages: number;
@@ -83,7 +76,6 @@ export type ScanPage = {
 export type ScanStats = {
   total: number;
   mislabeled: number;
-  /** Scans whose History card says "Synthetic": the top fiber is synthetic and the scan is not unsure. */
   synthetic: number;
 };
 
@@ -95,21 +87,12 @@ function daysRemainingUntilPurge(deletedAt: string, retentionDays: number): numb
   const expiresAt = deletedMs + retentionDays * 24 * 60 * 60 * 1000;
   return Math.max(0, Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000)));
 }
-/**
- * The three sustainability columns in tblScan are legacy: the app no longer scores sustainability,
- * but the columns are NOT NULL and are kept (dropping them needs a table rebuild). New and
- * migrated rows hold these neutral placeholders, which nothing reads.
- */
 export const LEGACY_SUSTAINABILITY_PLACEHOLDER = {
   rating: 'unrated',
   label: 'Not rated',
   score: 0,
 } as const;
 
-/**
- * A scan without the `sustainability` object older versions saved. Applied when saving (so an
- * imported old backup cannot write a score back), when reading, and when exporting.
- */
 function withoutLegacySustainability<T extends object>(scan: T): T {
   if (!('sustainability' in scan)) {
     return scan;
@@ -162,10 +145,8 @@ export async function saveScan(
   });
 }
 export type ScanExportEntry = {
-  /** The scan without its photo path, which is a device-specific location. */
   scan: ScanResult;
   isFavorite: boolean;
-  /** Where this device keeps the scan's photo, used to read it into the export; null if none. */
   imageUri: string | null;
 };
 
@@ -207,7 +188,6 @@ export async function getAllScansForExport(): Promise<ScanExportEntry[]> {
 
   return results;
 }
-/** Includes trash rows so importing an older backup can preserve their photo and date too. */
 export async function getScanImportMetadata(scanId: string): Promise<{
   createdAt: string | null;
   imageUri: string | null;
@@ -249,7 +229,6 @@ function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
-/** Builds the WHERE clause (always starting from `baseFilter`) plus its bound params. */
 function buildScanListFilter(
   baseFilter: string,
   query: ScanListQuery,
@@ -319,17 +298,14 @@ async function queryScanPage(
   };
 }
 
-/** One page of active (not deleted) scans, newest first. */
 export function getScansPage(query: ScanListQuery = {}): Promise<ScanPage> {
   return queryScanPage(ACTIVE_SCAN_FILTER, SCAN_LIST_ORDER, query);
 }
 
-/** One page of favorited, active scans, newest first. */
 export function getFavoriteScansPage(query: ScanListQuery = {}): Promise<ScanPage> {
   return queryScanPage(`isFavorite = 1 AND ${ACTIVE_SCAN_FILTER}`, SCAN_LIST_ORDER, query);
 }
 
-/** One page of the trash, most recently deleted first. Expired scans are purged first. */
 export async function getDeletedScansPage(
   query: ScanListQuery & { retentionDays?: number } = {},
 ): Promise<ScanPage> {
@@ -340,7 +316,6 @@ export async function getDeletedScansPage(
   return queryScanPage(DELETED_SCAN_FILTER, DELETED_SCAN_LIST_ORDER, query, retentionDays);
 }
 
-/** Saved photo paths of active scans and of scans in Recently deleted, for the storage breakdown. */
 export async function getScanPhotoUris(): Promise<{ active: string[]; deleted: string[] }> {
   if (!isDatabaseAvailable()) {
     return { active: [], deleted: [] };
@@ -357,7 +332,6 @@ export async function getScanPhotoUris(): Promise<{ active: string[]; deleted: s
   };
 }
 
-/** How many scans are in Recently deleted, after removing ones past the retention period. */
 export async function getDeletedScanCount(retentionDays = 30): Promise<number> {
   if (!isDatabaseAvailable()) {
     return 0;
@@ -370,12 +344,6 @@ export async function getDeletedScanCount(retentionDays = 30): Promise<number> {
   return row?.n ?? 0;
 }
 
-/**
- * Totals for the History header. The total is counted in SQL. The mislabeled and synthetic counts
- * read each scan the way its History card does (rowToPreview), so the header always agrees with
- * the pills: the label is re-checked live rather than read from the flag stored at save time,
- * which goes stale when the label-matching rules change.
- */
 export async function getScanStats(): Promise<ScanStats> {
   if (!isDatabaseAvailable()) {
     return { total: 0, mislabeled: 0, synthetic: 0 };
@@ -449,7 +417,6 @@ function rowToPreview(row: ScanRow, retentionDays = 30): RecentScanPreview {
         row.sellerLabel ?? row.resultSellerLabel ?? null,
         compositions ?? [],
       ).status;
-      // Same rule as buildMislabeling: only a mismatch raises the alert.
       liveMislabel = labelStatus === 'mismatch';
     } catch {
       compositionText = '';
@@ -543,11 +510,6 @@ export async function updateScanSellerLabel(
 
   return true;
 }
-/**
- * Saves a tester's notes (Research mode) with a scan. The notes live inside the scan's saved JSON
- * (no database column), so nothing else about the scan changes and the notes travel with Export
- * and Import. Saving empty notes removes them. Returns false when the scan does not exist.
- */
 export async function updateScanTesterFields(
   scanId: string,
   fields: unknown,
@@ -670,7 +632,6 @@ export async function permanentlyDeleteScans(scanIds: string[]): Promise<number>
   await db.withTransactionAsync(async () => {
     imageUris = await hardDeleteScanIds(db, scanIds);
   });
-  // Photos go only after the rows are gone, so a failed transaction never orphans a scan record.
   await deleteScanImages(imageUris);
   return scanIds.length;
 }
@@ -713,7 +674,6 @@ export async function purgeExpiredDeletedScans(retentionDays = 30): Promise<numb
   await permanentlyDeleteScans(ids);
   return ids.length;
 }
-/** Permanently removes every scan, including favorites and the trash. */
 export async function deleteAllScans(): Promise<void> {
   if (!isDatabaseAvailable()) {
     return;

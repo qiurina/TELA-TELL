@@ -15,11 +15,6 @@ import {
 
 const barGradient = [BrandColors.gradientStart, '#5CC8A0', BrandColors.primaryDark] as const;
 
-/**
- * "Analyzing Fabric" card over a dimmed screen while a scan is classified and saved. The bar follows
- * the real stages (model load, each burst photo, saving), not a timer. It cannot be dismissed: the
- * analysis keeps running and the app moves to the results when it finishes.
- */
 export function AnalyzingModal({ visible, progress }: { visible: boolean; progress: AnalysisProgress | null }) {
   const fill = useRef(new Animated.Value(0)).current;
   const fraction = analysisProgressFraction(progress);
@@ -33,7 +28,6 @@ export function AnalyzingModal({ visible, progress }: { visible: boolean; progre
       toValue: fraction,
       duration: 350,
       easing: Easing.out(Easing.cubic),
-      // Animates width, which the native driver cannot.
       useNativeDriver: false,
     }).start();
   }, [visible, fraction, fill]);

@@ -31,11 +31,8 @@ import { FABRIC_CATEGORY_COLORS, FABRIC_REGISTRY } from '@/data/fabrics/fabrics'
 
 type FiberProfileContentProps = {
   profile: FiberProfile;
-  /** When false, omits the thumbnail because a scan comparison already shows the swatch. */
   showHero?: boolean;
-  /** Scan-linked profiles describe a prediction, not confirmed composition. */
   predicted?: boolean;
-  /** Optional scan comparison, inside the same scroll view as the profile. */
   headerContent?: ReactNode | ((openReference: () => void) => ReactNode);
   onIdentityHiddenChange?: (hidden: boolean) => void;
 };
@@ -84,7 +81,6 @@ function SectionLabel({ children }: { children: string }) {
   return <Text accessibilityRole="header" style={styles.sectionLabel}>{children}</Text>;
 }
 
-/** A titled block with a tinted icon tile, used for each part of a tab. */
 function IconBlock({
   icon: Icon,
   title,
@@ -120,7 +116,6 @@ const CALLOUT_TONES = {
   info: { background: BrandColors.lavenderCard, border: BrandColors.borderLight, accent: BrandColors.primaryDark, icon: Tag },
 } as const;
 
-/** A short tinted note placed under the content it qualifies. */
 function Callout({
   tone,
   title,
@@ -178,12 +173,10 @@ export function FiberProfileContent({
   function selectTab(tab: ProfileTab) {
     if (tab === activeTab) return;
     setActiveTab(tab);
-    // Show the start of the new tab while keeping an already-pinned tab bar in place.
     scrollRef.current?.scrollTo({ y: Math.min(scrollOffset.current, identityBottom.current), animated: false });
   }
 
   const similarLabels = content.look.similarAppearances.text.replace(/\.$/, '').split(/,\s*(?:and\s+)?|\s+and\s+/);
-  // Split presentation into sentence rows without changing the stored, verified wording.
   const careRows = content.care.flatMap(({ text }) => text.split('. ').map((sentence, index, sentences) =>
     index < sentences.length - 1 ? `${sentence}.` : sentence));
 
@@ -256,7 +249,6 @@ export function FiberProfileContent({
 
         <View style={[
           styles.tabBody,
-          // Short tabs remain scrollable up to the pinned tabs; padding clears the raised scan button.
           { minHeight: Math.max(0, viewportHeight - tabsHeight), paddingBottom: insets.bottom + 40 },
         ]}>
           {activeTab === 'about' ? (

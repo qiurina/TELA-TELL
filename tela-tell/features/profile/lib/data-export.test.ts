@@ -1,8 +1,5 @@
 /**
  * @jest-environment node
- *
- * Export My Data / Import My Data with photos, run against the real scan queries on an in-memory
- * SQLite database, with the phone's file system and share sheet replaced by small fakes.
  */
 import BetterSqlite3 from 'better-sqlite3';
 
@@ -43,7 +40,6 @@ jest.mock('expo-sharing', () => ({
   shareAsync: jest.fn(async () => undefined),
 }));
 
-// A tiny in-memory file system: just the parts export reads and writes.
 jest.mock('expo-file-system', () => {
   const store = new Map<string, Uint8Array>();
   class FakeFile {
@@ -114,7 +110,6 @@ function buildResult(id: string): ScanResult {
   };
 }
 
-/** A "photo" is just text here; the fake file system treats the file contents as the base64 value. */
 function putPhoto(path: string, base64: string) {
   fakeStore.set(path, new Uint8Array(Buffer.from(base64, 'utf8')));
 }
@@ -142,7 +137,6 @@ describe('exportUserData with photos', () => {
     await saveScan(buildResult('scan_a'), { imageUri: 'file:///docs/scan-images/scan_a.jpg' });
     await saveScan(buildResult('scan_b'), { imageUri: 'file:///docs/scan-images/scan_b.jpg' });
     await saveScan(buildResult('scan_no_photo'), { imageUri: null });
-    // A scan whose file Android has cleared: exported without a photo, not as an error.
     await saveScan(buildResult('scan_gone'), { imageUri: 'file:///cache/gone.jpg' });
 
     await exportUserData();
@@ -151,9 +145,7 @@ describe('exportUserData with photos', () => {
     expect(Object.keys(parsed.photos).sort()).toEqual(['scan_a', 'scan_b']);
     expect(parsed.photos.scan_a).toBe('QUJDRA==');
     expect(parsed.scans).toHaveLength(4);
-    // The device-specific photo path is still never written into the scan data.
     expect(JSON.stringify(parsed.scans)).not.toContain('file:///');
-    // The capture details, including the three per-photo readings, are in the export.
     expect(parsed.scans[0].capture.sharpnessPerPhoto).toEqual([400, 500, 450]);
     expect(Sharing.shareAsync).toHaveBeenCalledWith(
       expect.stringContaining('tela-tell-export-'),
@@ -177,7 +169,6 @@ describe('importScans with photos', () => {
     await exportUserData();
     const payload = parseExportPayload(exportedFileText());
 
-    // A different device: empty database.
     mockDb.close();
     mockDb = new BetterSqlite3(':memory:');
     mockDb.exec(SCHEMA_SQL);
@@ -208,7 +199,6 @@ describe('importScans with photos', () => {
       garmentId: 'G-12',
     });
 
-    // A different device: empty database.
     mockDb.close();
     mockDb = new BetterSqlite3(':memory:');
     mockDb.exec(SCHEMA_SQL);

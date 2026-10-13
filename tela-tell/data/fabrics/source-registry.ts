@@ -1,29 +1,13 @@
-/**
- * Local registry of the sources cited by the eco-alternative and reuse guidance. Everything shown
- * in the "Basis" sheets and the About screen's reference list comes from here, so it works
- * offline; only opening a link needs a connection.
- *
- * Each entry is written for a quick read: a one-line `gist`, a few short `says` points (what the
- * source states, limited to the claims this app shows, attributed), and short `caveats` (scope,
- * funding, version or comparability limits). Add an id here before referencing it from a claim
- * (a test checks every reference resolves).
- */
 export type Source = {
   id: string;
-  /** Plain-language name used as the heading on the Basis sheet. */
   shortName: string;
   organization: string;
   title: string;
-  /** `null` when the document carries no publication date. */
   year: number | null;
   url: string;
-  /** One line saying what this source is. */
   gist: string;
-  /** What the source states, one short point each. */
   says: string[];
-  /** What to keep in mind about the source, one short point each. */
   caveats: string[];
-  /** Short note for the About screen on which content uses the source. */
   usedFor: string;
 };
 
@@ -644,13 +628,11 @@ export function getSource(id: string): Source | undefined {
   return SOURCES_BY_ID[id];
 }
 
-/** 1-based number shown next to a source on the Basis sheets and the About reference list. */
 export function getSourceNumber(id: string): number | undefined {
   const index = SOURCE_LIST.findIndex((source) => source.id === id);
   return index === -1 ? undefined : index + 1;
 }
 
-/** Resolves ids in order, de-duplicated. Unknown ids are skipped; use `findUnknownSourceIds` to catch them. */
 export function resolveSources(ids: readonly string[] | undefined): Source[] {
   const seen = new Set<string>();
   const sources: Source[] = [];
@@ -664,7 +646,6 @@ export function resolveSources(ids: readonly string[] | undefined): Source[] {
   return sources;
 }
 
-/** Sources behind a set of claims, in order of first use. */
 export function getClaimSources(claims: readonly { sourceIds?: readonly string[] }[]): Source[] {
   return resolveSources(claims.flatMap((claim) => claim.sourceIds ?? []));
 }

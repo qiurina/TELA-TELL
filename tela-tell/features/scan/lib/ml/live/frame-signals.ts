@@ -1,16 +1,3 @@
-/**
- * Worklet-callable pixel analysis for the live camera guidance signals
- * (distance/fill-ratio + blur/focus). Runs on VisionCamera's frame-processor
- * thread, not the JS thread — every exported function is a worklet (`'worklet'`
- * directive) so Reanimated's babel plugin compiles it for that runtime and it
- * can be called from another worklet (the onFrame callback in camera-guide.tsx).
- *
- * Deliberately NOT the same pipeline as the accurate offline one
- * (features/scan/lib/ml/preprocess.ts) — no white balance, no CLAHE, no LAB
- * colorspace. That pipeline is too slow to run per live frame; this one exists
- * purely to drive a live on-screen hint, not the actual classification result.
- */
-
 export type ChannelLayout = {
   bytesPerPixel: number;
   redOffset: number;
@@ -18,11 +5,6 @@ export type ChannelLayout = {
   blueOffset: number;
 };
 
-/**
- * Maps VisionCamera's concrete negotiated pixel format to byte offsets.
- * Returns null for formats this pipeline can't read directly (planar YUV,
- * RAW, private/GPU-only) — caller should skip that frame.
- */
 export function getChannelLayout(pixelFormat: string): ChannelLayout | null {
   'worklet';
   switch (pixelFormat) {
@@ -44,18 +26,6 @@ export type PixelRect = {
   height: number;
 };
 
-/**
- * Worklet-safe port of crop-to-guide.ts's mapCoverCrop() — same cover-crop math
- * (the frame here plays the role that "image" plays there), duplicated rather
- * than imported because that file's functions aren't worklet-marked and are
- * also used from plain JS elsewhere (the actual photo-capture crop). Maps the
- * on-screen guide-box rectangle into frame-pixel coordinates, so the live
- * analysis looks at the same region the user is actually framing, not the
- * camera's whole field of view — analyzing the whole FOV was the reason a
- * background-filled "too far" shot didn't reliably read differently from a
- * close-up: many ordinary backgrounds have enough texture to pass a fixed
- * threshold when averaged over the entire frame instead of just the guide box.
- */
 export function computeGuideRegionInFrame(
   viewWidth: number,
   viewHeight: number,
@@ -105,23 +75,14 @@ export function computeGuideRegionInFrame(
 }
 
 export type SharpnessSignals = {
-  /** Overall Laplacian-response variance across the downsample — low = blurry. */
   variance: number;
-  /** Share of pixels with above-noise-floor edge response — low = too far/flat. */
   texturedFraction: number;
 };
 
 const DOWNSAMPLE_SIZE = 48;
-/** Laplacian magnitude below this is treated as sensor noise, not real texture.
- * Placeholder — needs on-device calibration against real blurred/in-focus and
- * near/far shots, per the plan. */
+// Placeholder; not yet calibrated on a device.
 const NOISE_FLOOR = 8;
 
-/**
- * Downsamples the frame to a small grayscale grid (nearest-neighbor — cheap,
- * fine at this throttled cadence) and runs one Laplacian pass over it,
- * producing both signals from a single O(pixels) traversal.
- */
 export function computeSharpnessSignals(
   pixelBuffer: ArrayBuffer,
   bytesPerRow: number,

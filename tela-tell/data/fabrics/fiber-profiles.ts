@@ -2,8 +2,6 @@ import type { CareInstruction } from '@/data/scans/mock-data';
 import type { OccasionContext, WeatherContext } from '@/data/preferences/occasion-weather';
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
 
-// The per-fiber sustainability score, rating and sub-scores that used to live here were retired
-// (2026-10-11). The old values and the reasons are archived in docs/sustainability-score-archive.md.
 export type FiberProfile = {
   fabric: SupportedFabric;
   scientificName: string;
@@ -14,27 +12,13 @@ export type FiberProfile = {
   durability: string;
   stretch: string;
   moisture: string;
-  // texture uses vocabulary (Soft/Crisp/Slick/Stiff/etc.) that corresponds to real,
-  // objectively-measurable fabric-hand properties under the Kawabata Evaluation System
-  // for Fabrics (KES-F, Kawabata 1972) — an established textile-science instrument set
-  // that quantifies bending, shear, compression, and surface friction and correlates them
-  // to exactly this kind of hand-feel terminology. This file assigns the qualitative
-  // label per fiber from general textile knowledge rather than a lab-measured KES-F score
-  // per fiber (no such per-fiber dataset was located for all 12 fibers here), so treat the
-  // vocabulary itself as grounded, the specific assignment per fiber as informed judgment.
-  // weight (typical garment-weight range) has no equivalent measurement standard behind
-  // it — it's a practical, descriptive category, not a claim.
   texture: string;
   weaveType: string;
   weight: string;
   origin: string;
   bestWeather: WeatherContext[];
   bestOccasion: OccasionContext[];
-  // Follows the general temperature/heat conventions of ISO 3758:2023 (the GINETEX
-  // international textile care-labeling standard: cold/low-heat as the conservative
-  // default, natural protein fibers like wool needing gentler handling than plant/
-  // synthetic fibers). These aren't independently researched per fiber beyond that
-  // general framework, except where a fiber-specific source is noted inline (see Wool).
+  // Care temperatures follow ISO 3758 (GINETEX) conventions.
   careInstructions: CareInstruction[];
 };
 
@@ -67,9 +51,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'High',
     durability: 'Medium',
     stretch: 'Low',
-    // Moisture regain ~7-11% at standard test conditions (Mandal, Textile Learner,
-    // "Comparison Table of Different Textile Fiber Properties") — one of the more
-    // absorbent naturals, well above synthetics like polyester (~0.4%).
+    // Regain ~7-11% (Mandal, Textile Learner).
     moisture: 'Absorbs',
     texture: 'Soft',
     weaveType: 'Plain / Twill',
@@ -94,26 +76,15 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'High',
     durability: 'High',
     stretch: 'Medium',
-    // Standard moisture regain ~17% (Mandal, Textile Learner comparison table) — the
-    // highest of the common naturals measured this way. A distinct, larger figure
-    // (~30% absorbed into the fiber core specifically) is cited separately in
-    // comfort-profile.ts via The Woolmark Company; the two are different measurements,
-    // not a contradiction.
+    // Regain ~17% (Mandal, Textile Learner).
     moisture: 'Wicks slowly',
     texture: 'Lofty',
     weaveType: 'Knit / Felted',
     weight: 'Medium to heavy',
     origin: 'Animal fiber',
     bestWeather: ['cool', 'foggy', 'windy'],
-    // 'outdoor_activities' removed: occasion-weather.ts's avoid-list for that context names
-    // "Heavy wool" specifically ("too warm for most Philippine outdoor activity") — see
-    // docs/profile-screen-audit.md for the full reconciliation between these two datasets.
     bestOccasion: ['office_work', 'travel'],
-    // The Woolmark Company's official guide recommends lukewarm water (~30°C), not
-    // cold, for hand-washing wool. "Cold" here is a deliberately more conservative
-    // choice (still well within the safe range Woolmark gives, just the cooler end of
-    // it) rather than a factual error — cold water cannot damage wool the way hot
-    // water can, so it's a safe simplification for a general-audience app.
+    // Woolmark suggests ~30°C; cold is the safer simplification.
     careInstructions: [
       { text: 'Hand wash cold with mild soap', recommended: true },
       { text: 'Lay flat to dry', recommended: true },
@@ -131,8 +102,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'High',
     durability: 'Low',
     stretch: 'Low',
-    // Moisture regain ~11% (Mandal, Textile Learner comparison table) — moderate,
-    // between the low-absorption synthetics and the most absorbent naturals.
+    // Regain ~11% (Mandal, Textile Learner).
     moisture: 'Light absorb',
     texture: 'Smooth',
     weaveType: 'Plain / Satin',
@@ -157,22 +127,13 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'Very high',
     durability: 'High',
     stretch: 'Low',
-    // Moisture regain ~12% at standard test conditions (ASTM D2654 / ISO 139 equilibrium
-    // regain convention, 20°C/65% RH — the same standard convention behind the other
-    // fibers' regain figures in this file). Corrected 2026-09-27: previously misattributed
-    // this specific number to the Alliance for European Flax-Linen-Hemp's "Flax fibre -
-    // Performance and properties" page, which was directly checked and found to describe
-    // linen's breathability/moisture-transfer only qualitatively, without stating this
-    // percentage — that source still supports the general "hollow-tube structure aids
-    // wicking and breathability" claim below, just not the specific number.
+    // Regain ~12% (ASTM D2654 / ISO 139).
     moisture: 'Absorbs fast',
     texture: 'Crisp',
     weaveType: 'Plain / Basket',
     weight: 'Light to medium',
     origin: 'Plant fiber',
     bestWeather: ['sunny', 'partly_cloudy'],
-    // 'travel' removed: occasion-weather.ts's avoid-list for travel names "Pure linen"
-    // ("wrinkles heavily in luggage") — see docs/profile-screen-audit.md.
     bestOccasion: ['casual', 'formal', 'wedding', 'beach'],
     careInstructions: [
       { text: 'Machine wash cold on gentle cycle', recommended: true },
@@ -190,9 +151,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'Low',
     durability: 'High',
     stretch: 'Low',
-    // Moisture regain ~0.4% (Mandal, Textile Learner comparison table) — among the
-    // lowest of any fiber measured this way, why sweat stays on the surface instead
-    // of being absorbed.
+    // Regain ~0.4% (Mandal, Textile Learner).
     moisture: 'Repels',
     texture: 'Smooth',
     weaveType: 'Knit / Woven',
@@ -216,8 +175,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'Low',
     durability: 'Very high',
     stretch: 'High',
-    // Moisture regain ~4% (Mandal, Textile Learner comparison table) — low relative
-    // to naturals, though higher than polyester or acrylic.
+    // Regain ~4% (Mandal, Textile Learner).
     moisture: 'Repels',
     texture: 'Slick',
     weaveType: 'Tight knit / Ripstop',
@@ -241,17 +199,13 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'Low',
     durability: 'Medium',
     stretch: 'Medium',
-    // Moisture regain ~1-2% (Mandal, Textile Learner comparison table) — low
-    // absorption typical of synthetic fibers.
+    // Regain ~1-2% (Mandal, Textile Learner).
     moisture: 'Repels',
     texture: 'Fluffy',
     weaveType: 'Knit',
     weight: 'Light to medium',
     origin: 'Synthetic',
     bestWeather: ['cool', 'cloudy', 'foggy'],
-    // 'home_wear' and 'casual' removed: occasion-weather.ts's avoid-lists for those contexts
-    // name "Scratchy acrylic" and "Thick acrylic" respectively — see
-    // docs/profile-screen-audit.md.
     bestOccasion: ['travel'],
     careInstructions: [
       { text: 'Machine wash cold on gentle cycle', recommended: true },
@@ -269,9 +223,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'Low',
     durability: 'Medium',
     stretch: 'Very high',
-    // Moisture regain ~0.3-1.2% (CAMEO — Conservation & Art Materials Encyclopedia
-    // Online, Museum of Fine Arts Boston, "Spandex fiber") — minimal absorption; in a
-    // blend, moisture behavior mostly comes from whatever fiber spandex is combined with.
     moisture: 'Repels',
     texture: 'Smooth',
     weaveType: 'Knit blend',
@@ -295,8 +246,7 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     breathability: 'High',
     durability: 'Low',
     stretch: 'Low',
-    // Moisture regain ~13% for viscose rayon (Mandal, Textile Learner comparison
-    // table) — among the more absorbent fibers measured this way, similar to wool.
+    // Regain ~13% for viscose (Mandal, Textile Learner).
     moisture: 'Absorbs',
     texture: 'Flowy',
     weaveType: 'Plain / Twill',
@@ -326,9 +276,6 @@ export const FIBER_PROFILES: Record<SupportedFabric, FiberProfile> = {
     weight: 'Medium to heavy',
     origin: 'Animal hide',
     bestWeather: ['sunny', 'cool', 'cloudy'],
-    // 'outdoor_activities' removed: occasion-weather.ts's avoid-list for that context names
-    // "Leather" directly ("too stiff and heavy for active outdoor use") — see
-    // docs/profile-screen-audit.md.
     bestOccasion: ['formal', 'travel'],
     careInstructions: [
       { text: 'Wipe with damp cloth and air dry', recommended: true },

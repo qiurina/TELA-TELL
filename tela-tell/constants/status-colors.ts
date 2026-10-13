@@ -2,11 +2,6 @@ import { BrandColors } from '@/constants/brand';
 
 export type StatusTone = 'good' | 'caution' | 'alert' | 'neutral';
 
-/**
- * One color set for status cards (shedding tendency, label check) so the same state always looks
- * the same. `accent` is dark enough for text, icons and the solid pill fill; `border` is the thin
- * tint around a white card; `tint` is the light wash behind the card icon.
- */
 export const STATUS_COLORS: Record<
   StatusTone,
   { accent: string; border: string; tint: string; pill: string }

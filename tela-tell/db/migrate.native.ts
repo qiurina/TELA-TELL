@@ -14,14 +14,6 @@ import {
 let migrationPromise: Promise<MigrationReport> | null = null;
 let failedSteps = false;
 
-/**
- * Caches the migration result for the session and reports steps that failed or were skipped.
- * It only rejects when the database cannot open or the base schema cannot be created.
- *
- * Startup recovery may explicitly retry a settled run with failed steps. Clean runs remain
- * cached. Re-running is safe because every step is idempotent (columns/indexes are checked,
- * drops use IF EXISTS, and the profile resync records its fingerprint only after success).
- */
 export function migrateDatabase(options: { retry?: boolean } = {}): Promise<MigrationReport> {
   if (options.retry && failedSteps) migrationPromise = null;
   if (!migrationPromise) {
@@ -40,13 +32,8 @@ export function migrateDatabase(options: { retry?: boolean } = {}): Promise<Migr
   return migrationPromise;
 }
 
-/**
- * `ALTER TABLE ... DROP COLUMN` needs SQLite 3.35 (March 2021). expo-sqlite ships its own SQLite,
- * so this only fails if the app is built with a much older one.
- */
 const DROP_COLUMN_MIN_VERSION = { major: 3, minor: 35 };
 
-/** `true`/`false`, or `null` when the version string can't be read (then the drop is just tried). */
 export function isDropColumnSupported(version: string): boolean | null {
   const match = /^(\d+)\.(\d+)/.exec(version.trim());
   if (!match) {
@@ -71,10 +58,6 @@ class SqliteTooOldError extends Error {
   }
 }
 
-/**
- * Call before changing anything in a step that has to drop a column, so an unsupported SQLite
- * stops the step cleanly instead of failing half way through it.
- */
 async function assertDropColumnSupported(db: Database): Promise<void> {
   const row = await db.getFirstAsync<{ version: string }>('SELECT sqlite_version() AS version');
   const version = row?.version ?? '';
@@ -91,12 +74,6 @@ function describeError(error: unknown): string {
   return String(error).slice(0, 500);
 }
 
-/**
- * Runs migration steps in isolation so a failure in one can't take down independent steps after
- * it. A step that lists `requires` is skipped (and reported as skipped) when any of those steps
- * failed or was itself skipped, because running it against a half-migrated table would fail or
- * silently do the wrong thing.
- */
 function createStepRunner() {
   const issues: MigrationIssue[] = [];
   const unavailable = new Set<string>();
@@ -137,8 +114,6 @@ function createStepRunner() {
 
 async function runMigration(): Promise<MigrationReport> {
   const db = await getDatabase();
-  // Core schema creation is the one step allowed to abort the whole migration:
-  // nothing below can meaningfully run without the base tables existing.
   await db.execAsync(SCHEMA_SQL);
 
   const { runStep, issues } = createStepRunner();
@@ -156,7 +131,6 @@ async function runMigration(): Promise<MigrationReport> {
     () => db.execAsync('CREATE INDEX IF NOT EXISTS idx_scan_createdAt ON tblScan(createdAt DESC)'),
     ['ensureScanColumn:createdAt'],
   );
-  // Reads tblDeviceProfile.colorSeason when carrying a legacy account's preferences over.
   await runStep('removeLegacyAccounts', () => removeLegacyAccounts(db), [
     'ensureProfileColumn:colorSeason',
   ]);
@@ -178,15 +152,6 @@ async function runMigration(): Promise<MigrationReport> {
   return { issues };
 }
 
-/**
- * Re-derives the profile and recommendations for every stored scan from the current fiber and eco
- * data, since saveScan() snapshots these at scan time rather than computing them live on read.
- * It also clears the old sustainability scores (the legacy columns and the `sustainability` key in
- * the saved JSON), which the app no longer shows. A fiber-profiles.ts update should retroactively
- * fix history, not just new scans -- but rewriting every scan on every launch gets slower as history grows, so it
- * only runs when a fingerprint of that data (plus SCAN_PROFILE_LOGIC_VERSION) has changed since
- * the last run.
- */
 const SCAN_PROFILE_FINGERPRINT_KEY = '@tela-tell/scan-profile-fingerprint';
 
 function hashString(text: string): string {
@@ -219,8 +184,6 @@ async function resyncScanSustainability(db: Database) {
   );
 
   await db.withTransactionAsync(async () => {
-    // Old sustainability scores are cleared on every row, including rows whose saved JSON can't
-    // be read, so no stored score can reappear. Nothing else on the row is touched.
     await db.runAsync(
       `UPDATE tblScan
        SET sustainabilityRating = ?, sustainabilityLabel = ?, sustainabilityScore = ?
@@ -240,9 +203,6 @@ async function resyncScanSustainability(db: Database) {
         continue;
       }
 
-      // Only an unreadable row is skipped. A failed database write below is NOT caught: it rolls
-      // the transaction back and fails the step, so it is reported and retried on the next
-      // launch instead of being hidden while the fingerprint is saved as if all had succeeded.
       let next: ReturnType<typeof refreshStoredScan>;
       try {
         next = refreshStoredScan(JSON.parse(row.resultJson));
@@ -251,7 +211,6 @@ async function resyncScanSustainability(db: Database) {
       }
       const nextJson = JSON.stringify(next);
 
-      // Already current: leave the row alone rather than rewriting it.
       if (nextJson === row.resultJson) {
         continue;
       }
@@ -265,15 +224,6 @@ async function resyncScanSustainability(db: Database) {
 
 type Database = Awaited<ReturnType<typeof getDatabase>>;
 
-/**
- * The app used to have local accounts (tblUser, a user_id on scans and preferences). It is now
- * a single-user, on-device app. For databases created by an older build this:
- *  - moves the most recently saved account's preferences onto the one device profile
- *    (only if the device profile is still empty), then drops the per-account profiles;
- *  - drops tblUser (and with it the stored password hashes) and the user_id columns;
- *  - clears the stored session and the old avatar files.
- * Scans keep all their data; they were only ever filtered by user_id, which is no longer read.
- */
 async function removeLegacyAccounts(db: Database) {
   const profileColumns = await tableColumns(db, 'tblDeviceProfile');
   const scanColumns = await tableColumns(db, 'tblScan');
@@ -303,10 +253,6 @@ async function removeLegacyAccounts(db: Database) {
   }
 }
 
-/**
- * tblScanComposition was written on every save but never read (the full result lives in
- * tblScan.resultJson), and tblScan.syncStatus was always 'local'. Both are dropped.
- */
 async function dropUnusedScanStorage(db: Database) {
   await db.execAsync('DROP INDEX IF EXISTS idx_composition_scan');
   await db.execAsync('DROP TABLE IF EXISTS tblScanComposition');
@@ -317,11 +263,6 @@ async function dropUnusedScanStorage(db: Database) {
   }
 }
 
-/**
- * Scans saved before photos were kept in permanent storage point at the cache folder, which
- * Android can clear at any time. Copy the ones still there into scan-images/; for the ones already
- * gone, clear the path so History shows the placeholder instead of a broken image.
- */
 async function persistLegacyScanImages(db: Database) {
   const rows = await db.getAllAsync<{ scan_ID: string; imageUri: string }>(
     `SELECT scan_ID, imageUri FROM tblScan WHERE imageUri IS NOT NULL AND imageUri != ''`,
@@ -391,11 +332,6 @@ async function adoptLegacyPreferences(db: Database) {
         ]);
       }
     }
-    // Cascades to any child rows that were not moved above. Excludes DEVICE_PROFILE_ID:
-    // if the legacy account's profile row was already at profile_ID = DEVICE_PROFILE_ID
-    // (the common case, since this was a single-account app), deviceIsEmpty above is
-    // false and the copy branch never runs -- deleting unconditionally here would wipe
-    // that row (and cascade-delete its preferences) instead of leaving it in place.
     await db.runAsync('DELETE FROM tblDeviceProfile WHERE user_id IS NOT NULL AND profile_ID != ?', [
       DEVICE_PROFILE_ID,
     ]);

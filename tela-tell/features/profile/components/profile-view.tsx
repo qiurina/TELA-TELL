@@ -37,7 +37,6 @@ import {
   subscribeUserPreferences,
 } from '@/features/profile/lib/user-preferences';
 
-/** Root-stack routes (siblings of tabs) — tab bar stays under the push, no mid-anim hide. */
 const PROFILE_ALLERGIES_HREF = '/fabric-allergies' as Href;
 const PROFILE_PREFERRED_HREF = '/preferred-fabrics' as Href;
 const PROFILE_WEATHER_HREF = '/weather' as Href;
@@ -50,7 +49,6 @@ const PROFILE_DATA_HREF = '/data' as Href;
 
 export function ProfileView() {
   const router = useRouter();
-  // undefined while measuring; null where there is no file system (web).
   const [photoStorage, setPhotoStorage] = useState<ScanPhotoStorage | null | undefined>(undefined);
 
   const prefs = useSyncExternalStore(

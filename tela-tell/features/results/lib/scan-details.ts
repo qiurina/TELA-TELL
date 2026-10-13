@@ -10,11 +10,9 @@ const CAPTURE_TYPE_LABELS: Record<CaptureType, string> = {
 };
 
 export function isCaptureType(value: unknown): value is CaptureType {
-  // Own keys only: `in` would also accept inherited names such as "toString".
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(CAPTURE_TYPE_LABELS, value);
 }
 
-/** Plain-language name of how a photo was captured; "Not recorded" for older scans. */
 export function captureTypeLabel(type: CaptureType | string | null | undefined): string {
   return isCaptureType(type) ? CAPTURE_TYPE_LABELS[type] : NOT_RECORDED;
 }
@@ -22,12 +20,9 @@ export function captureTypeLabel(type: CaptureType | string | null | undefined):
 export type DetailRow = { label: string; value: string };
 
 export type ScanDetails = {
-  /** False for scans saved before capture details were recorded. */
   recorded: boolean;
-  /** Short text for the collapsed card header. */
   summary: string;
   rows: DetailRow[];
-  /** Measurements and identifiers, shown only under "Technical details". */
   technical: DetailRow[];
 };
 
@@ -79,11 +74,6 @@ function lightingTechnicalRows(lighting: ScanCaptureMeta['lighting']): DetailRow
   ];
 }
 
-/**
- * Turns a scan's saved capture details into rows for the "Scan details" card. Reads only what was
- * saved; nothing is computed or inferred. Missing measurements show "Not recorded"; the legacy
- * lens-answer row is omitted when no answer was saved.
- */
 export function describeScanDetails(capture: ScanCaptureMeta | null | undefined): ScanDetails {
   if (!capture) {
     return {

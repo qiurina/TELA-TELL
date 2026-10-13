@@ -22,10 +22,6 @@ type ScanHistoryCardProps = {
 
 type PillTone = 'alert' | 'ok' | 'caution' | 'neutral';
 
-/**
- * Pill for the stated-label check. No label ('none') and an unsure scan get no label pill: there
- * was nothing to compare, so "Label matches" would claim a check that never happened.
- */
 const LABEL_PILL: Partial<Record<DeclaredLabelStatus, { text: string; tone: PillTone }>> = {
   mismatch: { text: 'May not match', tone: 'alert' },
   weak: { text: 'Partly matches', tone: 'caution' },
@@ -33,7 +29,6 @@ const LABEL_PILL: Partial<Record<DeclaredLabelStatus, { text: string; tone: Pill
   match: { text: 'Label matches', tone: 'ok' },
 };
 
-/** Shortened from the badge on the results photo, so both screens make the same call. */
 const FIBER_PILL: Record<FiberBadge['kind'], { text: string; tone: PillTone }> = {
   likely: { text: 'Synthetic', tone: 'caution' },
   possible: { text: 'Possible synthetic', tone: 'caution' },
@@ -42,11 +37,6 @@ const FIBER_PILL: Record<FiberBadge['kind'], { text: string; tone: PillTone }> =
 
 const UNSURE_AMBER = '#b45309';
 
-/**
- * An unsure scan names no fiber, so the card says why instead of listing scores that read like a
- * blend: a close call shows the two fibers it was torn between; a weak match hedges on the top
- * fiber and suggests a rescan.
- */
 function getUnsureCardText(scan: RecentScanPreview) {
   const [first, second] = scan.closestCandidates ?? [];
   if (scan.unsureReason === 'close_call' && first && second) {

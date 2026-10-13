@@ -8,7 +8,6 @@ import type {
 import type { SupportedFabric } from '@/data/fabrics/fabrics';
 import type { DressingContext } from '@/data/preferences/occasion-weather';
 
-/** The app has a single on-device profile; it is the seed row created by db/schema.ts. */
 export const DEVICE_PROFILE_ID = 1;
 
 function emptyPreferences(): UserPreferences {

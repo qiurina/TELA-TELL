@@ -44,7 +44,6 @@ describe('buildCaptureMeta', () => {
       run,
     );
     expect(meta.sharpnessPerPhoto).toEqual([95.3, 812.4, null]);
-    // The existing single value is unchanged: it is still the sharpest photo's reading.
     expect(meta.sharpness).toBe(812.4);
   });
 

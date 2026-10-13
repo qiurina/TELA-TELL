@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
-/** Whether the intro slides have been completed or skipped. Stored on the device only. */
 const STORAGE_KEY = '@tela-tell/intro-seen';
 
 type IntroSnapshot = { loaded: boolean; introSeen: boolean };
@@ -22,7 +21,6 @@ export function loadIntroState(): Promise<void> {
       try {
         introSeen = (await AsyncStorage.getItem(STORAGE_KEY)) === 'true';
       } catch {
-        // Best-effort: the worst case is that the slides show again.
       }
       publish({ loaded: true, introSeen });
     })();

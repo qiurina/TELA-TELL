@@ -41,8 +41,6 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const currentRoute = state.routes[state.index]?.name;
 
-  // Immersive Scan: hide tabs; Scan screen provides a back chevron.
-  // Nested profile screens are root-stack routes, so the tab bar stays under them.
   if (currentRoute === 'scan') {
     return <View style={styles.hiddenStub} pointerEvents="none" />;
   }

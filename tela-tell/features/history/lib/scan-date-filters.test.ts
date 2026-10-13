@@ -1,6 +1,5 @@
 import { getScanDateRange } from '@/features/history/lib/scan-date-filters';
 
-// Wednesday, 2026-10-14, 15:30 local time.
 const NOW = new Date(2026, 9, 14, 15, 30);
 const local = (year: number, monthIndex: number, day: number) => new Date(year, monthIndex, day).toISOString();
 

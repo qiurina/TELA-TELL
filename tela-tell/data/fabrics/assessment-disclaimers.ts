@@ -1,9 +1,3 @@
-// Shared wording for the explanation sheets behind the (i) buttons. Each is two short blocks, "what
-// it is" and "what it isn't", so the sheet says only what matters. That results are visual
-// predictions rather than lab tests is stated once, in the confidence banner and on the About
-// screen, not repeated in every sheet. Citations stay on the About screen's Sources card; the
-// shedding explanation lives in HEALTH_RISK_DISCLAIMER (synthetic-health-risk.ts).
-
 export type InfoSection = { heading: string; body: string };
 
 export const FIBER_GUIDANCE_CAPTION =

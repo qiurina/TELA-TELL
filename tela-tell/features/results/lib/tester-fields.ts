@@ -17,16 +17,10 @@ function cleanText(value: unknown, maxLength: number): string | undefined {
   if (typeof value !== 'string') {
     return undefined;
   }
-  // Collapse line breaks and runs of spaces: these are short single-line notes.
   const trimmed = value.replace(/\s+/g, ' ').trim().slice(0, maxLength).trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-/**
- * Cleans what a tester typed before it is saved: trims, limits length, drops blanks and any
- * construction value that is not one of the options. Returns undefined when nothing is left, so a
- * scan with no tester notes carries no `testerFields` at all.
- */
 export function normalizeTesterFields(input: unknown): ScanTesterFields | undefined {
   if (!input || typeof input !== 'object') {
     return undefined;
