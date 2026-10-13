@@ -1,5 +1,5 @@
 import { resolveSupportedFabric } from '@/data/fabrics/fabric-references';
-import { resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
+import { resolveAllFabricAliases, resolveFabricAlias, type SupportedFabric } from '@/data/fabrics/fabrics';
 import { getSignificantFibers, TRACE_DETECTION_MIN_PERCENT } from '@/data/scans/scan-confidence';
 import type { FabricComposition } from '@/data/scans/mock-data';
 
@@ -175,7 +175,7 @@ function resolveScanFibers(
 }
 
 function alternativeMatchesFabric(alternativeName: string, fabric: SupportedFabric): boolean {
-  return alternativeName.toLowerCase().includes(fabric.toLowerCase());
+  return resolveAllFabricAliases(alternativeName).includes(fabric);
 }
 
 function filterAlternatives(

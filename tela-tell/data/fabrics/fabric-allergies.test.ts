@@ -1,4 +1,5 @@
 import { SENSITIVITY_CAVEAT, buildSensitivityMessage, getAllergyAlert } from '@/data/fabrics/fabric-allergies';
+import { SUPPORTED_FABRICS } from '@/data/fabrics/fabrics';
 
 describe('sensitivity reminder', () => {
   it('names the top fiber when it is on the list, and never shows a percentage', () => {
@@ -33,6 +34,27 @@ describe('sensitivity reminder', () => {
   it('reports no match when nothing on the list is predicted, and nothing when the list is empty', () => {
     expect(getAllergyAlert(['Silk'], 'Cotton', [{ material: 'Cotton', percentage: 100 }])?.conflictDetected).toBe(false);
     expect(getAllergyAlert([], 'Cotton', [{ material: 'Cotton', percentage: 100 }])).toBeNull();
+  });
+
+  it.each(['Cotton', 'Linen', 'Silk'] as const)('excludes lyocell alternatives when Rayon and %s are on the sensitivity list', (fabric) => {
+    const alert = getAllergyAlert([fabric, 'Rayon'], fabric, [{ material: fabric, percentage: 100 }])!;
+    expect(alert.alternatives.length).toBeGreaterThan(0);
+    expect(alert.alternatives.map((alternative) => alternative.name)).not.toContain('Tencel / lyocell');
+  });
+
+  it('uses an allowed fallback when sensitivity aliases exclude every suggested alternative', () => {
+    const alert = getAllergyAlert(['Cotton', 'Linen', 'Rayon'], 'Cotton', [{ material: 'Cotton', percentage: 100 }])!;
+    expect(alert.alternatives.map((alternative) => alternative.name)).toEqual(['Abaca']);
+  });
+
+  it('still excludes a sensitive fiber inside a descriptive alternative name', () => {
+    const alert = getAllergyAlert(['Leather', 'Cotton'], 'Leather', [{ material: 'Leather', percentage: 100 }])!;
+    expect(alert.alternatives.map((alternative) => alternative.name)).toEqual(['Linen', 'Abaca']);
+  });
+
+  it('does not suggest a fallback when every supported fiber is on the sensitivity list', () => {
+    const alert = getAllergyAlert([...SUPPORTED_FABRICS], 'Cotton', [{ material: 'Cotton', percentage: 100 }])!;
+    expect(alert.alternatives).toEqual([]);
   });
 
   it('says a photo cannot confirm content or see dyes and finishes, and alternatives are not guaranteed', () => {

@@ -144,7 +144,7 @@ export function DataSettingsView() {
         try { await refreshSummary(); } finally { endDataOperation(); }
       })();
       return () => { active = false; summaryRequest.current += 1; };
-    }, [refreshSummary]),
+    }, [backupBusy, refreshSummary]),
   );
 
   const nowUsing = (next: DataSummary | null) =>

@@ -387,7 +387,7 @@ export const CameraGuide = forwardRef<CameraGuideHandle, CameraGuideProps>(funct
         }
       },
     }),
-    [canUseLiveCamera, shutterFlash],
+    [canUseLiveCamera, photoOutput, shutterFlash],
   );
 
   // Android only says what to do while the snapshots are taken, and stays busy until the checks
